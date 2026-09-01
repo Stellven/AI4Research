@@ -108,6 +108,17 @@ def test_reconcile_preserves_active_multi_task_worker(tmp_path, monkeypatch):
         }
     ]
 
+    # An ordinary scheduler tick while the same operatord task is still
+    # active is an exact no-op.  In particular it must not add legacy node
+    # fields or replace the frozen runtime result mirror.
+    active_snapshot = json.loads(json.dumps(graph))
+    repeated_active = dispatcher._reconcile_existing_dispatches(
+        graph,
+        tmp_path / "sprint-test.task_graph.json",
+    )
+    assert repeated_active == []
+    assert graph == active_snapshot
+
     # The recovered exact task completes and publishes its handoff.  Reconcile
     # must advance to review rather than treating the synthetic multi-task pane
     # as an expired lease and making the node dispatchable again.

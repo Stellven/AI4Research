@@ -407,6 +407,21 @@
         "singleton": false
       }
     },
+    "ScientificSourceAssessor": {
+      "operator_type": "ScientificSourceAssessor",
+      "description": "Resolve relevance and metadata credibility for discovered and ingested scientific sources while retaining explicit unresolved decisions.",
+      "primary_role": "scientific-source-assessor",
+      "required_capabilities": {
+        "scientific_evidence": 3,
+        "data_extraction": 2,
+        "research_synthesis": 2
+      },
+      "cost_hint": "low",
+      "concurrency": {
+        "max_parallel": 1,
+        "singleton": false
+      }
+    },
     "ScientificPaperAnalyzer": {
       "operator_type": "ScientificPaperAnalyzer",
       "description": "AutoSci paper analysis evidence generation from parsed source evidence.",
@@ -518,6 +533,19 @@
         "max_parallel": 1,
         "singleton": false
       }
+    },
+    "ScientificDatasetPreparer": {
+      "operator_type": "ScientificDatasetPreparer",
+      "description": "Acquire and retain a real public dataset/model plus the exact runnable assets for a supported bounded scientific experiment.",
+      "candidates": [
+        {
+          "actor_id": "dataset_prepare_worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
     },
     "ScientificExperimentDesigner": {
       "operator_type": "ScientificExperimentDesigner",
@@ -1455,6 +1483,18 @@
       "candidates": [
         {
           "actor_id": "autosci-paper-ingest-worker",
+          "priority": 1,
+          "condition": "plugin_autosci_available"
+        }
+      ],
+      "selection_policy": "priority_first",
+      "fallback_policy": "error"
+    },
+    "ScientificSourceAssessor": {
+      "operator_type": "ScientificSourceAssessor",
+      "candidates": [
+        {
+          "actor_id": "source_assess_worker",
           "priority": 1,
           "condition": "plugin_autosci_available"
         }

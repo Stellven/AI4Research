@@ -39,6 +39,13 @@ def _seed_registry(harness: Path) -> None:
                     "model": "sonnet",
                     "enabled": True,
                 },
+                "autosci-local-action": {
+                    "role": "builder",
+                    "provider": "research_operator_registry",
+                    "backend": "research_operator_registry",
+                    "model_provider_neutral": True,
+                    "enabled": True,
+                },
             },
         },
     )
@@ -148,6 +155,36 @@ def test_codex_route_proof_accepts_openai_only(tmp_path):
     assert proof["allowed_providers"] == ["openai"]
     assert proof["violations"] == []
     assert (harness / "sprints" / f"{sid}.route-proof.json").exists()
+
+
+def test_codex_route_proof_accepts_registered_provider_neutral_local_operator(tmp_path):
+    harness = tmp_path / "harness"
+    sid = "sprint-route-local-neutral"
+    _seed_registry(harness)
+    _seed_pm_record(
+        harness,
+        sid,
+        "task-local",
+        node_id="S1",
+        role="builder",
+        operator_id="autosci-local-action",
+    )
+    _seed_result(
+        harness,
+        sid,
+        "task-local",
+        node_id="S1",
+        operator_id="autosci-local-action",
+        provider="research_operator_registry",
+        model="operator-runtime",
+    )
+
+    proof = route_proof.write_route_proof(harness, sid)
+
+    assert proof["ok"] is True
+    assert proof["enforced"] is True
+    assert proof["violations"] == []
+    assert proof["stages"][0]["model_provider_neutral"] is True
 
 
 def test_codex_route_proof_flags_anthropic_violation(tmp_path):

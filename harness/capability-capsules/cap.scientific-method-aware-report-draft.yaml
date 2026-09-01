@@ -1,8 +1,8 @@
 capability_capsule_id: cap.scientific-method-aware-report-draft
 capsule_kind: capability
 metadata:
-  name: Method-aware Scientific Report Draft
-  description: Draft a scientific report from its plan, claim verdicts, and required structured method evidence.
+  name: Method- and source-assessment-aware Scientific Report Draft
+  description: Draft a scientific report from its plan, claim verdicts, structured method evidence, and governed source-quality decisions.
 applicability:
   task_types:
     - scientific-research
@@ -23,13 +23,15 @@ contract:
         schema_ref: schemas/evidence/claim_verdict.v1.schema.json
       - name: research_method
         schema_ref: schemas/evidence/research_method.v1.schema.json
+      - name: research_source_assessment
+        schema_ref: schemas/evidence/research_source_assessment.v1.schema.json
   outputs:
     required:
       - name: scientific_report
         schema_ref: schemas/evidence/scientific_report.v1.schema.json
   preconditions:
     - check: method_aware_plan_available
-      description: The method-aware report plan, verdicts, and method evidence are available.
+      description: The report plan, verdicts, method evidence, and source assessment are available.
   postconditions:
     - check: draft_evidence_linked
       description: Findings and method descriptions cite retained evidence IDs.
@@ -44,6 +46,8 @@ composition:
       purpose: Verdict-backed claims.
     - schema_ref: schemas/evidence/research_method.v1.schema.json
       purpose: Structured method evidence assigned by the report plan.
+    - schema_ref: schemas/evidence/research_source_assessment.v1.schema.json
+      purpose: Source-quality decisions that constrain which evidence can support report findings.
   produces:
     - schema_ref: schemas/evidence/scientific_report.v1.schema.json
       purpose: Method-aware scientific report.
@@ -56,6 +60,7 @@ effects:
   read:
     - typed scientific evidence and report plans
     - schemas/evidence/research_method.v1.schema.json
+    - schemas/evidence/research_source_assessment.v1.schema.json
     - schemas/evidence/scientific_report_plan.v1.schema.json
     - schemas/evidence/scientific_report.v1.schema.json
   write:
@@ -76,6 +81,7 @@ bindings:
   mcp_capabilities: {}
   data_refs:
     - schemas/evidence/research_method.v1.schema.json
+    - schemas/evidence/research_source_assessment.v1.schema.json
     - schemas/evidence/scientific_report_plan.v1.schema.json
     - schemas/evidence/scientific_report.v1.schema.json
   secret_refs: []
@@ -87,6 +93,8 @@ verification:
     required: true
   pass_conditions:
     - Supplied method evidence appears in the report without changing its claims.
+    - Excluded or unresolved sources are not silently promoted to accepted support.
+    - Requirement bindings from the accepted report plan remain visible for independent evaluation.
 operator_compatibility:
   preferred:
     - autosci-report-worker

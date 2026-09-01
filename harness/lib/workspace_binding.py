@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import datetime
+import hashlib
 import json
 import os
 import re
@@ -25,6 +26,7 @@ from typing import Any
 
 
 SCHEMA = "solar.workspace_binding.v1"
+AUTHORITY_SCHEMA = "solar.workspace_authority.v1"
 BINDING_FILENAME = "workspace-binding.json"
 SAFE_SPRINT_ID = re.compile(r"^[A-Za-z0-9_.-]+$")
 
@@ -104,6 +106,179 @@ def _read_json_object(path: Path) -> dict[str, Any]:
     except (OSError, ValueError, TypeError):
         return {}
     return payload if isinstance(payload, dict) else {}
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _atomic_json(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, temporary = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            json.dump(payload, handle, ensure_ascii=False, indent=2)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.chmod(temporary, 0o600)
+        os.replace(temporary, path)
+    finally:
+        try:
+            Path(temporary).unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
+def workspace_authority_path(
+    sprints_dir: os.PathLike[str] | str,
+    sprint_id: str,
+) -> Path:
+    sid = str(sprint_id or "").strip()
+    if not SAFE_SPRINT_ID.fullmatch(sid):
+        raise ValueError("invalid sprint id")
+    return Path(sprints_dir).expanduser().resolve() / f"{sid}.workspace_authority.json"
+
+
+def _canonical_input_paths(sprints_dir: Path, sprint_id: str) -> dict[str, Path]:
+    return {
+        "raw_intent": (sprints_dir / f"{sprint_id}.raw_intent.json").resolve(),
+        "intent_ir": (sprints_dir / f"{sprint_id}.intent_ir.json").resolve(),
+        "requirement_ir": (sprints_dir / f"{sprint_id}.requirement_ir.json").resolve(),
+    }
+
+
+def freeze_sprint_workspace_authority(
+    sprints_dir: os.PathLike[str] | str,
+    sprint_id: str,
+    *,
+    harness_dir: os.PathLike[str] | str,
+    captured_cwd: os.PathLike[str] | str | None = None,
+) -> Path:
+    """Freeze the exact compiler inputs and user-workspace publication authority.
+
+    The active binding remains the controller authority. RawIntent may confirm
+    it, but neither a model-authored field nor the process cwd can redirect
+    publication. A cwd outside the workspace is recorded for audit and
+    normalized to the workspace root for execution.
+    """
+    sid = str(sprint_id or "").strip()
+    if not SAFE_SPRINT_ID.fullmatch(sid):
+        raise ValueError("invalid sprint id")
+    root = Path(sprints_dir).expanduser().resolve()
+    workspace = sprint_workspace_root(root, sid, harness_dir=harness_dir)
+    if workspace is None:
+        raise ValueError("active workspace binding does not match sprint source context")
+    inputs = _canonical_input_paths(root, sid)
+    missing = [name for name, path in inputs.items() if not path.is_file()]
+    if missing:
+        raise ValueError(f"canonical sprint inputs missing: {','.join(missing)}")
+
+    raw = _read_json_object(inputs["raw_intent"])
+    context = raw.get("context") if isinstance(raw.get("context"), dict) else {}
+    captured_text = str(captured_cwd or context.get("cwd") or workspace).strip()
+    captured = _existing_directory(captured_text)
+    normalized = True
+    effective_relative = "."
+    if captured is not None:
+        try:
+            effective_relative = str(captured.relative_to(workspace)) or "."
+            normalized = False
+        except ValueError:
+            effective_relative = "."
+    target = workspace_authority_path(root, sid)
+    payload = {
+        "schema_version": AUTHORITY_SCHEMA,
+        "artifact_role": "controller_frozen_authority",
+        "authority_id": f"workspace-authority-{sid}",
+        "path": str(target),
+        "sprint_id": sid,
+        "workspace_root": str(workspace),
+        "cwd": {
+            "captured": captured_text,
+            "effective_relative": effective_relative,
+            "normalized_to_workspace": normalized,
+        },
+        "inputs": {
+            name: {"path": str(path), "sha256": _sha256(path)}
+            for name, path in inputs.items()
+        },
+        "created_at": _utc_now(),
+    }
+    if target.exists():
+        existing = verify_sprint_workspace_authority(
+            target,
+            sprints_dir=root,
+            harness_dir=harness_dir,
+        )
+        stable_fields = (
+            "authority_id",
+            "path",
+            "sprint_id",
+            "workspace_root",
+            "cwd",
+            "inputs",
+        )
+        if any(existing.get(field) != payload.get(field) for field in stable_fields):
+            raise ValueError("workspace authority conflicts with existing frozen authority")
+        return target
+    _atomic_json(target, payload)
+    return target
+
+
+def verify_sprint_workspace_authority(
+    authority_path: os.PathLike[str] | str,
+    *,
+    sprints_dir: os.PathLike[str] | str,
+    harness_dir: os.PathLike[str] | str,
+    require_active_binding: bool = True,
+) -> dict[str, Any]:
+    """Verify canonical location and every frozen input hash.
+
+    The active binding is an intake-time selector, not durable per-sprint
+    authority. Long-running/overlapping sprints may therefore verify their
+    already-frozen authority with ``require_active_binding=False`` without a
+    later dashboard selection redirecting their destination.
+    """
+    root = Path(sprints_dir).expanduser().resolve()
+    path = Path(authority_path).expanduser().resolve()
+    payload = _read_json_object(path)
+    sid = str(payload.get("sprint_id") or "")
+    if payload.get("schema_version") != AUTHORITY_SCHEMA or not SAFE_SPRINT_ID.fullmatch(sid):
+        raise ValueError("workspace authority schema or sprint id is invalid")
+    if path != workspace_authority_path(root, sid):
+        raise ValueError("workspace authority path is not canonical")
+    if str(payload.get("path") or "") != str(path):
+        raise ValueError("workspace authority self path is not canonical")
+    if str(payload.get("authority_id") or "") != f"workspace-authority-{sid}":
+        raise ValueError("workspace authority id is invalid")
+    workspace = _existing_directory(payload.get("workspace_root"))
+    if workspace is None:
+        raise ValueError("workspace authority root is unavailable")
+    if require_active_binding:
+        active_workspace = sprint_workspace_root(root, sid, harness_dir=harness_dir)
+        if active_workspace is None or active_workspace != workspace:
+            raise ValueError("workspace authority does not match active workspace binding")
+    expected_inputs = _canonical_input_paths(root, sid)
+    declared_inputs = payload.get("inputs") if isinstance(payload.get("inputs"), dict) else {}
+    for name, expected_path in expected_inputs.items():
+        row = declared_inputs.get(name) if isinstance(declared_inputs.get(name), dict) else {}
+        if Path(str(row.get("path") or "")).expanduser().resolve() != expected_path:
+            raise ValueError(f"workspace authority input path mismatch: {name}")
+        if not expected_path.is_file() or str(row.get("sha256") or "") != _sha256(expected_path):
+            raise ValueError(f"workspace authority input hash mismatch: {name}")
+    cwd = payload.get("cwd") if isinstance(payload.get("cwd"), dict) else {}
+    relative = str(cwd.get("effective_relative") or "")
+    effective = (workspace / relative).resolve()
+    try:
+        effective.relative_to(workspace)
+    except ValueError as exc:
+        raise ValueError("workspace authority effective cwd escapes workspace") from exc
+    return payload
 
 
 def _sprint_workspace_candidates(sprints_dir: Path, sid: str) -> list[Path]:

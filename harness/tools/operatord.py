@@ -392,18 +392,22 @@ def _materialize_envelope_context(result_dir: Path, envelope: dict) -> dict[str,
         env["TASK_ID"] = str(envelope["task_id"])
     if str(envelope.get("sprint_id") or "").strip():
         env["SID"] = str(envelope["sprint_id"])
-    if _observability_enabled():
-        identity_environment = {
-            "DISPATCH_ID": envelope.get("dispatch_id"),
-            "ATTEMPT_ID": envelope.get("attempt_id"),
-            "CORRELATION_ID": envelope.get("correlation_id"),
-            "CAUSATION_ID": envelope.get("causation_id"),
-            "SOLAR_OBSERVABILITY_SPAN_ID": envelope.get("span_id"),
-            "SOLAR_OBSERVABILITY_PARENT_SPAN_ID": envelope.get("parent_span_id"),
-        }
-        for name, value in identity_environment.items():
-            if value not in {None, ""}:
-                env[name] = str(value)
+    identity_environment = {
+        "DISPATCH_ID": envelope.get("dispatch_id"),
+        "ATTEMPT_ID": envelope.get("attempt_id"),
+        "CORRELATION_ID": envelope.get("correlation_id"),
+        "CAUSATION_ID": envelope.get("causation_id"),
+        "GRAPH_DISPATCH_ID": envelope.get("graph_dispatch_id"),
+        "SCHEDULER_INPUT_SHA256": envelope.get("scheduler_input_sha256"),
+        "SOLAR_OBSERVABILITY_SPAN_ID": envelope.get("span_id"),
+        "SOLAR_OBSERVABILITY_PARENT_SPAN_ID": envelope.get("parent_span_id"),
+    }
+    for name, value in identity_environment.items():
+        if value not in {None, ""}:
+            env[name] = str(value)
+    candidate_ids = envelope.get("frozen_candidate_ids")
+    if isinstance(candidate_ids, list):
+        env["FROZEN_CANDIDATE_IDS_JSON"] = json.dumps(candidate_ids, ensure_ascii=False)
 
     allowed_output_roots = [
         HARNESS_DIR.expanduser().resolve(strict=False),
@@ -435,6 +439,15 @@ def _materialize_envelope_context(result_dir: Path, envelope: dict) -> dict[str,
     direct_write_roots = [result_dir.expanduser().resolve(strict=False)]
     if work_dir:
         direct_write_roots.append(Path(work_dir).expanduser().resolve(strict=False))
+    # The native research-registry adapter validates its canonical handoff
+    # path against the frozen sprint/node identity before it executes and
+    # writes that exact path itself.  Generic model workers still use staged
+    # publication because their control-plane outputs can be replaced while
+    # they are running.
+    if str(envelope.get("operator_backend") or "").strip() == "research_operator_registry":
+        native_handoff = str(envelope.get("handoff_path") or "").strip()
+        if native_handoff:
+            direct_write_roots.append(authorized_output(native_handoff))
     for index, raw in enumerate(envelope.get("expected_artifacts") or []):
         if not str(raw or "").strip():
             continue
@@ -496,6 +509,189 @@ def _staging_output_path(staging_dir: Path, index: int, publish_path: Path) -> P
     if len(str(shortened)) < 240:
         return shortened
     return staging_dir / str(index)
+
+
+def _persistent_writable_snapshot(
+    exec_env: dict[str, str],
+    *,
+    ephemeral_root: Path,
+) -> dict[str, Any]:
+    """Hash persistent writable grants around one provider invocation.
+
+    Provider wrappers may write anywhere below the bound work directory, not
+    only declared output files.  A safe pre-work fallback therefore needs a
+    whole-grant observation.  Wrapper-owned task bookkeeping below
+    ``ephemeral_root`` is deliberately excluded.
+    """
+    roots: list[Path] = []
+    declared_roots: set[Path] = set()
+    work_dir = str(exec_env.get("CODEX_WORKDIR") or exec_env.get("WORK_DIR") or "").strip()
+    if work_dir:
+        roots.append(Path(work_dir).expanduser().resolve(strict=False))
+    try:
+        declared = json.loads(exec_env.get("SOLAR_OPERATOR_ALLOWED_OUTPUTS_JSON") or "[]")
+    except (TypeError, ValueError):
+        declared = []
+    for value in declared if isinstance(declared, list) else []:
+        if isinstance(value, str) and value.strip():
+            declared_root = Path(value).expanduser().resolve(strict=False)
+            roots.append(declared_root)
+            declared_roots.add(declared_root)
+
+    ordered: list[Path] = []
+    for root in roots:
+        if (root == ephemeral_root or root.is_relative_to(ephemeral_root)) and root not in declared_roots:
+            continue
+        if any(root == kept or root.is_relative_to(kept) for kept in ordered if kept.is_dir()):
+            continue
+        ordered.append(root)
+
+    try:
+        max_files = max(1, int(os.environ.get("SOLAR_EFFECT_SNAPSHOT_MAX_FILES", "5000") or 5000))
+        max_bytes = max(1, int(os.environ.get("SOLAR_EFFECT_SNAPSHOT_MAX_BYTES", str(512 * 1024 * 1024))))
+    except (TypeError, ValueError):
+        max_files = 5000
+        max_bytes = 512 * 1024 * 1024
+    entries: dict[str, dict[str, Any]] = {}
+    total_bytes = 0
+    complete = True
+    error = ""
+
+    def observe(path: Path) -> None:
+        nonlocal total_bytes, complete, error
+        if len(entries) >= max_files:
+            complete = False
+            error = "snapshot_file_limit_exceeded"
+            return
+        try:
+            if path.is_symlink():
+                entries[str(path)] = {"kind": "symlink", "target": os.readlink(path)}
+                return
+            if path.is_dir():
+                entries[str(path)] = {"kind": "directory"}
+                return
+            if path.is_file():
+                size = path.stat().st_size
+                total_bytes += size
+                if total_bytes > max_bytes:
+                    complete = False
+                    error = "snapshot_byte_limit_exceeded"
+                    return
+                entries[str(path)] = {
+                    "kind": "file",
+                    "size": size,
+                    "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                }
+                return
+            entries[str(path)] = {"kind": "missing"}
+        except OSError as exc:
+            complete = False
+            error = f"snapshot_error:{type(exc).__name__}"
+
+    for root in ordered:
+        if not complete:
+            break
+        observe(root)
+        if root.is_dir() and not root.is_symlink():
+            try:
+                descendants = sorted(root.rglob("*"), key=lambda item: str(item))
+            except OSError as exc:
+                complete = False
+                error = f"snapshot_walk_error:{type(exc).__name__}"
+                break
+            for path in descendants:
+                if path == ephemeral_root or path.is_relative_to(ephemeral_root):
+                    continue
+                observe(path)
+                if not complete:
+                    break
+    return {
+        "schema_version": "solar.persistent_writable_snapshot.v1",
+        "complete": complete,
+        "error": error,
+        "roots": [str(root) for root in ordered],
+        "entry_count": len(entries),
+        "total_bytes": total_bytes,
+        "entries": entries,
+    }
+
+
+def _persistent_effects_receipt(
+    before: dict[str, Any],
+    after: dict[str, Any],
+    *,
+    published_outputs: list[str],
+    publish_attempted: bool,
+) -> dict[str, Any]:
+    before_entries = before.get("entries") if isinstance(before.get("entries"), dict) else {}
+    after_entries = after.get("entries") if isinstance(after.get("entries"), dict) else {}
+    changed = sorted(
+        path
+        for path in set(before_entries) | set(after_entries)
+        if before_entries.get(path) != after_entries.get(path)
+    )
+    complete = bool(before.get("complete") is True and after.get("complete") is True)
+    unknown = not complete
+    return {
+        "schema_version": "solar.operator_effects_receipt.v1",
+        "observed": True,
+        "complete": complete,
+        "unknown": unknown,
+        "persistent_roots": list(before.get("roots") or []),
+        "before_entry_count": int(before.get("entry_count") or 0),
+        "after_entry_count": int(after.get("entry_count") or 0),
+        "changed_persistent_paths": changed[:200],
+        "changed_path_count": len(changed),
+        "outputs_changed": bool(changed),
+        "publish_attempted": bool(publish_attempted),
+        "outputs_published": bool(published_outputs),
+        "published_outputs": list(published_outputs),
+        "effects_started": bool(changed or published_outputs or unknown),
+        "before_error": str(before.get("error") or ""),
+        "after_error": str(after.get("error") or ""),
+    }
+
+
+def _validated_provider_invocation_receipt(
+    result_dir: Path,
+    envelope: dict[str, Any],
+) -> dict[str, Any] | None:
+    path = result_dir / "provider-invocation-receipt.json"
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, TypeError, ValueError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    identifiers = payload.get("identifiers") if isinstance(payload.get("identifiers"), dict) else {}
+    for key in (
+        "task_id",
+        "dispatch_id",
+        "attempt_id",
+        "correlation_id",
+        "graph_dispatch_id",
+        "scheduler_input_sha256",
+    ):
+        expected = str(envelope.get(key) or "").strip()
+        observed = str(identifiers.get(key) or "").strip()
+        if expected != observed:
+            return None
+    expected_candidates = [
+        str(value).strip()
+        for value in envelope.get("frozen_candidate_ids") or []
+        if str(value).strip()
+    ]
+    observed_candidates = [
+        str(value).strip()
+        for value in identifiers.get("frozen_candidate_ids") or []
+        if str(value).strip()
+    ]
+    if expected_candidates != observed_candidates:
+        return None
+    receipt = dict(payload)
+    receipt["path"] = str(path)
+    receipt["sha256"] = hashlib.sha256(path.read_bytes()).hexdigest()
+    return receipt
 
 
 def _publish_staged_outputs(exec_env: dict[str, str]) -> list[str]:
@@ -886,6 +1082,28 @@ def _failure_runtime_override_skip_reason(failure_text: str) -> str:
     put an otherwise healthy operator into cooldown.  A terminal provider
     exception still reaches the normal classifier.
     """
+    # Research-registry and other structured workers emit a Solar node
+    # envelope as their final JSON line.  That typed error is authoritative:
+    # provider warnings earlier in stdout must not be reclassified as the
+    # cause of the whole operator failure.
+    for line in reversed(str(failure_text or "").splitlines()):
+        try:
+            payload = json.loads(line.strip())
+        except (TypeError, ValueError, json.JSONDecodeError):
+            continue
+        if not isinstance(payload, dict):
+            continue
+        receipt = payload.get("receipt") if isinstance(payload.get("receipt"), dict) else payload
+        error = receipt.get("error") if isinstance(receipt.get("error"), dict) else None
+        if not error:
+            continue
+        error_type = str(error.get("type") or "").strip().lower()
+        if not error_type:
+            break
+        if any(token in error_type for token in ("quota", "rate_limit", "auth")):
+            return ""
+        return f"typed_non_flow_control:{error_type}"
+
     terminal_exception = ""
     for line in reversed(str(failure_text or "").splitlines()):
         candidate = line.strip()
@@ -1374,6 +1592,14 @@ def cmd_daemon(args: argparse.Namespace) -> int:
             result_dir.mkdir(parents=True, exist_ok=True)
             log_path = result_dir / "output.log"
             exec_env = os.environ.copy()
+            persistent_before: dict[str, Any] = {
+                "complete": False,
+                "error": "envelope_not_materialized",
+                "roots": [],
+                "entries": {},
+            }
+            published_outputs: list[str] = []
+            publish_attempted = False
             child_envelope = dict(envelope)
             if _observability_enabled():
                 child_envelope["span_id"] = worker_span_id
@@ -1381,6 +1607,10 @@ def cmd_daemon(args: argparse.Namespace) -> int:
                 child_envelope["causation_id"] = observation_ids["dispatch_id"]
             try:
                 exec_env.update(_materialize_envelope_context(result_dir, child_envelope))
+                persistent_before = _persistent_writable_snapshot(
+                    exec_env,
+                    ephemeral_root=result_dir.resolve(strict=False),
+                )
             except Exception as exc:
                 failure = f"operator envelope materialization failed: {type(exc).__name__}: {exc}"
                 _info(failure)
@@ -1708,8 +1938,10 @@ def cmd_daemon(args: argparse.Namespace) -> int:
                 exit_code = exit_code or 65
 
             if result_status == "completed":
+                publish_attempted = True
                 try:
-                    for published_path in _publish_staged_outputs(exec_env):
+                    published_outputs = _publish_staged_outputs(exec_env)
+                    for published_path in published_outputs:
                         log_lines.append(f"[output-publish] {published_path}")
                 except Exception as exc:
                     log_lines.append(f"[ERROR] declared output publish failed: {exc}")
@@ -1798,9 +2030,24 @@ def cmd_daemon(args: argparse.Namespace) -> int:
 
             # ── Write result artifact ─────────────────────────────────────────────
             log_tail = "\n".join(log_lines[-50:])
+            provider_receipt = _validated_provider_invocation_receipt(result_dir, envelope)
             flow_control_decision: dict[str, Any] | None = None
-            if result_status != "completed" and log_tail.strip():
-                skip_reason = _failure_runtime_override_skip_reason(log_tail)
+            if result_status != "completed" and (log_tail.strip() or provider_receipt is not None):
+                structured_stream = (
+                    provider_receipt.get("structured_stream")
+                    if isinstance(provider_receipt, dict)
+                    and isinstance(provider_receipt.get("structured_stream"), dict)
+                    else {}
+                )
+                structured_failure = str(
+                    structured_stream.get("terminal_error_message") or ""
+                ).strip()
+                if provider_receipt is not None and provider_receipt.get("provider_admission_refusal") is not True:
+                    skip_reason = "provider_receipt_not_admission_refusal"
+                else:
+                    skip_reason = _failure_runtime_override_skip_reason(
+                        structured_failure if provider_receipt is not None else log_tail
+                    )
                 if skip_reason:
                     flow_control_decision = {
                         "runtime_state": "",
@@ -1816,7 +2063,11 @@ def cmd_daemon(args: argparse.Namespace) -> int:
                             config=config,
                             envelope=envelope,
                             task_dir=result_dir,
-                            failure_text=log_tail,
+                            failure_text=(
+                                structured_failure
+                                if provider_receipt is not None
+                                else log_tail
+                            ),
                         )
                     except Exception as exc:
                         log_lines.append(f"[WARN] failure flow control hook failed: {exc}")
@@ -1852,6 +2103,45 @@ def cmd_daemon(args: argparse.Namespace) -> int:
                             provenance="observed",
                         )
                 log_tail = "\n".join(log_lines[-50:])
+            persistent_after = _persistent_writable_snapshot(
+                exec_env,
+                ephemeral_root=result_dir.resolve(strict=False),
+            )
+            effects_receipt = _persistent_effects_receipt(
+                persistent_before,
+                persistent_after,
+                published_outputs=published_outputs,
+                publish_attempted=publish_attempted,
+            )
+            typed_error: dict[str, Any] | None = None
+            typed_flow_control: dict[str, Any] | None = None
+            if provider_receipt and provider_receipt.get("provider_admission_refusal") is True:
+                raw_error = provider_receipt.get("error")
+                if isinstance(raw_error, dict):
+                    typed_error = dict(raw_error)
+                raw_flow = provider_receipt.get("failure_flow_control")
+                if isinstance(raw_flow, dict):
+                    typed_flow_control = dict(raw_flow)
+                    typed_flow_control["expires_at"] = str(
+                        (flow_control_decision or {}).get("expires_at") or ""
+                    )
+                    if flow_control_decision:
+                        typed_flow_control["runtime_state"] = str(
+                            flow_control_decision.get("runtime_state")
+                            or typed_flow_control.get("runtime_state")
+                            or ""
+                        )
+            result_identifiers = {
+                key: envelope.get(key)
+                for key in (
+                    "dispatch_id",
+                    "attempt_id",
+                    "correlation_id",
+                    "graph_dispatch_id",
+                    "scheduler_input_sha256",
+                    "frozen_candidate_ids",
+                )
+            }
             result_path = write_result(
                 operator_id=operator_id,
                 task_id=task_id,
@@ -1864,6 +2154,11 @@ def cmd_daemon(args: argparse.Namespace) -> int:
                 log_tail=log_tail,
                 model_route=model_route,
                 graph_path=envelope.get("graph_path"),
+                error=typed_error,
+                failure_flow_control=typed_flow_control,
+                identifiers=result_identifiers,
+                effects_receipt=effects_receipt,
+                provider_invocation_receipt=provider_receipt,
             )
             _info(f"Result written: {result_path}")
             _observe(

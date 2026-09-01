@@ -9,6 +9,7 @@ from .production_research import (
     production_services_from_environment,
 )
 from .bounded_experiment import BoundedLocalExperimentExecutor
+from .kv_cache_experiment import KVCacheExperimentPackageBuilder
 
 __all__ = [
     "BoundedUrlFetcher",
@@ -16,6 +17,7 @@ __all__ = [
     "ResearchModelService",
     "ProductionIdeaGenerator",
     "BoundedLocalExperimentExecutor",
+    "KVCacheExperimentPackageBuilder",
     "configured_secret_values",
     "production_services_from_environment",
 ]

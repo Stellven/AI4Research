@@ -1,0 +1,72 @@
+capability_capsule_id: cap.research-executable-experiment-design
+capsule_kind: capability
+metadata:
+  name: Executable Scientific Experiment Design
+  description: Bind a governed claim and retained dataset/code package into one exact bounded experiment plan.
+applicability:
+  task_types: [scientific-research, experiment-design, experiment-run]
+  positive_signals: [executable experiment, run poc, measured validation]
+  negative_signals: [design only]
+contract:
+  inputs:
+    required:
+      - name: claim_ref
+        schema_ref: schemas/evidence/research_claims.v1.schema.json
+      - name: dataset_manifest
+        schema_ref: schemas/evidence/dataset_manifest.v1.schema.json
+  outputs:
+    required:
+      - name: experiment_plan
+        schema_ref: schemas/evidence/experiment_plan.v1.schema.json
+  preconditions:
+    - check: package_available
+      description: Dataset/model/code package hashes and execution contract are present.
+  postconditions:
+    - check: exact_plan_ready
+      description: The plan binds the exact runner, inputs, metrics, criteria, sandbox, and result route.
+  invariants:
+    - Does not execute the experiment.
+    - Never removes dataset/model/code limitations from the retained package.
+composition:
+  consumes:
+    - schema_ref: schemas/evidence/research_claims.v1.schema.json
+      purpose: Governed claim being tested.
+    - schema_ref: schemas/evidence/dataset_manifest.v1.schema.json
+      purpose: Retained real dataset/model/code package.
+  produces:
+    - schema_ref: schemas/evidence/experiment_plan.v1.schema.json
+      purpose: Hash-bound executable plan.
+  compatible_with: [cap.research-native-experiment-approval, cap.research-experiment-run]
+  incompatible_with: []
+  requires_after: [cap.research-dataset-prepare]
+effects:
+  read: [governed claims and retained experiment assets]
+  write: [experiment plan evidence]
+  execute: [plugins/autosci/operators/scientific_lifecycle/action/experiment.py]
+  network: [none]
+  cost: [bounded deterministic plan binding]
+  risk: [incorrect asset binding would invalidate execution]
+bindings:
+  skills:
+    required: []
+    optional: [autosci.experiment_design]
+  mcp_capabilities: {}
+  data_refs: [schemas/evidence/dataset_manifest.v1.schema.json, schemas/evidence/experiment_plan.v1.schema.json]
+  secret_refs: []
+verification:
+  self_check:
+    - Validate the exact runner/input hashes and result route against the dataset manifest.
+  external_verifier:
+    required: true
+  pass_conditions:
+    - A schema-valid exact executable plan is emitted from the retained package.
+operator_compatibility:
+  preferred: [experiment_design_worker]
+  forbidden: [BackendFullWorkflowRunner]
+implementation:
+  trust_class: evidence_transform
+  entrypoint: plugins.autosci.operators.scientific_lifecycle.action.experiment:design_experiment
+  required_services: []
+provenance:
+  owner: opensolar
+  source_phase: elastic_planner_real_poc

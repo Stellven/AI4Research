@@ -2,7 +2,7 @@ capability_capsule_id: cap.research-experiment-run
 capsule_kind: capability
 metadata:
   name: Scientific Experiment Run
-  description: Execute one approved, hash-bound local experiment and emit measured result evidence.
+  description: Execute one approved, hash-bound local experiment when its dataset and executor are available; when the frozen request explicitly permits it, emit an evidence-backed inconclusive result instead of fabricating measurements.
 applicability:
   task_types:
     - scientific-research
@@ -24,6 +24,7 @@ contract:
   outputs:
     required:
       - name: experiment_result
+        type: collection
         schema_ref: schemas/evidence/experiment_result.v1.schema.json
   preconditions:
     - check: plan_available
@@ -32,11 +33,12 @@ contract:
       description: Required approval is present for non-fixture or external modes.
   postconditions:
     - check: result_evidence_emitted
-      description: Result evidence records outcome, metrics, artifacts, provenance, and limitations.
+      description: Result evidence records either measured execution or a typed unavailable-resource inconclusive outcome, with provenance and limitations.
   invariants:
     - Runs only an exact Python runner and input files whose hashes are bound into the approved plan.
     - Denies network access and writes only inside the approved experiment scope.
     - Does not claim measured execution when the process or result contract fails.
+    - Missing dataset or executor becomes inconclusive only when the frozen node objective explicitly requests that policy; other failures remain failures.
 composition:
   consumes:
     - schema_ref: schemas/evidence/experiment_plan.v1.schema.json
@@ -45,7 +47,7 @@ composition:
       purpose: Hash-bound approval for the exact experiment plan.
   produces:
     - schema_ref: schemas/evidence/experiment_result.v1.schema.json
-      purpose: Measured experiment result with recomputed criteria and runtime evidence.
+      purpose: Measured experiment result with recomputed criteria and runtime evidence, or explicit unavailable-resource evidence with outcome inconclusive and no fabricated metrics.
   compatible_with:
     - cap.research-experiment-monitor
     - cap.research-claim-verify
@@ -85,8 +87,8 @@ verification:
   external_verifier:
     required: true
   pass_conditions:
-    - The approved process exits successfully and emits valid measured experiment_result.v1 evidence.
-    - Acceptance criteria are recomputed from measured metrics rather than trusted from the runner.
+    - An available approved process exits successfully and emits valid measured experiment_result.v1 evidence with recomputed acceptance criteria.
+    - When the frozen request requires an unavailable-resource fallback, the result is inconclusive, execution_attempted is false, metrics are empty, and the unavailable resource and reason are retained.
 operator_compatibility:
   preferred:
     - experiment_run_worker

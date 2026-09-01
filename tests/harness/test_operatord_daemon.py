@@ -1102,7 +1102,39 @@ class TestFailureFlowControl:
             == ""
         )
 
-    def _submit_command_task(self, tmp_path: Path, env: dict, *, task_id: str, command: str) -> None:
+    def test_typed_provider_environment_failure_overrides_earlier_429_warning(self):
+        failure = "\n".join(
+            [
+                "Semantic Scholar returned HTTP 429 before a fallback provider ran.",
+                json.dumps(
+                    {
+                        "ok": False,
+                        "receipt": {
+                            "status": "awaiting_external",
+                            "error": {
+                                "type": "provider_environment_failure",
+                                "detail": "Authoritative coverage remained incomplete.",
+                                "retryable": True,
+                            },
+                        },
+                    }
+                ),
+            ]
+        )
+
+        assert _od._failure_runtime_override_skip_reason(failure) == (
+            "typed_non_flow_control:provider_environment_failure"
+        )
+
+    def _submit_command_task(
+        self,
+        tmp_path: Path,
+        env: dict,
+        *,
+        task_id: str,
+        command: str,
+        envelope_updates: dict | None = None,
+    ) -> None:
         envelope = {
             "task_id": task_id,
             "sprint_id": "sprint-command",
@@ -1112,6 +1144,7 @@ class TestFailureFlowControl:
             "objective": "exercise failure flow control",
             "command": command,
         }
+        envelope.update(envelope_updates or {})
         envelope_path = tmp_path / f"{task_id}.json"
         envelope_path.write_text(json.dumps(envelope), encoding="utf-8")
         result = subprocess.run(
@@ -1169,6 +1202,83 @@ class TestFailureFlowControl:
         result = json.loads(result_path.read_text(encoding="utf-8"))
         assert result["status"] == "failed"
         assert "'int' object has no attribute 'seek'" not in result["log_tail"]
+
+    def test_provider_admission_refusal_persists_typed_ids_and_zero_effects(self, tmp_path):
+        env = _setup_command_harness(tmp_path)
+        work_dir = tmp_path / "sprints" / "sprint-command" / "workdir"
+        work_dir.mkdir(parents=True)
+        declared_output = work_dir / "report.md"
+        worker = (
+            "import json,os,pathlib; "
+            "ids={'task_id':os.environ['TASK_ID'],'dispatch_id':os.environ['DISPATCH_ID'],"
+            "'attempt_id':os.environ['ATTEMPT_ID'],'correlation_id':os.environ['CORRELATION_ID'],"
+            "'graph_dispatch_id':os.environ['GRAPH_DISPATCH_ID'],"
+            "'scheduler_input_sha256':os.environ['SCHEDULER_INPUT_SHA256'],"
+            "'frozen_candidate_ids':json.loads(os.environ['FROZEN_CANDIDATE_IDS_JSON'])}; "
+            "receipt={'schema_version':'solar.provider_invocation_receipt.v1','provider':'openai',"
+            "'invocation_id':'inv-test','status':'failed','exit_code':1,'identifiers':ids,"
+            "'provider_admission_refusal':True,"
+            "'structured_stream':{'complete':True,'provider_admission_refusal':True,"
+            "'terminal_failed':True,'turn_completed':False,'agent_message_observed':False,"
+            "'tool_or_external_event_observed':False,'terminal_error_message':\"You've hit your usage limit\"},"
+            "'final_assistant_message':{'present':False,'sha256':''},"
+            "'tool_evidence':{'observed':False,'complete':True,'basis':'provider_refusal_before_final_assistant_message'},"
+            "'error':{'type':'provider_quota','phase':'admission','retryable':True,"
+            "'retry_scope':'frozen_operator_alternative'},"
+            "'failure_flow_control':{'runtime_state':'cooldown','reason':'rate_limit'}}; "
+            "pathlib.Path(os.environ['TASK_DIR'],'provider-invocation-receipt.json').write_text(json.dumps(receipt)); "
+            "print(\"You've hit your usage limit\", flush=True); raise SystemExit(1)"
+        )
+        self._submit_command_task(
+            tmp_path,
+            env,
+            task_id="T-typed-provider-refusal",
+            command=_command_text([_worker_python(), "-c", worker]),
+            envelope_updates={
+                "dispatch_id": "dispatch-T-typed-provider-refusal",
+                "attempt_id": "3",
+                "correlation_id": "sprint-command:N1",
+                "graph_dispatch_id": "graph-sprint-command-N1-rank2",
+                "scheduler_input_sha256": "a" * 64,
+                "frozen_candidate_ids": ["op.rank1", "test-command-builder", "op.rank3"],
+                "work_dir": str(work_dir),
+                "expected_artifacts": [str(declared_output)],
+            },
+        )
+
+        daemon_proc = self._run_command_daemon_once(env)
+        assert daemon_proc.returncode == 0, daemon_proc.stderr
+        result_path = (
+            tmp_path
+            / "run"
+            / "operator-results"
+            / "test-command-builder"
+            / "T-typed-provider-refusal"
+            / "result.json"
+        )
+        result = json.loads(result_path.read_text(encoding="utf-8"))
+        assert result["error"] == {
+            "type": "provider_quota",
+            "phase": "admission",
+            "retryable": True,
+            "retry_scope": "frozen_operator_alternative",
+        }
+        assert result["failure_flow_control"]["runtime_state"] == "cooldown"
+        assert result["dispatch_id"] == "dispatch-T-typed-provider-refusal"
+        assert result["attempt_id"] == "3"
+        assert result["correlation_id"] == "sprint-command:N1"
+        assert result["graph_dispatch_id"] == "graph-sprint-command-N1-rank2"
+        assert result["scheduler_input_sha256"] == "a" * 64
+        assert result["frozen_candidate_ids"] == [
+            "op.rank1",
+            "test-command-builder",
+            "op.rank3",
+        ]
+        assert result["effects_receipt"]["complete"] is True
+        assert result["effects_receipt"]["effects_started"] is False
+        assert result["effects_receipt"]["changed_path_count"] == 0
+        assert result["effects_receipt"]["outputs_published"] is False
+        assert result["effects_receipt"]["publish_attempted"] is False
 
     def test_fast_failed_quota_task_drains_trailing_error_before_classification(self, tmp_path):
         env = _setup_command_harness(tmp_path)

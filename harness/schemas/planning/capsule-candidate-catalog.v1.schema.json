@@ -34,7 +34,8 @@
                 "reason_codes": {"type": "array", "minItems": 1, "items": {"type": "string"}, "uniqueItems": true},
                 "missing_inputs": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
                 "unsupported_node_inputs": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
-                "missing_outputs": {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+                "missing_outputs": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+                "unsatisfied_proof_classes": {"type": "array", "items": {"const": "patch_proof"}, "uniqueItems": true}
               }
             }
           }

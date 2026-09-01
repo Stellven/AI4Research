@@ -3,7 +3,7 @@ version: 0.1.0
 capsule_kind: capability
 metadata:
   name: Requirement Compiler Audit
-  description: Execute read-only audit, inventory, and reporting tasks derived from compiled requirement packages.
+  description: Inspect source files without modifying them, then author declared non-code documentation, report, and handoff artifacts derived from compiled requirement packages.
 applicability:
   task_types:
     - audit_inventory
@@ -15,6 +15,9 @@ applicability:
     - inventory
     - report
     - documentation
+    - document authoring
+    - markdown
+    - summary
     - readiness
     - packaging
   negative_signals:
@@ -52,7 +55,7 @@ contract:
     - check: output_present
       field: handoff_md
   invariants:
-    - Audit tasks must not modify source code unless the graph explicitly opts into a mutating implementation capsule.
+    - Audit tasks may create declared documentation, report, and handoff artifacts but must not modify inspected source files.
     - Handoff must cite inspected files, commands, and any unverified assumptions.
 composition:
   consumes:

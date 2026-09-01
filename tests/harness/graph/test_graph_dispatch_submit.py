@@ -1282,6 +1282,41 @@ class TestSendToPaneLiteral:
         assert reopen_recovered_dependency_nodes(graph) == []
         assert graph["nodes"][2]["status"] == "skipped"
 
+    def test_scheduler_projection_preserves_dependency_skip_authority(self, tmp_harness):
+        """Save/load must retain why an automatically skipped node may later reopen."""
+        _tmp_path, sprints, sid, graph = tmp_harness
+        from graph_scheduler import load_graph, save_graph
+
+        graph["schema_version"] = "solar.scheduler_runtime_projection.v1"
+        graph["nodes"] = [
+            {"id": "S1", "status": "failed", "depends_on": []},
+            {
+                "id": "S2",
+                "status": "skipped",
+                "depends_on": ["S1"],
+                "skip_reason": "blocked_by_failed_dependency",
+                "blocked_by_failed_dependency": ["S1"],
+            },
+        ]
+        graph["node_results"] = {
+            "S1": {"status": "failed"},
+            "S2": {
+                "status": "skipped",
+                "note": "blocked_by_failed_dependency",
+                "blocked_by": ["S1"],
+            },
+        }
+        graph_path = sprints / f"{sid}.task_graph.json"
+
+        save_graph(graph_path, graph)
+        loaded = load_graph(graph_path)
+        loaded_nodes = {node["id"]: node for node in loaded["nodes"]}
+
+        assert loaded_nodes["S2"]["skip_reason"] == "blocked_by_failed_dependency"
+        assert loaded_nodes["S2"]["blocked_by_failed_dependency"] == ["S1"]
+        assert loaded["node_results"]["S2"]["note"] == "blocked_by_failed_dependency"
+        assert loaded["node_results"]["S2"]["blocked_by"] == ["S1"]
+
     def test_repair_completed_handoff_schedules_fresh_evaluator_dispatch(self, tmp_harness, monkeypatch):
         """After repair output exists, the node returns to review and gets a new eval generation."""
         tmp_path, sprints, sid, graph = tmp_harness

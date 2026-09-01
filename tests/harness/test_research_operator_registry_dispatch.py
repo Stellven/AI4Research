@@ -30,6 +30,82 @@ def _load_adapter():
     return module
 
 
+def test_report_registry_payload_preserves_experiment_evidence() -> None:
+    adapter = _load_adapter()
+    documents = [
+        {"schema": "claim_verdict.v1", "outputs": {"verdicts": []}},
+        {"schema": "research_method.v1", "outputs": {"methods": []}},
+        {"schema": "experiment_plan.v1", "outputs": {"experiment_plan": {}}},
+        {"schema": "experiment_result.v1", "outputs": {"result": {}}},
+    ]
+
+    plan_payload = adapter._payload_for_documents("report_plan", documents)
+    draft_payload = adapter._payload_for_documents(
+        "report_draft",
+        [
+            {"schema": "scientific_report_plan.v1", "outputs": {"report_plan": {}}},
+            *documents,
+        ],
+    )
+
+    assert set(plan_payload) == {
+        "verdicts",
+        "research_method",
+        "experiment_plan",
+        "experiment_result",
+    }
+    assert set(draft_payload) == {
+        "report_plan",
+        "verdicts",
+        "research_method",
+        "experiment_plan",
+        "experiment_result",
+    }
+
+
+def test_unified_registry_resolves_shared_node_by_frozen_implementation_id() -> None:
+    adapter = _load_adapter()
+    binding = {
+        "registry": "plugins.autosci.operators.scientific_lifecycle.registry",
+        "node_id": "report_draft",
+        "implementation_operator_id": "autosci-report-drafting-physical",
+    }
+
+    resolved = adapter._validated_binding(
+        {
+            "operator_id": "autosci-report-worker",
+            "runtime_binding": binding,
+        }
+    )
+
+    assert resolved == {
+        "operator_id": "autosci-report-worker",
+        **binding,
+    }
+
+
+def test_report_title_is_bound_from_frozen_requirement_ir() -> None:
+    adapter = _load_adapter()
+    title = "KV Cache Efficiency Landscape for Long-Context LLM Inference"
+    requirement_ir = {
+        "schema_version": "solar.requirement_ir.v2",
+        "requirements": [{
+            "requirement_id": "R-title",
+            "statement": f"Use the project name: {title}.",
+            "acceptance": {"kind": "coverage", "required_values": [title]},
+        }],
+    }
+    node = {
+        "goal": f'Produce the final report titled "{title}" with retained evidence.'
+    }
+
+    assert adapter._explicit_report_title(node, [requirement_ir]) == title
+    assert adapter._explicit_report_title(
+        {"goal": 'Produce the final report titled "Invented title".'},
+        [requirement_ir],
+    ) == ""
+
+
 def _binding() -> dict:
     return {
         "registry": "plugins.autosci.operators.scientific_lifecycle.evidence.registry",
@@ -55,6 +131,15 @@ def _scheduler_node(
     operator_id: str = "discovery_ingest_worker",
     capsule_id: str = "cap.research-discovery-ingest",
 ) -> dict:
+    output_routes = [
+        {
+            "artifact_type": artifact_type,
+            "route_kind": "sprint_private",
+            "relative_path": f"artifacts/{node_id}/output-{index}",
+            "materialization_kind": "directory",
+        }
+        for index, artifact_type in enumerate(produces, start=1)
+    ]
     return {
         "id": node_id,
         "goal": f"Complete {node_id}",
@@ -62,6 +147,7 @@ def _scheduler_node(
         "dispatch_task_type": "research",
         "depends_on": depends_on,
         "requirement_ids": [f"REQ-{node_id}"],
+        "capability_capsule_id": capsule_id,
         "capsule_binding": {
             "capsule_ids": [capsule_id],
             "composition_id": None,
@@ -75,6 +161,8 @@ def _scheduler_node(
             }
         ],
         "artifact_contract": {"consumes": consumes, "produces": produces},
+        "output_routes": output_routes,
+        "workspace_reads": [],
         "evaluation_binding": {
             "deterministic_gate_ids": ["gate.schema.v1"],
             "semantic_evaluator_ids": ["evaluator.fidelity.v1"],
@@ -306,14 +394,37 @@ def test_all_current_providerless_registry_operators_are_locally_dispatchable(mo
 
     assert set(registry_operators) == {
         "autosci-claim-extract-worker",
+        "autosci-literature-discover-worker",
+        "autosci-method-extract-worker",
+        "dataset_prepare_worker",
         "discovery_ingest_worker",
+        "source_assess_worker",
         "idea_evaluate_worker",
         "experiment_design_worker",
+        "experiment_run_worker",
+        "claim_select_one_worker",
+        "claim_verify_worker",
+        "experiment_monitor_worker",
+        "experiment_approval_gate_worker",
+        "autosci-report-plan-worker",
+        "autosci-report-worker",
     }
     for operator_id, operator in registry_operators.items():
         assert not operator.get("provider") and not operator.get("vendor")
         assert not operator.get("key_ref")
         assert mtr.operator_dispatchable({"operator_id": operator_id, **operator}) == (True, "ready")
+
+
+def test_all_current_registry_operators_ship_their_declared_persona():
+    operators = json.loads((HARNESS / "config" / "physical-operators.json").read_text(encoding="utf-8"))["operators"]
+
+    for operator_id, operator in operators.items():
+        if operator.get("backend") != "research_operator_registry":
+            continue
+        persona = str(operator.get("persona") or operator.get("role") or "").strip()
+        assert persona, f"{operator_id} does not declare a persona"
+        persona_path = HARNESS / "personas" / f"{persona}.md"
+        assert persona_path.is_file(), f"{operator_id} persona file missing: {persona_path}"
 
 
 def test_provider_backed_registry_operator_still_requires_credential_reference(monkeypatch):
@@ -380,6 +491,60 @@ def test_registry_adapter_executes_exact_discovery_ingest_entrypoint(tmp_path):
     assert all((Path(envelope["work_dir"]) / item["path"]).is_file() for item in receipt["artifacts"])
     assert receipt_path.is_file()
     assert Path(envelope["handoff_path"]).is_file()
+
+
+def test_registry_adapter_accepts_direct_graph_dispatch_operator_lease(tmp_path):
+    adapter = _load_adapter()
+    envelope, _graph_path, _sprints_dir = _verified_dispatch_fixture(tmp_path, adapter)
+    status_path = adapter.RUN_DIR / envelope["task_id"] / "status.json"
+    status_path.unlink()
+    adapter.OPERATOR_LEASE_DIR = tmp_path / "operator-leases"
+    adapter.OPERATOR_LEASE_DIR.mkdir()
+    (adapter.OPERATOR_LEASE_DIR / f"{envelope['operator_id']}.json").write_text(
+        json.dumps(
+            {
+                "operator_id": envelope["operator_id"],
+                "task_id": envelope["task_id"],
+                "sprint_id": envelope["sprint_id"],
+                "node_id": envelope["node_id"],
+                "leased_at": "2026-08-28T18:49:30Z",
+                "expires_at": "2099-08-28T19:04:30Z",
+                "state": "running",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    receipt = adapter.execute(envelope, receipt_path=tmp_path / "direct_node_envelope.json")
+
+    assert receipt["status"] == "completed"
+    assert receipt["operator_id"] == envelope["operator_id"]
+
+
+def test_registry_adapter_rejects_operator_lease_for_another_task(tmp_path):
+    adapter = _load_adapter()
+    envelope, _graph_path, _sprints_dir = _verified_dispatch_fixture(tmp_path, adapter)
+    status_path = adapter.RUN_DIR / envelope["task_id"] / "status.json"
+    status_path.unlink()
+    adapter.OPERATOR_LEASE_DIR = tmp_path / "operator-leases"
+    adapter.OPERATOR_LEASE_DIR.mkdir()
+    (adapter.OPERATOR_LEASE_DIR / f"{envelope['operator_id']}.json").write_text(
+        json.dumps(
+            {
+                "operator_id": envelope["operator_id"],
+                "task_id": "another-task",
+                "sprint_id": envelope["sprint_id"],
+                "node_id": envelope["node_id"],
+                "leased_at": "2026-08-28T18:49:30Z",
+                "expires_at": "2099-08-28T19:04:30Z",
+                "state": "running",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(adapter.RegistryAdapterError, match="task_id does not match"):
+        adapter.execute(envelope, receipt_path=tmp_path / "direct_node_envelope.json")
 
 
 def test_registry_adapter_claim_extract_consumes_frozen_paper_route_and_hands_off_direct_artifact(tmp_path):
@@ -581,5 +746,8 @@ def test_registry_adapter_rejects_wrong_or_missing_scheduler_lease(tmp_path):
         adapter.execute(envelope, receipt_path=tmp_path / "node_envelope.json")
 
     status_path.unlink()
-    with pytest.raises(adapter.RegistryAdapterError, match="lease status is missing"):
+    with pytest.raises(
+        adapter.RegistryAdapterError,
+        match="neither scheduler task status nor an active operator lease exists",
+    ):
         adapter.execute(envelope, receipt_path=tmp_path / "node_envelope.json")

@@ -76,6 +76,7 @@
       }
     },
     "expression": {
+      "description": "Typed expression AST. contains_all, contains_any, and contains_none require exactly two args and the second arg must be a set expression, including for a one-item set. all_of and any_of require at least two args; not requires one; all other operators require two.",
       "oneOf": [
         {
           "type": "object",
@@ -114,6 +115,7 @@
           "required": ["op", "args"],
           "properties": {
             "op": {
+              "description": "Operator governed by the expression operand contract; collection containment operators consume a set as their right operand.",
               "enum": [
                 "all_of", "any_of", "not", "equals", "not_equals",
                 "contains_all", "contains_any", "contains_none", "at_least", "at_most",
@@ -123,6 +125,7 @@
               ]
             },
             "args": {
+              "description": "Ordered operands. For contains_all, contains_any, and contains_none, args[1] must be an object with a set array, never a scalar literal or ref.",
               "type": "array",
               "minItems": 1,
               "items": {"$ref": "#/$defs/expression"}

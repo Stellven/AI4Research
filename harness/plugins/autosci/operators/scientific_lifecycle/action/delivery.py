@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 from typing import Any
@@ -75,12 +76,24 @@ def verify_claim(node_request: dict[str, Any], context: OperatorContext) -> dict
         for paper in papers
         if str(paper.get("paper_id") or "").strip()
     }
-    paper_anchors = {
-        str(section.get("source_anchor") or "").strip()
-        for paper in papers
-        for section in paper.get("sections") or []
-        if isinstance(section, dict) and str(section.get("source_anchor") or "").strip()
-    }
+    paper_anchor_text: dict[str, list[str]] = {}
+    for paper in papers:
+        paper_id = str(paper.get("paper_id") or "").strip()
+        for section in paper.get("sections") or []:
+            if not isinstance(section, dict):
+                continue
+            anchor = str(section.get("source_anchor") or "").strip()
+            if not anchor:
+                continue
+            normalized_text = re.sub(
+                r"\s+", " ", str(section.get("text") or "")
+            ).strip().casefold()
+            paper_anchor_text.setdefault(anchor, []).append(normalized_text)
+            if paper_id:
+                paper_anchor_text.setdefault(
+                    f"{paper_id}::{anchor}", []
+                ).append(normalized_text)
+    paper_anchors = set(paper_anchor_text)
     verdicts: list[dict[str, Any]] = []
     for claim in claims:
         claim_id = require_text(claim.get("claim_id"), "claim_id")
@@ -92,28 +105,59 @@ def verify_claim(node_request: dict[str, Any], context: OperatorContext) -> dict
         resolved_paper_ids = sorted(claim_evidence_ids & paper_ids)
         anchor_resolved = bool(source_anchor and source_anchor in paper_anchors)
         literature_grounded = bool(resolved_paper_ids or anchor_resolved)
+        normalized_claim_text = re.sub(
+            r"\s+", " ", str(claim.get("text") or "")
+        ).strip().casefold()
+        source_reported_exact = bool(
+            anchor_resolved
+            and normalized_claim_text
+            and any(
+                normalized_claim_text in source_text
+                for source_text in paper_anchor_text.get(source_anchor, [])
+            )
+        )
         matched = bool(criteria) and all(criteria_results.get(item) is True for item in criteria)
         rejected = any(criteria_results.get(item) is False for item in criteria)
         scope_comparison = compare_claim_evidence_scope(claim, experiment)
         scope_risks = list(scope_comparison["risks"])
-        if outcome == "refutes" or rejected:
+        if results and (outcome == "refutes" or rejected):
             verdict, support_class, confidence = "not_supported", "unsupported", 0.9
             basis = "Experiment evidence refutes the claim or fails an explicit acceptance criterion."
-        elif scope_risks:
+        elif results and scope_risks:
             verdict, support_class, confidence = "insufficient", "insufficient_evidence", 0.35
             basis = "Claim scope exceeds the available evidence; local support cannot establish the broader assertion."
-        elif outcome == "supports" and experiment_evidence and matched:
+        elif results and outcome == "supports" and experiment_evidence and matched:
             verdict, support_class, confidence = "supported", "supported", 0.9
             basis = "Experiment evidence supports every explicit claim acceptance criterion."
+        elif not results and source_reported_exact:
+            verdict, support_class, confidence = "partially_supported", "source_reported", 0.85
+            basis = (
+                "The claim is an exact statement retained from the cited source section; "
+                "the workflow did not independently reproduce the scientific result."
+            )
         else:
             verdict, support_class, confidence = "insufficient", "insufficient_evidence", 0.3
-            basis = "Evidence does not establish every explicit acceptance criterion."
-        evidence_ids = sorted(set([*experiment_evidence, *[str(item) for item in claim.get("evidence_ids") or [] if str(item).strip()]]))
-        if not evidence_ids:
-            evidence_ids = [f"missing-evidence:{claim_id}"]
-        limitations = [] if support_class != "insufficient_evidence" else [
-            *(scope_risks or ["Missing or incomplete acceptance-criteria evidence."])
+            basis = (
+                "Evidence does not establish every explicit acceptance criterion."
+                if results
+                else "The claim text could not be reproduced exactly from its cited retained source section."
+            )
+        retained_evidence_ids = [
+            *experiment_evidence,
+            *[str(item) for item in claim.get("evidence_ids") or [] if str(item).strip()],
         ]
+        if retained_evidence_ids:
+            evidence_ids = sorted(set([claim_id, *retained_evidence_ids]))
+        else:
+            evidence_ids = [f"missing-evidence:{claim_id}"]
+        if support_class == "source_reported":
+            limitations = [
+                "Source-reported exact quotation only; no local reproduction or independent scientific validation was performed."
+            ]
+        elif support_class == "insufficient_evidence":
+            limitations = [*(scope_risks or ["Missing or incomplete acceptance-criteria evidence."])]
+        else:
+            limitations = []
         if papers and not literature_grounded:
             limitations.append(
                 "The claim's paper identifier or source anchor does not resolve in the retained paper evidence."
@@ -134,7 +178,19 @@ def verify_claim(node_request: dict[str, Any], context: OperatorContext) -> dict
             "evidence_ids": evidence_ids,
             "limitations": limitations,
             "acceptance_criteria_checked": criteria,
-            "evidence_outcome": "insufficient_evidence" if support_class == "insufficient_evidence" else outcome,
+            "evidence_outcome": (
+                "insufficient_evidence"
+                if support_class == "insufficient_evidence"
+                else "source_reported"
+                if support_class == "source_reported"
+                else outcome
+            ),
+            "verification_basis": (
+                "source_reported_exact_quote"
+                if support_class == "source_reported"
+                else "measured_experiment" if results else "unresolved"
+            ),
+            "locally_reproduced": bool(results and outcome == "supports" and matched),
             "overclaim_risks": scope_risks,
             "scope_comparison": scope_comparison,
             "source_grounding": {
@@ -142,6 +198,7 @@ def verify_claim(node_request: dict[str, Any], context: OperatorContext) -> dict
                 "resolved": literature_grounded,
                 "resolved_paper_ids": resolved_paper_ids,
                 "source_anchor_resolved": anchor_resolved,
+                "exact_quote_resolved": source_reported_exact,
             },
         })
     return completed_result(
@@ -197,9 +254,326 @@ def _method_evidence(context: OperatorContext) -> tuple[list[dict[str, Any]], li
     return methods, limitations
 
 
+def _source_assessment_evidence(
+    context: OperatorContext,
+) -> tuple[dict[str, Any], list[str]]:
+    documents = load_documents(
+        context,
+        schemas=("research_source_assessment.v1",),
+        payload_keys=("source_assessment",),
+        required=False,
+    )
+    assessment: dict[str, Any] = {}
+    limitations: list[str] = []
+    for document in documents:
+        values = _outputs(document)
+        if assessment:
+            raise ResearchOperatorError(
+                "Multiple source assessments were supplied to one report",
+                error_type="artifact_identity_mismatch",
+            )
+        assessment = values
+        limitations.extend(
+            str(item) for item in document.get("limitations") or [] if str(item).strip()
+        )
+    return assessment, limitations
+
+
+def _paper_evidence(
+    context: OperatorContext,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    documents = load_documents(
+        context,
+        schemas=("research_paper.v1",),
+        payload_keys=("research_paper",),
+        required=False,
+    )
+    papers: list[dict[str, Any]] = []
+    limitations: list[str] = []
+    seen: set[str] = set()
+    for document in documents:
+        values = _outputs(document)
+        paper = values.get("paper") if isinstance(values, dict) else None
+        if not isinstance(paper, dict):
+            continue
+        paper_id = require_text(paper.get("paper_id"), "paper_id")
+        if paper_id in seen:
+            raise ResearchOperatorError(
+                f"Duplicate research paper identity supplied to one report: {paper_id}",
+                error_type="artifact_identity_mismatch",
+            )
+        seen.add(paper_id)
+        papers.append(paper)
+        limitations.extend(
+            str(item) for item in document.get("limitations") or [] if str(item).strip()
+        )
+    return papers, list(dict.fromkeys(limitations))
+
+
+def _experiment_evidence(
+    context: OperatorContext,
+) -> tuple[dict[str, Any], dict[str, Any], list[str]]:
+    """Load a matched measured experiment plan/result pair when supplied.
+
+    Research-only reports remain valid without either artifact.  A report may
+    not consume only one side of the pair, mix experiment identities, or call
+    an outcome measured when no metrics or retained result evidence exist.
+    """
+
+    documents = load_documents(
+        context,
+        schemas=("experiment_plan.v1", "experiment_result.v1"),
+        payload_keys=("experiment_plan", "experiment_result"),
+        required=False,
+    )
+    experiment_plan: dict[str, Any] = {}
+    experiment_result: dict[str, Any] = {}
+    limitations: list[str] = []
+    for document in documents:
+        values = _outputs(document)
+        raw_plan = values.get("experiment_plan") if isinstance(values, dict) else None
+        raw_result = values.get("result") if isinstance(values, dict) else None
+        if isinstance(raw_plan, dict):
+            if experiment_plan:
+                raise ResearchOperatorError(
+                    "Multiple experiment plans were supplied to one report",
+                    error_type="artifact_identity_mismatch",
+                )
+            experiment_plan = raw_plan
+        if isinstance(raw_result, dict):
+            if experiment_result:
+                raise ResearchOperatorError(
+                    "Multiple experiment results were supplied to one report",
+                    error_type="artifact_identity_mismatch",
+                )
+            experiment_result = raw_result
+        limitations.extend(
+            str(item) for item in document.get("limitations") or [] if str(item).strip()
+        )
+
+    if bool(experiment_plan) != bool(experiment_result):
+        raise ResearchOperatorError(
+            "A combined experiment report requires both experiment_plan.v1 and experiment_result.v1",
+            error_type="missing_input",
+        )
+    if not experiment_plan:
+        return {}, {}, []
+
+    plan_id = require_text(experiment_plan.get("experiment_id"), "experiment plan id")
+    result_id = require_text(experiment_result.get("experiment_id"), "experiment result id")
+    if plan_id != result_id:
+        raise ResearchOperatorError(
+            f"Experiment plan/result identity mismatch: {plan_id} != {result_id}",
+            error_type="artifact_identity_mismatch",
+        )
+    metrics = [item for item in experiment_result.get("metrics") or [] if isinstance(item, dict)]
+    evidence_ids = [
+        str(item).strip()
+        for item in experiment_result.get("evidence_ids") or []
+        if str(item).strip()
+    ]
+    outcome = str(experiment_result.get("outcome") or "")
+    if not evidence_ids:
+        raise ResearchOperatorError(
+            "Experiment reporting requires non-empty result or availability evidence ids",
+            error_type="insufficient_evidence",
+        )
+    if outcome != "inconclusive" and not metrics:
+        raise ResearchOperatorError(
+            "A conclusive measured experiment result requires non-empty metrics",
+            error_type="insufficient_evidence",
+        )
+    if outcome == "inconclusive" and not metrics:
+        availability = (
+            experiment_result.get("availability")
+            if isinstance(experiment_result.get("availability"), dict)
+            else {}
+        )
+        if str(availability.get("status") or "") != "unavailable":
+            raise ResearchOperatorError(
+                "A metric-free inconclusive result must retain unavailable-resource evidence",
+                error_type="insufficient_evidence",
+            )
+    limitations.extend(
+        str(item)
+        for item in experiment_result.get("limitations") or []
+        if str(item).strip()
+    )
+    return experiment_plan, experiment_result, list(dict.fromkeys(limitations))
+
+
+def _requirement_bindings(context: OperatorContext) -> list[dict[str, Any]]:
+    """Preserve accepted RequirementIR obligations without claiming they passed."""
+
+    document = context.payload.get("requirement_ir")
+    if document is None:
+        return []
+    if not isinstance(document, dict) or not str(document.get("schema_version") or "").startswith(
+        "solar.requirement_ir."
+    ):
+        raise ResearchOperatorError(
+            "Accepted RequirementIR input is malformed",
+            error_type="artifact_identity_mismatch",
+        )
+    raw_requirements = document.get("requirements")
+    if not isinstance(raw_requirements, list) or not raw_requirements:
+        raise ResearchOperatorError(
+            "Accepted RequirementIR has no requirements",
+            error_type="missing_input",
+        )
+    bindings: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for raw in raw_requirements:
+        if not isinstance(raw, dict):
+            raise ResearchOperatorError(
+                "RequirementIR contains a non-object requirement",
+                error_type="invalid_input",
+            )
+        requirement_id = require_text(raw.get("requirement_id"), "requirement_id")
+        if requirement_id in seen:
+            raise ResearchOperatorError(
+                f"RequirementIR contains duplicate requirement id: {requirement_id}",
+                error_type="invalid_input",
+            )
+        seen.add(requirement_id)
+        acceptance = raw.get("acceptance") if isinstance(raw.get("acceptance"), dict) else {}
+        bindings.append(
+            {
+                "requirement_id": requirement_id,
+                "statement": require_text(raw.get("statement"), f"requirement {requirement_id} statement"),
+                "priority": str(raw.get("priority") or "must"),
+                "check": str(raw.get("check") or ""),
+                "acceptance": {
+                    "kind": str(acceptance.get("kind") or ""),
+                    "required_values": [
+                        str(item)
+                        for item in acceptance.get("required_values") or []
+                        if str(item).strip()
+                    ],
+                },
+            }
+        )
+    return bindings
+
+
+def _unknown_resolution_traces(
+    requirement_bindings: list[dict[str, Any]],
+    evidence_ids: list[str],
+    owned_requirement_ids: set[str],
+) -> list[dict[str, Any]]:
+    """Materialize unresolved-question obligations without inventing answers.
+
+    The Requirement Compiler permits an unknown to be either resolved or
+    explicitly retained as unresolved.  Report planning cannot infer a
+    scientific resolution merely because evidence artifacts exist, so the
+    conservative, truthful default is an explicit unresolved trace over the
+    evidence set that was available to the planner.
+    """
+
+    traces: list[dict[str, Any]] = []
+    for binding in requirement_bindings:
+        if str(binding.get("check") or "") != "check.unknown_resolution_trace.v1":
+            continue
+        requirement_id = require_text(
+            binding.get("requirement_id"), "unknown-resolution requirement_id"
+        )
+        statement = require_text(
+            binding.get("statement"), f"unknown-resolution {requirement_id} statement"
+        )
+        owned_by_report_plan = requirement_id in owned_requirement_ids
+        traces.append(
+            {
+                "requirement_id": requirement_id,
+                "finding": (
+                    (
+                        "The report plan resolves this planning obligation with an explicit "
+                        "section structure, requirement bindings, evidence identifiers, claim-status "
+                        "mappings, and unresolved-question traces: "
+                    )
+                    if owned_by_report_plan
+                    else (
+                        "The available evidence did not establish a defensible resolution; "
+                        "the report must preserve this question explicitly: "
+                    )
+                )
+                + statement,
+                "supporting_evidence": list(evidence_ids),
+                "unresolved_status": (
+                    "resolved" if owned_by_report_plan else "unresolved"
+                ),
+            }
+        )
+    return traces
+
+
+def _claim_status_mappings(
+    verdicts: list[dict[str, Any]],
+    experiment_result: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Carry verifier truth and the experimental boundary into report planning."""
+
+    experiment_evidence_ids = {
+        str(item)
+        for item in experiment_result.get("evidence_ids") or []
+        if str(item).strip()
+    }
+    experiment_executed = bool(
+        experiment_result
+        and experiment_result.get("execution_attempted", True)
+        and experiment_result.get("metrics")
+    )
+    mappings: list[dict[str, Any]] = []
+    for item in verdicts:
+        claim_id = require_text(item.get("claim_id"), "claim verdict claim_id")
+        claim_evidence_ids = [
+            str(value)
+            for value in item.get("evidence_ids") or []
+            if str(value).strip()
+        ]
+        verdict = require_text(item.get("verdict"), f"claim verdict {claim_id}")
+        evidence_outcome = str(item.get("evidence_outcome") or verdict)
+        contradicted = (
+            verdict == "not_supported"
+            or evidence_outcome in {"contradicted", "refuted"}
+            or bool(item.get("contradicted_by"))
+        )
+        mappings.append(
+            {
+                "claim_id": claim_id,
+                "verdict": verdict,
+                "support_classification": str(
+                    item.get("support_classification") or verdict
+                ),
+                "evidence_outcome": evidence_outcome,
+                "evidence_ids": claim_evidence_ids,
+                "contradiction_status": (
+                    "contradicted" if contradicted else "no_recorded_contradiction"
+                ),
+                "tested_status": (
+                    "tested"
+                    if experiment_executed
+                    and bool(set(claim_evidence_ids) & experiment_evidence_ids)
+                    else "not_tested"
+                ),
+                "limitations": [
+                    str(value)
+                    for value in item.get("limitations") or []
+                    if str(value).strip()
+                ],
+            }
+        )
+    return mappings
+
+
 def plan_report(node_request: dict[str, Any], context: OperatorContext) -> dict[str, Any]:
     verdicts = _verdicts(context)
     methods, method_limitations = _method_evidence(context)
+    papers, paper_limitations = _paper_evidence(context)
+    source_assessment, source_assessment_limitations = _source_assessment_evidence(context)
+    experiment_plan, experiment_result, experiment_limitations = _experiment_evidence(
+        context
+    )
+    requirement_bindings = _requirement_bindings(context)
     reportable = [
         item for item in verdicts
         if _grounded_evidence_ids(item) and str(item.get("claim_text") or "").strip()
@@ -218,11 +592,104 @@ def plan_report(node_request: dict[str, Any], context: OperatorContext) -> dict[
         for evidence_id in method.get("evidence_ids") or []
         if str(evidence_id).strip()
     }
-    evidence_ids = sorted(claim_evidence_ids | method_evidence_ids)
+    experiment_evidence_ids = {
+        str(evidence_id)
+        for evidence_id in experiment_result.get("evidence_ids") or []
+        if str(evidence_id).strip()
+    }
+    source_assessment_evidence_ids = {
+        str(evidence_id)
+        for assessment in source_assessment.get("assessments") or []
+        if isinstance(assessment, dict)
+        for evidence_id in assessment.get("evidence_ids") or []
+        if str(evidence_id).strip()
+    }
+    paper_evidence_ids = {
+        evidence_id
+        for paper in papers
+        for evidence_id in (
+            str(paper.get("paper_id") or "").strip(),
+            *(
+                str(section.get("source_anchor") or "").strip()
+                for section in paper.get("sections") or []
+                if isinstance(section, dict)
+            ),
+        )
+        if evidence_id
+    }
+    evidence_ids = sorted(
+        claim_evidence_ids
+        | method_evidence_ids
+        | experiment_evidence_ids
+        | source_assessment_evidence_ids
+        | paper_evidence_ids
+    )
+    unknown_resolution_traces = _unknown_resolution_traces(
+        requirement_bindings,
+        evidence_ids,
+        {
+            str(item)
+            for item in context.payload.get("requirement_ids") or []
+            if str(item).strip()
+        },
+    )
+    claim_status_mappings = _claim_status_mappings(verdicts, experiment_result)
     sections = [
-        {"section_id": "summary", "title": f"Summary: {topic}", "purpose": "Answer the requested topic.", "evidence_ids": evidence_ids},
-        {"section_id": "findings", "title": "Source-grounded findings", "purpose": "Present claims with their unchanged verification classification.", "evidence_ids": evidence_ids},
+        {
+            "section_id": "summary",
+            "title": f"Summary: {topic}",
+            "purpose": "Answer the requested topic.",
+            "evidence_ids": evidence_ids,
+            "requirement_ids": [],
+        },
+        {
+            "section_id": "findings",
+            "title": "Source-grounded findings",
+            "purpose": "Present claims with their unchanged verification classification.",
+            "evidence_ids": evidence_ids,
+            "requirement_ids": [],
+        },
     ]
+    if requirement_bindings:
+        sections.append(
+            {
+                "section_id": "requirements",
+                "title": "Requested outcomes and verification boundary",
+                "purpose": (
+                    "Preserve each accepted requirement and its check contract; the independent evaluator, "
+                    "not this producer, decides whether the report satisfies it."
+                ),
+                "evidence_ids": evidence_ids,
+                "requirement_ids": [item["requirement_id"] for item in requirement_bindings],
+            }
+        )
+    if unknown_resolution_traces:
+        sections.append(
+            {
+                "section_id": "unknown_resolution",
+                "title": "Resolved and unresolved research questions",
+                "purpose": (
+                    "State each compiler-identified unknown, the evidence available to assess it, "
+                    "and whether it remains unresolved without inventing a resolution."
+                ),
+                "evidence_ids": evidence_ids,
+                "requirement_ids": [
+                    item["requirement_id"] for item in unknown_resolution_traces
+                ],
+            }
+        )
+    sections.append(
+        {
+            "section_id": "claim_audit",
+            "title": "Claim verdicts, disagreements, and test boundary",
+            "purpose": (
+                "Map every claim to its actual verifier classification, recorded contradiction state, "
+                "and tested-versus-not-tested status."
+            ),
+            "evidence_ids": evidence_ids,
+            "requirement_ids": [],
+        }
+    )
     if methods or method_limitations:
         sections.append({
             "section_id": "methods",
@@ -233,21 +700,83 @@ def plan_report(node_request: dict[str, Any], context: OperatorContext) -> dict[
                 else "State that structured method evidence was insufficient."
             ),
             "evidence_ids": sorted(method_evidence_ids),
+            "requirement_ids": [],
         })
+    if source_assessment:
+        sections.append({
+            "section_id": "source_assessment",
+            "title": "Source relevance, credibility, and benchmark resolution",
+            "purpose": (
+                "Report which discovered sources were selected, excluded, or unresolved, "
+                "which benchmark candidates were identified, and the metadata-only credibility boundary."
+            ),
+            "evidence_ids": sorted(source_assessment_evidence_ids),
+            "requirement_ids": [],
+        })
+    if papers:
+        sections.append({
+            "section_id": "source_evidence",
+            "title": "Exact retained source evidence and unknowns",
+            "purpose": (
+                "Preserve exact quotations, source identifiers, parse state, and explicitly unknown paper fields."
+            ),
+            "evidence_ids": sorted(paper_evidence_ids),
+            "requirement_ids": [],
+        })
+    if experiment_plan:
+        sections.extend(
+            [
+                {
+                    "section_id": "experiment_design",
+                    "title": "Experiment design",
+                    "purpose": (
+                        "Describe the exact bounded experiment whose retained result is reported."
+                    ),
+                    "evidence_ids": sorted(experiment_evidence_ids),
+                    "requirement_ids": [],
+                },
+                {
+                    "section_id": "measured_results",
+                    "title": (
+                        "Measured experiment results"
+                        if experiment_result.get("metrics")
+                        and experiment_result.get("execution_attempted", True)
+                        else "Experiment inconclusive status"
+                    ),
+                    "purpose": (
+                        "Report measured metrics when execution occurred, or the exact unavailable-resource "
+                        "reason when execution is inconclusive, without promoting either beyond its evidence."
+                    ),
+                    "evidence_ids": sorted(experiment_evidence_ids),
+                    "requirement_ids": [],
+                },
+            ]
+        )
     sections.append(
-        {"section_id": "limitations", "title": "Limitations", "purpose": "List unsupported and insufficient claims.", "evidence_ids": evidence_ids},
+        {
+            "section_id": "limitations",
+            "title": "Limitations",
+            "purpose": "List unsupported and insufficient claims.",
+            "evidence_ids": evidence_ids,
+            "requirement_ids": [],
+        },
     )
     plan = {
         "report_id": str(context.payload.get("report_id") or "scientific-report"),
         "title": topic,
         "audience": str(context.payload.get("audience") or "researcher"),
         "sections": sections,
-        # The ABI field is retained for compatibility.  It means reportable,
-        # evidence-linked claims here; each claim's support classification is
-        # preserved in the report and is never promoted from inconclusive.
-        "supported_claim_ids": [str(item["claim_id"]) for item in reportable],
+        "supported_claim_ids": [
+            str(item["claim_id"])
+            for item in reportable
+            if str(item.get("support_classification") or "") == "supported"
+        ],
+        "reportable_claim_ids": [str(item["claim_id"]) for item in reportable],
         "excluded_claim_ids": [str(item["claim_id"]) for item in verdicts if item not in reportable],
         "evidence_ids": evidence_ids,
+        "requirement_bindings": requirement_bindings,
+        "unknown_resolution_traces": unknown_resolution_traces,
+        "claim_status_mappings": claim_status_mappings,
     }
     return completed_result(
         context,
@@ -256,19 +785,52 @@ def plan_report(node_request: dict[str, Any], context: OperatorContext) -> dict[
         outputs={"report_plan": plan},
         filename="scientific_report_plan.v1.json",
         artifact_id="scientific_report_plan",
+        limitations=[
+            *method_limitations,
+            *paper_limitations,
+            *source_assessment_limitations,
+            *experiment_limitations,
+        ],
     )
 
 
-def _report_plan_and_verdicts(context: OperatorContext) -> tuple[dict[str, Any], list[dict[str, Any]], list[dict[str, Any]], list[str]]:
+def _report_plan_and_verdicts(
+    context: OperatorContext,
+) -> tuple[
+    dict[str, Any],
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+    list[str],
+    dict[str, Any],
+    dict[str, Any],
+    list[str],
+    dict[str, Any],
+    list[str],
+]:
     documents = load_documents(
         context,
-        schemas=("scientific_report_plan.v1", "claim_verdict.v1", "research_method.v1"),
-        payload_keys=("report_plan", "verdicts", "research_method"),
+        schemas=(
+            "scientific_report_plan.v1",
+            "claim_verdict.v1",
+            "research_method.v1",
+            "research_source_assessment.v1",
+            "experiment_plan.v1",
+            "experiment_result.v1",
+        ),
+        payload_keys=(
+            "report_plan",
+            "verdicts",
+            "research_method",
+            "source_assessment",
+            "experiment_plan",
+            "experiment_result",
+        ),
     )
     plan: dict[str, Any] = {}
     verdicts: list[dict[str, Any]] = []
     methods: list[dict[str, Any]] = []
     method_limitations: list[str] = []
+    method_source_inputs: list[Any] = []
     for document in documents:
         if document.get("report_id") and document.get("sections"):
             plan = document
@@ -285,9 +847,291 @@ def _report_plan_and_verdicts(context: OperatorContext) -> tuple[dict[str, Any],
             methods.extend(item for item in values["methods"] if isinstance(item, dict))
         if document.get("schema") == "research_method.v1":
             method_limitations.extend(str(item) for item in document.get("limitations") or [] if str(item).strip())
+            method_source_inputs.append(document.get("inputs"))
     if not plan or not verdicts:
         raise ResearchOperatorError("Report plan and claim verdict evidence are required", error_type="missing_input")
-    return plan, verdicts, methods, method_limitations
+    experiment_plan, experiment_result, experiment_limitations = _experiment_evidence(
+        context
+    )
+    source_assessment, source_assessment_limitations = _source_assessment_evidence(context)
+    methods = _named_method_catalog(methods, method_source_inputs, source_assessment)
+    return (
+        plan,
+        verdicts,
+        methods,
+        method_limitations,
+        experiment_plan,
+        experiment_result,
+        experiment_limitations,
+        source_assessment,
+        source_assessment_limitations,
+    )
+
+
+_GENERIC_METHOD_HEADINGS = {
+    "method",
+    "methods",
+    "experiment",
+    "experiments",
+    "experiment results",
+    "experimental setup",
+    "general experiment settings",
+    "implementation",
+    "implementation details",
+    "procedure",
+    "protocol",
+    "setup",
+    "needle in a haystack experiment settings",
+}
+_NON_METHOD_IDENTIFIERS = {
+    "API", "BERT", "CPU", "CUDA", "FP16", "GPU", "HTML", "INT4", "INT8",
+    "JSON", "KV", "LLM", "LLMS", "MLLM", "MLLMS", "PDF", "QA", "RAM",
+    "RAG", "TTFT", "TPOT", "URL", "CSV", "LLaVA", "Qwen", "Llama",
+    "LongBench", "MileBench", "Hugging", "Transformers",
+}
+_NAMED_METHOD_PATTERN = re.compile(
+    r"\b(?:[A-Z][A-Za-z0-9]*[A-Z0-9][A-Za-z0-9-]*|[A-Z]{2,}[A-Z0-9-]*)\b"
+)
+_METHOD_SUBJECT_ACTION_PATTERN = re.compile(
+    r"^\s*(?:\([^)]{0,60}\)\s*)?(?:quantizes?|uses?|proposes?|introduces?|"
+    r"compresses?|evicts?|selects?|adapts?|assigns?|allocates?|couples?|alternates?|"
+    r"implements?|retains?|prioritizes?)\b",
+    re.IGNORECASE,
+)
+_METHOD_LIST_PREFIX_PATTERN = re.compile(
+    r"\b(?:include|including|against|such\s+as|baselines?|methods?|approaches?|strategies?)\b"
+    r"[^.!?;:]{0,120}$",
+    re.IGNORECASE,
+)
+_METHOD_APPOSITIVE_SUFFIX_PATTERN = re.compile(
+    r"^\s*,?\s+(?:a|an|which\s+is|which\s+are|are)\b.{0,80}"
+    r"\b(?:method|approach|strategy|framework|technique)s?\b",
+    re.IGNORECASE,
+)
+
+
+def _nested_papers(value: Any) -> list[dict[str, Any]]:
+    """Find retained paper-shaped objects without depending on one envelope layout."""
+
+    found: list[dict[str, Any]] = []
+    if isinstance(value, dict):
+        sections = value.get("sections")
+        if isinstance(sections, list) and any(
+            isinstance(item, dict) and str(item.get("text") or "").strip()
+            for item in sections
+        ):
+            found.append(value)
+        for child in value.values():
+            found.extend(_nested_papers(child))
+    elif isinstance(value, list):
+        for child in value:
+            found.extend(_nested_papers(child))
+    return found
+
+
+def _method_family(text: str) -> str:
+    lowered = text.casefold()
+    families = (
+        ("quantization", ("quantiz", "low-bit", "int8", "int4")),
+        ("eviction", ("evict", "discard", "drop token", "cache removal")),
+        ("selection", ("select", "heavy-hitter", "token importance", "top-k")),
+        ("sparsification", ("sparse", "sparsif", "attention sink")),
+        ("compression", ("compress", "low-rank", "reduced cache")),
+        ("system/cache sharing", ("shared", "pool", "serving", "scheduler", "offload")),
+    )
+    matched = [name for name, cues in families if any(cue in lowered for cue in cues)]
+    return "/".join(matched[:2]) if matched else "other source-reported technique"
+
+
+def _likely_method_identifier(name: str) -> bool:
+    lowered = name.casefold()
+    return bool(
+        any(marker in lowered for marker in ("kv", "attn", "prune", "cache", "quant", "infer", "stream"))
+        or re.search(r"(?:llm|gen|flow|mem|sparse)$", lowered)
+        or re.fullmatch(r"[A-Za-z]\d[A-Za-z]", name)
+    )
+
+
+def _is_generic_method_heading(name: str) -> bool:
+    lowered = " ".join(name.casefold().split())
+    return lowered in _GENERIC_METHOD_HEADINGS or lowered.startswith(
+        ("experiment ", "experimental ", "implementation details", "general experiment", "needle in a haystack")
+    )
+
+
+def _named_method_catalog(
+    extracted: list[dict[str, Any]],
+    source_inputs: list[Any],
+    source_assessment: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Promote named, source-anchored techniques over generic section headings.
+
+    The source parser already retains full paper sections in the method artifact's
+    immutable input envelope.  This pass only identifies names that occur verbatim
+    in those retained sections; it does not invent mechanisms or performance.
+    """
+
+    selected_ids = {
+        str(item.get("source_id") or "")
+        for item in source_assessment.get("assessments") or []
+        if isinstance(item, dict) and str(item.get("decision") or "") == "selected"
+    }
+    records: dict[str, dict[str, Any]] = {}
+    contexts: dict[str, list[str]] = {}
+
+    def record(name: str, text: str, anchor: str, paper_id: str, *, strong_named: bool) -> None:
+        clean = name.strip(" .,:;()[]{}")
+        if (
+            len(clean) < 3
+            or clean.casefold() in {item.casefold() for item in _NON_METHOD_IDENTIFIERS}
+            or _is_generic_method_heading(clean)
+            or clean.casefold().endswith(("benchmark", "dataset"))
+        ):
+            return
+        lowered = text.casefold()
+        has_method_context = any(
+            cue in lowered
+            for cue in (
+                "kv cache", "attention", "method", "approach", "baseline", "evict",
+                "quantiz", "compress", "sparse", "select", "inference", "memory",
+            )
+        )
+        if not strong_named and not has_method_context:
+            return
+        stable_anchor = anchor
+        if Path(str(anchor)).is_absolute() or "/tmp/" in str(anchor).replace("\\", "/"):
+            stable_anchor = paper_id
+        key = clean.casefold()
+        contexts.setdefault(key, []).append(text)
+        row = records.setdefault(
+            key,
+            {
+                "method_id": "",
+                "name": clean,
+                "summary": "",
+                "procedure": [],
+                "source_papers": [],
+                "evidence_ids": [],
+                "extraction_basis": "named_source_mention",
+                "confidence": 0.8,
+                "family": "",
+                "evidence_status": "source_reported_not_locally_reproduced",
+                "_strong_named": strong_named,
+            },
+        )
+        row["_strong_named"] = bool(row.get("_strong_named")) or strong_named
+        if paper_id and paper_id not in row["source_papers"]:
+            row["source_papers"].append(paper_id)
+        if stable_anchor and stable_anchor not in row["evidence_ids"]:
+            row["evidence_ids"].append(stable_anchor)
+
+    for source_input in source_inputs:
+        for paper in _nested_papers(source_input):
+            paper_id = str(paper.get("paper_id") or paper.get("source_id") or "")
+            if selected_ids and paper_id and paper_id not in selected_ids:
+                continue
+            title = str(paper.get("title") or "").strip()
+            prefix = title.split(":", 1)[0].strip()
+            if title and prefix and len(prefix.split()) <= 3:
+                for candidate in _NAMED_METHOD_PATTERN.findall(prefix):
+                    record(candidate, title, str(paper.get("source_ref") or paper_id), paper_id, strong_named=True)
+            for section in paper.get("sections") or []:
+                if not isinstance(section, dict):
+                    continue
+                text = str(section.get("text") or "").strip()
+                anchor = str(section.get("source_anchor") or paper_id)
+                if not text:
+                    continue
+                for sentence in (
+                    value.strip()
+                    for value in re.split(r"(?<=[.!?])\s+|\n+", text)
+                    if len(value.strip()) >= 20
+                ):
+                    for match in _NAMED_METHOD_PATTERN.finditer(sentence):
+                        prefix = sentence[max(0, match.start() - 160):match.start()]
+                        suffix = sentence[match.end():match.end() + 140]
+                        if (
+                            _METHOD_SUBJECT_ACTION_PATTERN.search(suffix)
+                            or _METHOD_LIST_PREFIX_PATTERN.search(prefix)
+                            or _METHOD_APPOSITIVE_SUFFIX_PATTERN.search(suffix)
+                        ):
+                            strong_named = bool(
+                                _METHOD_SUBJECT_ACTION_PATTERN.search(suffix)
+                                or _METHOD_APPOSITIVE_SUFFIX_PATTERN.search(suffix)
+                            )
+                            record(match.group(0), sentence, anchor, paper_id, strong_named=strong_named)
+
+    for key, row in records.items():
+        candidate_contexts = contexts.get(key) or []
+        representative = min(candidate_contexts, key=len) if candidate_contexts else row["name"]
+        representative = " ".join(representative.split())
+        row["summary"] = representative[:700]
+        row["procedure"] = [representative[:700]]
+        row["family"] = _method_family(" ".join(candidate_contexts))
+
+    named = sorted(
+        (
+            row
+            for row in records.values()
+            if bool(row.get("_strong_named")) or _likely_method_identifier(str(row.get("name") or ""))
+        ),
+        key=lambda item: (str(item.get("family")), str(item.get("name")).casefold()),
+    )
+    for index, row in enumerate(named, start=1):
+        row["method_id"] = f"named-method-{index:03d}"
+        row.pop("_strong_named", None)
+
+    substantive_extracted = [
+        item
+        for item in extracted
+        if not _is_generic_method_heading(str(item.get("name") or "").strip())
+    ]
+    known = {str(item.get("name") or "").casefold() for item in named}
+    for item in substantive_extracted:
+        if str(item.get("name") or "").casefold() not in known:
+            named.append(item)
+    return named or extracted
+
+
+def _render_source_assessment(source_assessment: dict[str, Any]) -> tuple[str, list[str]]:
+    rows: list[str] = []
+    evidence_ids: set[str] = set()
+    for assessment in source_assessment.get("assessments") or []:
+        if not isinstance(assessment, dict):
+            continue
+        relevance = assessment.get("relevance") if isinstance(assessment.get("relevance"), dict) else {}
+        credibility = assessment.get("credibility") if isinstance(assessment.get("credibility"), dict) else {}
+        item_evidence = [
+            str(item) for item in assessment.get("evidence_ids") or [] if str(item).strip()
+        ]
+        evidence_ids.update(item_evidence)
+        rows.append(
+            f"- {assessment.get('source_id')} — {assessment.get('title')}: "
+            f"decision={assessment.get('decision')}; relevance={relevance.get('status')}; "
+            f"credibility={credibility.get('status')} ({credibility.get('authority_class')}); "
+            f"evidence={', '.join(item_evidence)}."
+        )
+    benchmarks = [
+        item for item in source_assessment.get("benchmark_candidates") or [] if isinstance(item, dict)
+    ]
+    rows.append("\nBenchmark candidates:")
+    rows.extend(
+        f"- {item.get('title')} ({item.get('availability_status')}): {item.get('identification_basis')}"
+        for item in benchmarks
+    )
+    if not benchmarks:
+        rows.append("- No benchmark candidate was established from retained evidence.")
+    unresolved = [
+        str(item) for item in source_assessment.get("unresolved_questions") or [] if str(item).strip()
+    ]
+    if unresolved:
+        rows.append("\nUnresolved questions:")
+        rows.extend(f"- {item}" for item in unresolved)
+    rows.append(
+        "\nBoundary: credibility here describes retained authority/traceability metadata; "
+        "it does not establish that a source's scientific findings are true."
+    )
+    return "\n".join(rows).strip(), sorted(evidence_ids)
 
 
 def _render_method_section(
@@ -316,6 +1160,8 @@ def _render_method_section(
             rows.extend(
                 [
                     f"### {name}",
+                    f"- Family/category: {method.get('family') or 'not established by retained evidence'}",
+                    f"- Evidence status: {method.get('evidence_status') or 'source_reported_not_locally_reproduced'}",
                     f"- Summary: {summary}",
                     "- Procedure:",
                     *[
@@ -332,26 +1178,496 @@ def _render_method_section(
     return "\n".join(rows).strip(), sorted(evidence_ids)
 
 
+def _render_experiment_design(experiment_plan: dict[str, Any]) -> str:
+    dataset = experiment_plan.get("dataset") if isinstance(experiment_plan.get("dataset"), dict) else {}
+    variants = [
+        item for item in experiment_plan.get("variants") or [] if isinstance(item, dict)
+    ]
+    rows = [
+        f"- Experiment ID: {require_text(experiment_plan.get('experiment_id'), 'experiment id')}",
+        f"- Objective: {require_text(experiment_plan.get('objective'), 'experiment objective')}",
+        f"- Hypothesis: {require_text(experiment_plan.get('hypothesis'), 'experiment hypothesis')}",
+        "- Planned metrics: "
+        + (", ".join(str(item) for item in experiment_plan.get("metrics") or []) or "not recorded"),
+        "- Procedure:",
+        *[
+            f"  {index}. {step}"
+            for index, step in enumerate(experiment_plan.get("procedure") or [], start=1)
+            if str(step).strip()
+        ],
+    ]
+    if dataset:
+        rows.append(
+            "- Dataset: "
+            f"{dataset.get('path', 'unavailable')} ({dataset.get('format', 'unknown')}; "
+            f"role={dataset.get('role', 'unknown')})"
+        )
+    if variants:
+        rows.append(
+            "- Compared variants: "
+            + "; ".join(
+                f"{item.get('name', 'unnamed')} — {item.get('description', '')}" for item in variants
+            )
+        )
+    seeds = experiment_plan.get("seeds")
+    if not isinstance(seeds, list):
+        seed = experiment_plan.get("random_seed")
+        seeds = [seed] if seed is not None else []
+    if seeds:
+        rows.append("- Seeds: " + ", ".join(str(item) for item in seeds))
+    return "\n".join(rows)
+
+
+def _render_requirement_coverage(
+    requirement_bindings: list[dict[str, Any]],
+    methods: list[dict[str, Any]],
+    fallback_evidence_ids: list[str],
+    *,
+    reportable_claims: list[dict[str, Any]] | None = None,
+    source_assessment: dict[str, Any] | None = None,
+) -> tuple[str, list[dict[str, Any]]]:
+    """Expose what source evidence does and does not cover without self-approval."""
+
+    method_rows: list[tuple[str, set[str]]] = []
+    for method in methods:
+        searchable = re.sub(
+            r"[^a-z0-9]+",
+            " ",
+            json.dumps(method, ensure_ascii=False, sort_keys=True).casefold(),
+        ).strip()
+        method_rows.append(
+            (
+                searchable,
+                {
+                    str(item)
+                    for item in method.get("evidence_ids") or []
+                    if str(item).strip()
+                },
+            )
+        )
+    for claim in reportable_claims or []:
+        method_rows.append(
+            (
+                re.sub(
+                    r"[^a-z0-9]+",
+                    " ",
+                    json.dumps(claim, ensure_ascii=False, sort_keys=True).casefold(),
+                ).strip(),
+                {
+                    str(item)
+                    for item in claim.get("evidence_ids") or []
+                    if str(item).strip()
+                },
+            )
+        )
+    for assessment in (source_assessment or {}).get("assessments") or []:
+        if not isinstance(assessment, dict):
+            continue
+        method_rows.append(
+            (
+                re.sub(
+                    r"[^a-z0-9]+",
+                    " ",
+                    json.dumps(assessment, ensure_ascii=False, sort_keys=True).casefold(),
+                ).strip(),
+                {
+                    str(item)
+                    for item in assessment.get("evidence_ids") or []
+                    if str(item).strip()
+                },
+            )
+        )
+
+    rows: list[str] = []
+    enriched: list[dict[str, Any]] = []
+    for binding in requirement_bindings:
+        requirement_id = require_text(binding.get("requirement_id"), "requirement_id")
+        required_values = [
+            str(item).strip()
+            for item in (binding.get("acceptance") or {}).get("required_values") or []
+            if str(item).strip()
+        ]
+        matched_evidence: set[str] = set()
+        value_rows: list[str] = []
+        for required_value in required_values:
+            normalized_value = re.sub(
+                r"[^a-z0-9]+", " ", required_value.casefold()
+            ).strip()
+            value_evidence = {
+                evidence_id
+                for searchable, evidence_ids in method_rows
+                if normalized_value and normalized_value in searchable
+                for evidence_id in evidence_ids
+            }
+            matched_evidence.update(value_evidence)
+            value_rows.append(
+                f"{required_value}="
+                + (
+                    f"source_grounded ({', '.join(sorted(value_evidence))})"
+                    if value_evidence
+                    else "explicitly retained; source-specific coverage unresolved"
+                )
+            )
+        rows.append(
+            f"- {requirement_id}: "
+            + ("; ".join(value_rows) or "no enumerated required values")
+            + "."
+        )
+        all_values_grounded = bool(required_values) and all(
+            "source_grounded" in row for row in value_rows
+        )
+        source_assessment_present = bool((source_assessment or {}).get("assessments"))
+        artifact_fields = str((binding.get("acceptance") or {}).get("kind") or "") == "artifact_fields"
+        status = (
+            "evidence_present_for_independent_evaluation"
+            if source_assessment_present and (all_values_grounded or artifact_fields)
+            else "pending_independent_evaluation"
+        )
+        enriched.append({
+            **binding,
+            "requirement_text": str(binding.get("statement") or ""),
+            "status": status,
+            "coverage_status": status,
+            "evidence_ids": sorted(matched_evidence) or list(fallback_evidence_ids),
+        })
+    return (
+        "\n".join(rows) or "- No accepted requirement bindings were supplied.",
+        enriched,
+    )
+
+
+def _resolve_report_unknowns_from_governed_artifacts(
+    traces: list[dict[str, Any]],
+    requirement_bindings: list[dict[str, Any]],
+    *,
+    methods: list[dict[str, Any]],
+    source_assessment: dict[str, Any],
+    report_requirement_bindings: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Resolve only unknown classes directly answered by typed input artifacts."""
+
+    statements = {
+        str(item.get("requirement_id") or ""): str(item.get("statement") or "")
+        for item in requirement_bindings
+    }
+    grounded_coverage = any(
+        str(item.get("coverage_status") or "")
+        == "evidence_present_for_independent_evaluation"
+        and str((item.get("acceptance") or {}).get("kind") or "") == "coverage"
+        for item in report_requirement_bindings
+    )
+    selected_sources = [
+        item
+        for item in source_assessment.get("assessments") or []
+        if isinstance(item, dict) and str(item.get("decision") or "") == "selected"
+    ]
+    resolved: list[dict[str, Any]] = []
+    for trace in traces:
+        row = dict(trace)
+        statement = statements.get(str(row.get("requirement_id") or ""), "").casefold()
+        asks_source_set = any(
+            token in statement
+            for token in ("sources", "papers", "benchmarks", "repositories", "datasets")
+        )
+        asks_methods = "method" in statement or "taxonomy" in statement
+        if asks_source_set and selected_sources:
+            row["unresolved_status"] = "resolved"
+            row["finding"] = (
+                f"The governed source assessment selected {len(selected_sources)} traceable source(s), "
+                "retained exclusions and unresolved candidates, and identified benchmark candidates."
+            )
+        elif asks_methods and methods and grounded_coverage:
+            row["unresolved_status"] = "resolved"
+            row["finding"] = (
+                f"The governed method evidence contains {len(methods)} source-linked method or evaluation "
+                "record(s), and the source assessment covers the requested method families."
+            )
+        resolved.append(row)
+    return resolved
+
+
+def _render_measured_results(experiment_result: dict[str, Any]) -> str:
+    rows = [
+        f"- Experiment ID: {require_text(experiment_result.get('experiment_id'), 'experiment id')}",
+        f"- Recorded outcome: {require_text(experiment_result.get('outcome'), 'experiment outcome')}",
+        "- Measured metrics:",
+    ]
+    for metric in experiment_result.get("metrics") or []:
+        if not isinstance(metric, dict):
+            continue
+        name = require_text(metric.get("name"), "metric name")
+        value = metric.get("value")
+        unit = str(metric.get("unit") or "").strip()
+        rows.append(f"  - {name}: {value}{f' {unit}' if unit else ''}")
+    rows.append(
+        "- Result evidence IDs: "
+        + ", ".join(str(item) for item in experiment_result.get("evidence_ids") or [])
+    )
+    return "\n".join(rows)
+
+
+def _semantic_report_draft(
+    context: OperatorContext,
+    *,
+    title: str,
+    reportable: list[dict[str, Any]],
+    requirement_bindings: list[dict[str, Any]],
+    unknown_resolution_traces: list[dict[str, Any]],
+    methods: list[dict[str, Any]],
+    source_assessment: dict[str, Any],
+) -> tuple[dict[str, Any], list[str], list[dict[str, Any]]]:
+    """Optionally synthesize the narrative with a real injected model service.
+
+    The deterministic action remains the evidence owner.  The model receives
+    only already-governed claims and typed metadata, and its conclusion links
+    are checked against the exact claim-id set before any text is published.
+    """
+
+    model_generate = context.services.get("model_generate")
+    if model_generate is None:
+        return {}, [], []
+    grounded_claims = [
+        {
+            "claim_id": str(item.get("claim_id") or ""),
+            "text": str(item.get("claim_text") or ""),
+            "evidence_ids": [
+                str(value) for value in item.get("evidence_ids") or [] if str(value).strip()
+            ],
+            "uncertainty": str(item.get("uncertainty") or item.get("confidence") or "unknown"),
+            "limitations": [
+                str(value) for value in item.get("limitations") or [] if str(value).strip()
+            ],
+        }
+        for item in reportable
+    ]
+    response = model_generate(
+        node_id="report_draft",
+        task_contract={
+            "user_intent": title,
+            "deliverable": {"language": "preserve_user_request"},
+        },
+        deliverable_requirements={
+            "requirements": requirement_bindings,
+            "unknowns": unknown_resolution_traces,
+            "methods": methods,
+            "source_assessment": source_assessment,
+            "rules": [
+                "Produce a comprehensive source-bounded landscape, not a concatenation of extracts.",
+                "Resolve each unknown when the supplied evidence permits it; otherwise state exactly why it remains unresolved.",
+                "Do not reproduce a claim whose source text is visibly truncated mid-sentence.",
+                "Compare requested method families only to the depth supported by supplied evidence.",
+            ],
+        },
+        evidence_synthesis={"claims": grounded_claims},
+    )
+    if not isinstance(response, dict):
+        raise ResearchOperatorError(
+            "model_generate service must return a JSON object",
+            error_type="provider_contract_failure",
+        )
+    model_report = response.get("report") if isinstance(response.get("report"), dict) else {}
+    body = require_text(model_report.get("body"), "semantic report body")
+    allowed_claim_ids = {
+        str(item.get("claim_id") or "") for item in grounded_claims if str(item.get("claim_id") or "")
+    }
+    conclusions = [
+        item for item in model_report.get("conclusions") or [] if isinstance(item, dict)
+    ]
+    for conclusion in conclusions:
+        cited = {str(item) for item in conclusion.get("evidence_ids") or [] if str(item).strip()}
+        unknown = sorted(cited - allowed_claim_ids)
+        if unknown:
+            raise ResearchOperatorError(
+                "Semantic report conclusion cited unknown claim ids: " + ", ".join(unknown),
+                error_type="artifact_identity_mismatch",
+            )
+    sections = [
+        {
+            "section_id": f"semantic-{index}",
+            "title": require_text(item.get("title"), f"semantic section {index} title"),
+            "body": require_text(item.get("body"), f"semantic section {index} body"),
+        }
+        for index, item in enumerate(model_report.get("sections") or [], start=1)
+        if isinstance(item, dict)
+    ]
+    return (
+        {
+            "title": str(model_report.get("title") or title),
+            "body": body,
+            "sections": sections,
+            "conclusions": conclusions,
+        },
+        [str(item) for item in response.get("limitations") or [] if str(item).strip()],
+        [item for item in response.get("provider_usage") or [] if isinstance(item, dict)],
+    )
+
+
+def _semantic_unknown_resolution(
+    traces: list[dict[str, Any]],
+    requirement_bindings: list[dict[str, Any]],
+    markdown: str,
+) -> list[dict[str, Any]]:
+    """Promote only text-addressed unknowns to a producer-proposed resolution.
+
+    This is not acceptance: the independent evaluator still decides whether
+    the narrative actually resolves the question.  The lexical floor merely
+    prevents a producer from claiming resolution when the report omitted the
+    subject entirely.
+    """
+
+    statements = {
+        str(item.get("requirement_id") or ""): str(item.get("statement") or "")
+        for item in requirement_bindings
+    }
+    report_terms = set(re.findall(r"[a-z0-9][a-z0-9_-]{3,}", markdown.casefold()))
+    stop = {"what", "which", "should", "would", "could", "report", "resolve", "explicitly", "unresolved", "question", "current"}
+    resolved: list[dict[str, Any]] = []
+    for trace in traces:
+        row = dict(trace)
+        statement = statements.get(str(row.get("requirement_id") or ""), "")
+        terms = {
+            value
+            for value in re.findall(r"[a-z0-9][a-z0-9_-]{3,}", statement.casefold())
+            if value not in stop
+        }
+        overlap = len(terms & report_terms) / max(1, len(terms))
+        if row.get("supporting_evidence") and overlap >= 0.5:
+            row["unresolved_status"] = "resolved"
+            row["finding"] = (
+                "The source-bounded report narrative addresses this question using the retained "
+                "evidence identifiers; independent evaluation remains authoritative: " + statement
+            )
+        resolved.append(row)
+    return resolved
+
+
 def draft_report(node_request: dict[str, Any], context: OperatorContext) -> dict[str, Any]:
-    plan, verdicts, methods, method_limitations = _report_plan_and_verdicts(context)
-    supported_ids = set(str(item) for item in plan.get("supported_claim_ids") or [])
-    reportable = [item for item in verdicts if str(item.get("claim_id")) in supported_ids]
+    (
+        plan,
+        verdicts,
+        methods,
+        method_limitations,
+        experiment_plan,
+        experiment_result,
+        experiment_limitations,
+        source_assessment,
+        source_assessment_limitations,
+    ) = _report_plan_and_verdicts(context)
+    reportable_ids = set(
+        str(item)
+        for item in (
+            plan.get("reportable_claim_ids")
+            or plan.get("supported_claim_ids")
+            or []
+        )
+    )
+    reportable = [item for item in verdicts if str(item.get("claim_id")) in reportable_ids]
+    reportable = [
+        item
+        for item in reportable
+        if not (
+            len(str(item.get("claim_text") or "")) > 180
+            and not re.search(r"[.!?][\"')\]]?$", str(item.get("claim_text") or "").strip())
+        )
+    ]
     if not reportable:
         raise ResearchOperatorError("Report plan has no still-reportable source-grounded claim", error_type="insufficient_evidence")
-    title = require_text(plan.get("title"), "report title")
+    title = require_text(context.payload.get("topic") or plan.get("title"), "report title")
     sections: list[dict[str, Any]] = []
     markdown_parts = [f"# {title}"]
     methods_rendered = False
+    requirement_bindings = [
+        item for item in plan.get("requirement_bindings") or [] if isinstance(item, dict)
+    ]
+    requirements_by_id = {
+        str(item.get("requirement_id") or ""): item
+        for item in requirement_bindings
+        if str(item.get("requirement_id") or "")
+    }
+    unknown_resolution_traces = [
+        item
+        for item in plan.get("unknown_resolution_traces") or []
+        if isinstance(item, dict)
+    ]
+    claim_status_mappings = [
+        item
+        for item in plan.get("claim_status_mappings") or []
+        if isinstance(item, dict)
+    ]
+    report_evidence_ids = sorted(
+        {
+            str(evidence_id)
+            for item in reportable
+            for evidence_id in item.get("evidence_ids") or []
+            if str(evidence_id).strip()
+        }
+    )
+    coverage_body, report_requirement_bindings = _render_requirement_coverage(
+        requirement_bindings,
+        methods,
+        report_evidence_ids,
+        reportable_claims=reportable,
+        source_assessment=source_assessment,
+    )
+    unknown_resolution_traces = _resolve_report_unknowns_from_governed_artifacts(
+        unknown_resolution_traces,
+        requirement_bindings,
+        methods=methods,
+        source_assessment=source_assessment,
+        report_requirement_bindings=report_requirement_bindings,
+    )
+    semantic_report, semantic_limitations, semantic_usage = _semantic_report_draft(
+        context,
+        title=title,
+        reportable=reportable,
+        requirement_bindings=requirement_bindings,
+        unknown_resolution_traces=unknown_resolution_traces,
+        methods=methods,
+        source_assessment=source_assessment,
+    )
     for section in require_list(plan.get("sections"), "report sections"):
         section_id = require_text(section.get("section_id"), "section_id")
         section_title = require_text(section.get("title"), "section title")
         evidence_ids = [str(item) for item in section.get("evidence_ids") or [] if str(item).strip()]
+        requirement_ids = [
+            str(item) for item in section.get("requirement_ids") or [] if str(item).strip()
+        ]
         if section_id == "methods":
             body, method_section_evidence_ids = _render_method_section(
                 methods, method_limitations
             )
             evidence_ids = sorted(set(evidence_ids) | set(method_section_evidence_ids))
             methods_rendered = True
+        elif section_id == "source_assessment":
+            if not source_assessment:
+                raise ResearchOperatorError(
+                    "Report plan requires source assessment evidence that was not supplied",
+                    error_type="missing_input",
+                )
+            body, assessment_evidence_ids = _render_source_assessment(source_assessment)
+            evidence_ids = sorted(set(evidence_ids) | set(assessment_evidence_ids))
+        elif section_id == "experiment_design":
+            if not experiment_plan:
+                raise ResearchOperatorError(
+                    "Report plan requires experiment design evidence that was not supplied",
+                    error_type="missing_input",
+                )
+            body = _render_experiment_design(experiment_plan)
+        elif section_id == "measured_results":
+            if not experiment_result:
+                raise ResearchOperatorError(
+                    "Report plan requires measured experiment evidence that was not supplied",
+                    error_type="missing_input",
+                )
+            body = _render_measured_results(experiment_result)
+            evidence_ids = sorted(
+                set(evidence_ids)
+                | {
+                    str(item)
+                    for item in experiment_result.get("evidence_ids") or []
+                    if str(item).strip()
+                }
+            )
         elif section_id == "limitations" and not methods_rendered and (methods or method_limitations):
             method_body, method_section_evidence_ids = _render_method_section(
                 methods, method_limitations
@@ -379,6 +1695,72 @@ def draft_report(node_request: dict[str, Any], context: OperatorContext) -> dict
                 f"Evidence: {', '.join(str(value) for value in item.get('evidence_ids') or [])}."
                 for item in reportable
             )
+        elif section_id == "requirements":
+            rows = []
+            for requirement_id in requirement_ids:
+                binding = next(
+                    (
+                        item
+                        for item in report_requirement_bindings
+                        if item.get("requirement_id") == requirement_id
+                    ),
+                    None,
+                )
+                if not binding:
+                    raise ResearchOperatorError(
+                        f"Report plan references unknown requirement: {requirement_id}",
+                        error_type="artifact_identity_mismatch",
+                    )
+                required_values = [
+                    str(item)
+                    for item in (binding.get("acceptance") or {}).get("required_values") or []
+                    if str(item).strip()
+                ]
+                rows.append(
+                    f"- {requirement_id} [{str(binding.get('status') or '').replace('_', ' ')}]: "
+                    f"{binding.get('statement')}. "
+                    f"Required evidence/fields: {', '.join(required_values) or 'not specified'}. "
+                    f"Retained evidence: {', '.join(binding.get('evidence_ids') or []) or 'none'}."
+                )
+            body = "\n".join(rows) or "- No accepted report requirements were supplied."
+        elif section_id == "unknown_resolution":
+            traces_by_id = {
+                str(item.get("requirement_id") or ""): item
+                for item in unknown_resolution_traces
+                if str(item.get("requirement_id") or "")
+            }
+            rows = []
+            for requirement_id in requirement_ids:
+                trace = traces_by_id.get(requirement_id)
+                if not trace:
+                    raise ResearchOperatorError(
+                        f"Report plan is missing unknown-resolution trace: {requirement_id}",
+                        error_type="artifact_identity_mismatch",
+                    )
+                supporting_evidence = [
+                    str(item)
+                    for item in trace.get("supporting_evidence") or []
+                    if str(item).strip()
+                ]
+                rows.append(
+                    f"- {requirement_id} [{trace.get('unresolved_status')}]: "
+                    f"{trace.get('finding')} Supporting evidence reviewed: "
+                    f"{', '.join(supporting_evidence) or 'none available'}."
+                )
+                evidence_ids = sorted(set(evidence_ids) | set(supporting_evidence))
+            body = "\n".join(rows) or "- No unresolved questions were recorded."
+        elif section_id == "claim_audit":
+            rows = []
+            for mapping in claim_status_mappings:
+                claim_id = require_text(mapping.get("claim_id"), "claim audit claim_id")
+                rows.append(
+                    f"- {claim_id}: verdict={mapping.get('verdict')}; "
+                    f"support={mapping.get('support_classification')}; "
+                    f"evidence_outcome={mapping.get('evidence_outcome')}; "
+                    f"contradiction={mapping.get('contradiction_status')}; "
+                    f"experimental_status={mapping.get('tested_status')}."
+                )
+            body = "\n".join(rows) or "- No claim-verdict mappings were supplied."
         elif section_id == "limitations":
             rows = [
                 f"- {item['claim_id']}: {item['support_classification']} — {item['basis']}"
@@ -386,6 +1768,13 @@ def draft_report(node_request: dict[str, Any], context: OperatorContext) -> dict
                 if item.get("support_classification") != "supported"
             ]
             rows.extend(f"- Method limitation: {item}" for item in method_limitations)
+            rows.extend(
+                f"- Experiment limitation: {item}" for item in experiment_limitations
+            )
+            rows.extend(
+                f"- Source-assessment limitation: {item}"
+                for item in source_assessment_limitations
+            )
             body = "\n".join(rows) or "- No additional limitations recorded."
         else:
             body = (
@@ -393,20 +1782,181 @@ def draft_report(node_request: dict[str, Any], context: OperatorContext) -> dict
                 "Claims marked insufficient_evidence are retained as limitations, not promoted to verified findings."
             )
         require_text(body, f"section {section_id} body")
-        sections.append({"section_id": section_id, "title": section_title, "body": body, "evidence_ids": evidence_ids})
+        sections.append(
+            {
+                "section_id": section_id,
+                "title": section_title,
+                "body": body,
+                "evidence_ids": evidence_ids,
+                "requirement_ids": requirement_ids,
+            }
+        )
         markdown_parts.extend([f"\n## {section_title}", body])
+    if requirement_bindings:
+        sections.append(
+            {
+                "section_id": "coverage",
+                "title": "Required coverage and unresolved gaps",
+                "body": coverage_body,
+                "evidence_ids": report_evidence_ids,
+                "requirement_ids": [
+                    str(item.get("requirement_id"))
+                    for item in report_requirement_bindings
+                ],
+            }
+        )
+        markdown_parts.extend(["\n## Required coverage and unresolved gaps", coverage_body])
+    unsupported = [str(item.get("claim_id")) for item in verdicts if item not in reportable]
+    if unsupported:
+        unsupported_body = "\n".join(
+            f"- {claim_id}: excluded from report conclusions because its retained verdict did not meet "
+            "the report plan's evidence threshold."
+            for claim_id in unsupported
+        )
+        sections.append(
+            {
+                "section_id": "unsupported_claims",
+                "title": "Unsupported or excluded claims",
+                "body": unsupported_body,
+                "evidence_ids": report_evidence_ids,
+                "requirement_ids": [],
+            }
+        )
+        markdown_parts.extend(["\n## Unsupported or excluded claims", unsupported_body])
+    conclusions = [
+        {
+            "conclusion_id": f"conclusion-{index:03d}",
+            "text": str(item.get("claim_text") or "").strip(),
+            "claim_ids": [str(item.get("claim_id") or "")],
+            "evidence_ids": [
+                str(value) for value in item.get("evidence_ids") or [] if str(value).strip()
+            ],
+            "evidence_status": str(item.get("support_classification") or "source_reported"),
+            "tested_status": "not_locally_reproduced",
+        }
+        for index, item in enumerate(reportable, start=1)
+        if str(item.get("claim_text") or "").strip()
+    ]
+    if conclusions:
+        conclusion_body = "\n".join(
+            f"- {item['conclusion_id']} [{item['evidence_status']}; not locally reproduced]: "
+            f"{item['text']} Evidence: {', '.join(item['evidence_ids'])}."
+            for item in conclusions
+        )
+        markdown_parts.extend(["\n## Evidence-bounded conclusions", conclusion_body])
     markdown = "\n".join(markdown_parts).strip() + "\n"
+    if semantic_report:
+        semantic_sections = [
+            {
+                **item,
+                "evidence_ids": report_evidence_ids,
+                "requirement_ids": [
+                    str(binding.get("requirement_id")) for binding in requirement_bindings
+                ],
+            }
+            for item in semantic_report.get("sections") or []
+        ]
+        markdown = require_text(semantic_report.get("body"), "semantic report body").rstrip() + "\n"
+        sections = semantic_sections or sections
+        unknown_resolution_traces = _semantic_unknown_resolution(
+            unknown_resolution_traces,
+            requirement_bindings,
+            markdown,
+        )
+        report_requirement_bindings = [
+            {
+                key: value
+                for key, value in binding.items()
+                if key not in {"status", "coverage_status"}
+            }
+            for binding in report_requirement_bindings
+        ]
     if title.lower() not in markdown.lower():
         raise ResearchOperatorError("Draft is not relevant to the requested topic", error_type="product_failure")
-    unsupported = [str(item.get("claim_id")) for item in verdicts if item not in reportable]
     report = {
         "report_id": require_text(plan.get("report_id"), "report_id"),
         "title": title,
         "sections": sections,
-        "evidence_ids": sorted({str(eid) for item in reportable for eid in item.get("evidence_ids") or []}),
+        "evidence_ids": sorted(
+            {
+                str(eid)
+                for item in reportable
+                for eid in item.get("evidence_ids") or []
+            }
+            | {
+                str(eid)
+                for eid in experiment_result.get("evidence_ids") or []
+                if str(eid).strip()
+            }
+            | {
+                str(eid)
+                for assessment in source_assessment.get("assessments") or []
+                if isinstance(assessment, dict)
+                for eid in assessment.get("evidence_ids") or []
+                if str(eid).strip()
+            }
+        ),
         "unsupported_claims": unsupported,
         "methods": methods,
         "method_evidence_status": "available" if methods else "insufficient_evidence",
+        "requirement_bindings": report_requirement_bindings,
+        "unknown_resolution_traces": unknown_resolution_traces,
+        "claim_status_mappings": claim_status_mappings,
+        "requirement_evaluation_status": (
+            "independent_evaluation_required"
+            if semantic_report and requirement_bindings
+            else "pending_independent_evaluation"
+            if requirement_bindings
+            else "not_supplied"
+        ),
+        "conclusions": semantic_report.get("conclusions") or conclusions,
+        "scope": {
+            "source_count": len(source_assessment.get("selected_source_ids") or []),
+            "claim_count": len(reportable),
+            "method_count": len(methods),
+            "tested_boundary": "Source-reported findings were not locally reproduced unless an experiment result is attached.",
+        },
+        "comparative_analysis": [
+            {
+                "family": family,
+                "methods": sorted(
+                    str(item.get("name") or "")
+                    for item in methods
+                    if str(item.get("family") or "") == family
+                ),
+                "evidence_ids": sorted(
+                    {
+                        str(value)
+                        for item in methods
+                        if str(item.get("family") or "") == family
+                        for value in item.get("evidence_ids") or []
+                        if str(value).strip()
+                    }
+                ),
+            }
+            for family in sorted(
+                {str(item.get("family") or "unclassified") for item in methods}
+            )
+        ],
+        "source_assessments": source_assessment.get("assessments") or [],
+        "benchmark_coverage": source_assessment.get("benchmark_candidates") or [],
+        "coverage_matrix": report_requirement_bindings,
+        "disagreements": [
+            item
+            for item in claim_status_mappings
+            if str(item.get("contradiction_status") or "")
+            not in {"", "none", "no_recorded_contradiction"}
+        ],
+        "experiment": (
+            {
+                "experiment_id": experiment_result.get("experiment_id"),
+                "outcome": experiment_result.get("outcome"),
+                "metrics": experiment_result.get("metrics"),
+                "evidence_ids": experiment_result.get("evidence_ids"),
+            }
+            if experiment_result
+            else None
+        ),
         "markdown": markdown,
     }
     extra_artifacts: list[dict[str, Any]] = []
@@ -428,9 +1978,15 @@ def draft_report(node_request: dict[str, Any], context: OperatorContext) -> dict
         outputs={"report": report},
         filename="scientific_report.v1.json",
         artifact_id="scientific_report",
-        limitations=method_limitations,
+        limitations=[
+            *method_limitations,
+            *source_assessment_limitations,
+            *experiment_limitations,
+            *semantic_limitations,
+        ],
         extra_artifacts=extra_artifacts,
         extra_hashes=extra_hashes,
+        model_provider_usage=semantic_usage,
     )
 
 

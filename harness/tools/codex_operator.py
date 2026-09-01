@@ -198,6 +198,244 @@ def _write_skill_bridge_result(task_dir: Path, evidence: dict[str, object], exit
     )
 
 
+def _provider_jsonl_limit_bytes() -> int:
+    try:
+        return max(65536, int(os.environ.get("SOLAR_CODEX_PROVIDER_JSONL_MAX_BYTES", "1048576")))
+    except (TypeError, ValueError):
+        return 1048576
+
+
+def _bounded_provider_log(task_dir: Path, provider_output: str) -> tuple[str, bool]:
+    """Retain a bounded raw JSONL log; overflow makes admission proof incomplete."""
+    raw = provider_output.encode("utf-8", errors="replace")
+    limit = _provider_jsonl_limit_bytes()
+    overflow = len(raw) > limit
+    if overflow:
+        marker = b"\n[provider JSONL omitted: bounded log overflow]\n"
+        remaining = max(0, limit - len(marker))
+        head = remaining // 2
+        bounded = raw[:head] + marker + raw[-(remaining - head):]
+    else:
+        bounded = raw
+    path = task_dir / "codex-cli-output.log"
+    temporary = path.with_suffix(".log.tmp")
+    temporary.write_bytes(bounded)
+    os.replace(temporary, path)
+    return bounded.decode("utf-8", errors="replace"), overflow
+
+
+def _structured_provider_admission(provider_output: str, *, overflow: bool = False) -> dict[str, object]:
+    """Parse Codex ``exec --json`` output without treating message text as events."""
+    events: list[dict[str, object]] = []
+    malformed = bool(overflow)
+    malformed_line = 0
+    for line_number, raw_line in enumerate(provider_output.splitlines(), start=1):
+        line = raw_line.strip()
+        if not line:
+            continue
+        try:
+            event = json.loads(line)
+        except (TypeError, ValueError):
+            malformed = True
+            malformed_line = malformed_line or line_number
+            continue
+        if not isinstance(event, dict):
+            malformed = True
+            malformed_line = malformed_line or line_number
+            continue
+        events.append(event)
+
+    event_types = [str(event.get("type") or "").strip() for event in events]
+    supported_event_types = {
+        "thread.started",
+        "turn.started",
+        "turn.completed",
+        "turn.failed",
+        "item.started",
+        "item.updated",
+        "item.completed",
+        "error",
+    }
+    supported_item_types = {
+        "agent_message",
+        "reasoning",
+        "command_execution",
+        "file_change",
+        "mcp_tool_call",
+        "web_search",
+        "todo_list",
+        "error",
+    }
+    unknown_event_types: set[str] = set()
+    unknown_item_types: set[str] = set()
+    final_event = events[-1] if events else {}
+    terminal_failed = bool(event_types and event_types[-1] == "turn.failed")
+    turn_completed = "turn.completed" in event_types
+    agent_message = False
+    tool_or_external = False
+    tool_markers = (
+        "command_execution",
+        "tool_call",
+        "mcp",
+        "web_search",
+        "web_",
+        "computer_",
+        "file_change",
+    )
+    for event in events:
+        event_type = str(event.get("type") or "").strip().lower()
+        item = event.get("item") if isinstance(event.get("item"), dict) else {}
+        item_type = str(item.get("type") or "").strip().lower()
+        if event_type not in supported_event_types:
+            unknown_event_types.add(event_type or "<missing>")
+        if event_type.startswith("item.") and item_type not in supported_item_types:
+            unknown_item_types.add(item_type or "<missing>")
+        if item_type == "agent_message":
+            agent_message = True
+        if any(marker in event_type or marker in item_type for marker in tool_markers):
+            tool_or_external = True
+
+    terminal_error = final_event.get("error") if isinstance(final_event.get("error"), dict) else {}
+    terminal_message = str(terminal_error.get("message") or "").strip()
+    runtime_state = ""
+    if terminal_failed and terminal_message:
+        try:
+            import operator_flow_control as ofc
+
+            runtime_state = str(ofc.classify_failure_state(terminal_message) or "")
+        except Exception:
+            runtime_state = ""
+    lowered_error = terminal_message.lower()
+    if runtime_state == "auth_expired":
+        error_type = "provider_auth"
+    elif runtime_state in {"cooldown", "quota_exhausted"}:
+        capacity_only = "capacity" in lowered_error and not any(
+            token in lowered_error for token in ("quota", "usage limit", "rate limit", "rate-limit")
+        )
+        error_type = "provider_capacity" if capacity_only else "provider_quota"
+    else:
+        error_type = ""
+    complete = bool(events) and not malformed and not unknown_event_types and not unknown_item_types
+    admission_refusal = bool(
+        complete
+        and terminal_failed
+        and error_type
+        and not turn_completed
+        and not agent_message
+        and not tool_or_external
+    )
+    return {
+        "complete": complete,
+        "malformed": malformed,
+        "malformed_line": malformed_line,
+        "event_count": len(events),
+        "unknown_event_types": sorted(unknown_event_types),
+        "unknown_item_types": sorted(unknown_item_types),
+        "terminal_event_type": event_types[-1] if event_types else "",
+        "terminal_failed": terminal_failed,
+        "turn_completed": turn_completed,
+        "agent_message_observed": agent_message,
+        "tool_or_external_event_observed": tool_or_external,
+        "terminal_error_message": terminal_message[:1000],
+        "runtime_state": runtime_state,
+        "error_type": error_type,
+        "provider_admission_refusal": admission_refusal,
+    }
+
+
+def _write_provider_invocation_receipt(
+    task_dir: Path,
+    output_file: Path,
+    provider_output: str,
+    exit_code: int,
+    *,
+    invocation_id: str,
+    status: str,
+) -> dict[str, object]:
+    """Persist wrapper-observed provider admission evidence.
+
+    The graph runtime must never infer quota/auth state from stdout.  This
+    wrapper is the provider boundary, so it records whether the provider
+    refused the invocation before producing a final assistant message.  It
+    intentionally makes no claim about filesystem effects; operatord records
+    those independently around the whole writable grant.
+    """
+    _bounded, overflow = _bounded_provider_log(task_dir, provider_output)
+    structured = _structured_provider_admission(provider_output, overflow=overflow)
+    runtime_state = str(structured.get("runtime_state") or "")
+    try:
+        final_message = output_file.read_bytes() if output_file.is_file() else b""
+    except OSError:
+        final_message = b""
+    final_present = bool(final_message.strip())
+    error_type = str(structured.get("error_type") or "")
+    admission_refusal = bool(
+        exit_code != 0
+        and structured.get("provider_admission_refusal") is True
+        and not final_present
+    )
+    try:
+        candidates = json.loads(os.environ.get("FROZEN_CANDIDATE_IDS_JSON") or "[]")
+    except (TypeError, ValueError):
+        candidates = []
+    if not isinstance(candidates, list):
+        candidates = []
+    identifiers = {
+        "task_id": os.environ.get("TASK_ID") or "",
+        "dispatch_id": os.environ.get("DISPATCH_ID") or "",
+        "attempt_id": os.environ.get("ATTEMPT_ID") or "",
+        "correlation_id": os.environ.get("CORRELATION_ID") or "",
+        "graph_dispatch_id": os.environ.get("GRAPH_DISPATCH_ID") or "",
+        "scheduler_input_sha256": os.environ.get("SCHEDULER_INPUT_SHA256") or "",
+        "frozen_candidate_ids": [str(value) for value in candidates if str(value).strip()],
+    }
+    receipt: dict[str, object] = {
+        "schema_version": "solar.provider_invocation_receipt.v1",
+        "provider": "openai",
+        "invocation_id": invocation_id,
+        "status": status,
+        "exit_code": int(exit_code),
+        "identifiers": identifiers,
+        "provider_admission_refusal": admission_refusal,
+        "structured_stream": structured,
+        "final_assistant_message": {
+            "present": final_present,
+            "sha256": hashlib.sha256(final_message).hexdigest() if final_message else "",
+        },
+        "tool_evidence": {
+            "observed": bool(structured.get("tool_or_external_event_observed")),
+            "basis": (
+                "provider_refusal_before_final_assistant_message"
+                if admission_refusal
+                else "plain_stream_does_not_prove_tool_absence"
+            ),
+            "complete": bool(structured.get("complete")),
+        },
+    }
+    if admission_refusal:
+        receipt["error"] = {
+            "type": error_type,
+            "phase": "admission",
+            "retryable": True,
+            "retry_scope": "frozen_operator_alternative",
+        }
+        receipt["failure_flow_control"] = {
+            "runtime_state": runtime_state,
+            "reason": (
+                "capacity"
+                if error_type == "provider_capacity"
+                else "rate_limit"
+                if error_type == "provider_quota"
+                else runtime_state
+            ),
+        }
+    path = task_dir / "provider-invocation-receipt.json"
+    temporary = path.with_suffix(".json.tmp")
+    temporary.write_text(json.dumps(receipt, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    os.replace(temporary, path)
+    return receipt
+
+
 def _declared_output_guidance() -> str:
     try:
         outputs = json.loads(os.environ.get("SOLAR_OPERATOR_ALLOWED_OUTPUTS_JSON") or "[]")
@@ -451,6 +689,7 @@ def _codex_exec_command(
     cmd.append("exec")
     if _truthy_env("SOLAR_CODEX_OPERATOR_EPHEMERAL", "1"):
         cmd.append("--ephemeral")
+    cmd.append("--json")
     cmd.extend([
         "--skip-git-repo-check",
         "--model",
@@ -989,8 +1228,8 @@ def main() -> int:
             "dispatch_sha256": hashlib.sha256(
                 dispatch.encode("utf-8", errors="replace")
             ).hexdigest(),
-            "structured_stream": False,
-            "structured_stream_reason": "json_mode_parity_not_verified",
+            "structured_stream": True,
+            "structured_stream_reason": "codex_exec_jsonl",
             "provider_latency_ms": None,
             "model_latency_ms": None,
         },
@@ -1028,6 +1267,14 @@ def main() -> int:
                 env=codex_env,
             )
         except Exception as exc:
+            _write_provider_invocation_receipt(
+                task_dir,
+                output_file,
+                str(exc),
+                70,
+                invocation_id=invocation_id,
+                status="spawn_error",
+            )
             _complete_invocation("spawn_error", None, failure_class=type(exc).__name__)
             raise
         _observe(
@@ -1051,6 +1298,14 @@ def main() -> int:
                     proc.kill()
                 proc.wait(timeout=5)
             _complete_invocation("registration_failed", 75)
+            _write_provider_invocation_receipt(
+                task_dir,
+                output_file,
+                "process registration failed",
+                75,
+                invocation_id=invocation_id,
+                status="registration_failed",
+            )
             return 75
         try:
             assert proc.stdin is not None
@@ -1113,6 +1368,19 @@ def main() -> int:
                             proc.kill()
                         proc.wait(timeout=5)
                     _write_skill_bridge_result(task_dir, skill_bridge_evidence, 0)
+                    combined = (
+                        cli_log.read_text(encoding="utf-8", errors="replace")
+                        if cli_log.exists()
+                        else ""
+                    )
+                    _write_provider_invocation_receipt(
+                        task_dir,
+                        output_file,
+                        combined,
+                        int(proc.returncode or 0),
+                        invocation_id=invocation_id,
+                        status="pm_result_ready",
+                    )
                     _complete_invocation(
                         "pm_result_ready",
                         int(proc.returncode or 0),
@@ -1142,6 +1410,14 @@ def main() -> int:
                     )
                     _write_pm_result(task_dir, output_file, combined, 0)
                     _write_skill_bridge_result(task_dir, skill_bridge_evidence, 0)
+                    _write_provider_invocation_receipt(
+                        task_dir,
+                        output_file,
+                        combined,
+                        0,
+                        invocation_id=invocation_id,
+                        status="declared_closeout_ready",
+                    )
                     _complete_invocation(
                         "declared_closeout_ready",
                         0,
@@ -1183,6 +1459,14 @@ def main() -> int:
                 print(combined, file=sys.stderr)
                 _write_pm_result(task_dir, output_file, combined, 124)
                 _write_skill_bridge_result(task_dir, skill_bridge_evidence, 124)
+                _write_provider_invocation_receipt(
+                    task_dir,
+                    output_file,
+                    combined,
+                    124,
+                    invocation_id=invocation_id,
+                    status="timeout",
+                )
                 _complete_invocation("timeout", 124, first_output_observed=first_output_observed)
                 return 124
             time.sleep(1)
@@ -1195,11 +1479,19 @@ def main() -> int:
         _write_pm_result(task_dir, output_file, combined, int(proc.returncode))
     exit_code = int(proc.returncode or 0)
     _write_skill_bridge_result(task_dir, skill_bridge_evidence, exit_code)
+    _write_provider_invocation_receipt(
+        task_dir,
+        output_file,
+        combined,
+        exit_code,
+        invocation_id=invocation_id,
+        status="completed" if exit_code == 0 else "failed",
+    )
     _complete_invocation(
         "completed" if exit_code == 0 else "failed",
         exit_code,
         first_output_observed=first_output_observed,
-        structured_stream=False,
+        structured_stream=True,
     )
     return exit_code
 

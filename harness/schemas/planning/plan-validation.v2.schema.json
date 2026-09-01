@@ -14,7 +14,7 @@
       "additionalProperties": false,
       "properties": {
         "plan_ir_id": {"type": "string", "minLength": 1},
-        "generation": {"type": "integer", "minimum": 0, "maximum": 1},
+        "generation": {"type": "integer", "minimum": 0, "maximum": 4},
         "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
       }
     },
@@ -35,6 +35,6 @@
     },
     "errors": {"type": "array", "items": {"type": "object"}},
     "warnings": {"type": "array", "items": {"type": "object"}},
-    "repair_count": {"type": "integer", "minimum": 0, "maximum": 1}
+    "repair_count": {"type": "integer", "minimum": 0, "maximum": 4}
   }
 }

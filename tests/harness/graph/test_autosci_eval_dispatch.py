@@ -542,6 +542,63 @@ def test_autosci_eval_snapshot_uses_workdir_and_exact_operator_envelope(
     assert rows[relative_output]["exists"] is True
 
 
+def test_autosci_eval_snapshot_recovers_direct_operator_envelope_from_runstate(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    harness_dir, sprints = _prepare_isolated_harness(tmp_path, monkeypatch)
+    sid = "sprint-autosci-snapshot-runstate"
+    node_id = "literature_discover"
+    task_id = f"graph-{sid}-{node_id}-20260829T021656Z"
+    operator_id = "autosci-literature-discover-worker"
+    relative_output = f"artifacts/scientific/{sid}/01_paper/literature_discovery.v1.json"
+    output = sprints / sid / "workdir" / relative_output
+    output.parent.mkdir(parents=True)
+    output.write_text('{"schema":"literature_discovery.v1","status":"completed"}\n', encoding="utf-8")
+    envelope = harness_dir / "run" / "operator-results" / operator_id / task_id / "envelope.json"
+    envelope.parent.mkdir(parents=True)
+    envelope.write_text('{"expected_action":"discover_literature"}\n', encoding="utf-8")
+
+    import node_runstate
+
+    node_runstate.record(
+        sprints,
+        sid,
+        node_id,
+        "attribution",
+        {
+            "phase": "dispatched",
+            "dispatch_mode": "autosci_operator_direct",
+            "dispatch_id": task_id,
+            "pm_task_id": task_id,
+            "operator_id": operator_id,
+            "role": "scientific-literature-discoverer",
+        },
+    )
+    node = {
+        "id": node_id,
+        "status": "reviewing",
+        "read_scope": ["dispatch/envelope.json"],
+        "write_scope": [relative_output],
+    }
+    graph = {
+        "sprint_id": sid,
+        "workflow_contract": "research.autosci.v1",
+        "workflow_contract_id": "research.autosci.v1",
+        "artifact_roots": {"canonical": f"artifacts/scientific/{sid}/"},
+        "nodes": [node],
+    }
+
+    import graph_node_dispatcher as gnd
+
+    snapshot = gnd._capture_eval_artifact_snapshot(sid, node, graph)
+
+    assert snapshot["ok"] is True, snapshot
+    rows = {row["declared"]: row for row in snapshot["rows"]}
+    assert rows["dispatch/envelope.json"]["authority"] == "operator_dispatch"
+    assert rows["dispatch/envelope.json"]["path"] == str(envelope)
+
+
 def test_autosci_dispatch_names_the_same_workdir_used_by_eval_snapshot(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

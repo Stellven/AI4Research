@@ -257,6 +257,56 @@ def test_generic_research_words_do_not_make_an_unrelated_candidate_relevant() ->
     assert audit["blocking_reasons"] == ["query_has_no_specific_topic_terms"]
 
 
+def test_semicolon_method_coverage_is_satisfied_across_kv_cache_landscape() -> None:
+    query = """Retrieve a KV-cache efficiency landscape for long-context LLM inference.
+
+Authoritative discovery scope:
+- [R5] The study must cover KV cache compression, quantization, selection, eviction, and sparsification methods. Required coverage: compression; quantization; selection; eviction; sparsification
+- [R6] The study scope is long-context large language model inference. Required coverage: long-context large language model inference
+"""
+    candidates = [
+        _candidate(1, "KV cache compression for long-context large language model inference", "Compression reduces cache memory."),
+        _candidate(2, "KV cache quantization in long-context LLM inference", "Quantization preserves generation quality."),
+        _candidate(3, "KV cache token selection for long-context language models", "Selection reduces inference memory."),
+        _candidate(4, "KV cache eviction for long-context language model inference", "Eviction retains important tokens."),
+        _candidate(5, "KV cache sparsification for efficient long-context LLM inference", "Sparsification accelerates decoding."),
+    ]
+
+    accepted, audit = apply_discovery_relevance_gate(query, candidates)
+
+    assert audit["status"] == "passed"
+    assert len(accepted) == 5
+    assert audit["aggregate_coverage_missing"] == []
+    method_items = audit["coverage_anchor_groups"][0]["anchor_items"]
+    assert [item["label"] for item in method_items] == [
+        "compression",
+        "quantization",
+        "selection",
+        "eviction",
+        "sparsification",
+    ]
+
+
+def test_sparsification_coverage_accepts_sparse_scientific_terminology() -> None:
+    query = """Retrieve a KV-cache efficiency landscape for long-context LLM inference.
+
+Authoritative discovery scope:
+- [R5] Cover KV cache compression and sparsification. Required coverage: compression; sparsification
+- [R6] Study long-context large language model inference. Required coverage: long-context large language model inference
+"""
+    candidates = [
+        _candidate(1, "KV cache compression for long-context LLM inference", "Compression reduces memory."),
+        _candidate(2, "Sparse KV cache for long-context language model inference", "Sparse attention retains selected tokens."),
+        _candidate(3, "KV cache sparsity for long-context LLM inference", "Sparsity reduces decode memory."),
+    ]
+
+    accepted, audit = apply_discovery_relevance_gate(query, candidates)
+
+    assert audit["status"] == "passed"
+    assert len(accepted) == 3
+    assert audit["aggregate_coverage_missing"] == []
+
+
 def test_service_archives_incomplete_relevance_audit_and_returns_no_candidates(tmp_path: Path) -> None:
     raw_candidates = [
         _candidate(1, "Sodium-ion batteries for stationary grid storage", "Battery chemistry and lifetime."),
@@ -428,3 +478,49 @@ Authoritative discovery scope:
         "Compare lithium-ion, sodium-ion, solid-state, and lithium-sulfur batteries for grid storage",
         "Evaluate energy density, lifetime, safety, material availability, cost, and commercial readiness",
     ]
+
+
+def test_service_ranks_admitted_candidates_with_specific_evidence(tmp_path: Path) -> None:
+    query = "Compare cache quantization, eviction, and sparsification for long context inference"
+    raw_candidates = [
+        _candidate(1, "Cache quantization for long context inference", "Quantized KV cache memory."),
+        _candidate(2, "Sparse cache eviction for long context inference", "Sparse token eviction."),
+        _candidate(3, "Cache compression and sparsification", "Long context inference compression."),
+    ]
+
+    def backend(**_kwargs):
+        return {
+            "status": "completed",
+            "candidates": [
+                {
+                    "candidate_id": item["source_id"],
+                    "paperId": item["source_id"],
+                    "title": item["title"],
+                    "source_ref": item["url"],
+                    "abstract": item["content_summary"],
+                    "year": 2025,
+                    "source_channels": ["search_s2"],
+                }
+                for item in raw_candidates
+            ],
+            "limitations": [],
+        }
+
+    service = LiteratureDiscoveryService(tmp_path, backend=backend, limit=3, max_attempts_per_provider=1)
+    service._arxiv = lambda _query: ([], {"provider": "arxiv"})
+    service._europe_pmc = lambda _query: ([], {"provider": "europe_pmc"})
+    service._openalex = lambda _query: ([], {"provider": "openalex"})
+    service._crossref = lambda _query: ([], {"provider": "crossref"})
+
+    result = service(
+        seed_snapshot={"seeds": [{"seed_kind": "topic", "content": query}]},
+        payload={},
+    )
+
+    assert result["status"] == "completed"
+    assert all(float(item["ranking_score"]) > 0 for item in result["candidates"])
+    assert result["candidates"] == sorted(
+        result["candidates"], key=lambda item: item["ranking_score"], reverse=True
+    )
+    assert len({item["ranking_rationale"] for item in result["candidates"]}) == 3
+    assert all("Matched " in item["ranking_rationale"] for item in result["candidates"])

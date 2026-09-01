@@ -57,7 +57,8 @@ def _expression_values(expression: Any) -> list[str]:
     return _dedupe(values)
 
 
-def _requirement_ir_id(intent_ir_id: str) -> str:
+def requirement_ir_id_for_intent(intent_ir_id: str) -> str:
+    """Derive the stable RequirementIR identity from its admitted intent."""
     if intent_ir_id.startswith("intent-ir-"):
         return "requirement-ir-" + intent_ir_id.removeprefix("intent-ir-")
     normalized = re.sub(r"[^A-Za-z0-9_.-]+", "-", intent_ir_id).strip("-")
@@ -262,7 +263,7 @@ def compile_requirement_ir(
 
     return {
         "schema_version": "solar.requirement_ir.v2",
-        "requirement_ir_id": _requirement_ir_id(intent_ir_id),
+        "requirement_ir_id": requirement_ir_id_for_intent(intent_ir_id),
         "intent_ir_ref": {
             "intent_ir_id": intent_ir_id,
             "sha256": intent_ir_sha256.lower(),

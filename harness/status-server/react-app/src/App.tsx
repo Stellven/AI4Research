@@ -107,6 +107,8 @@ import {
   payload,
   shortText,
   stallCopy,
+  failureCodeIsTyped,
+  typedFailureFacts,
   statusTone,
   titleForSprint,
   unwrapEvent,
@@ -1425,7 +1427,12 @@ function RunOverview({
     tone = "blocked";
   } else if (terminalOutcome === "failure") {
     kicker = "Run failed";
+    const typedLine =
+      stall?.failure && failureCodeIsTyped(stall.failure.code)
+        ? stallCopy(stall)
+        : "";
     line =
+      typedLine ||
       "A required step failed. Review the failed step and evaluation evidence below.";
     tone = "blocked";
   } else if (terminalOutcome === "success") {
@@ -1565,7 +1572,11 @@ function SessionView({
         projectionEvents,
         session.deliverables,
         phase,
-        { showStallSummary: isBlocked, stall, runActive },
+        {
+          showStallSummary: isBlocked || Boolean(stall?.failure),
+          stall,
+          runActive,
+        },
       ),
     [
       projection,
@@ -3437,13 +3448,19 @@ function buildProcessSteps(
     options.showStallSummary === false
       ? undefined
       : options.stall || projection?.data?.dispatch?.stall;
-  if (stall?.is_stalled && !steps.some((step) => step.state === "blocked")) {
-    steps.push({
+  const typedFailure = Boolean(stall?.is_stalled && stall.failure);
+  if (
+    stall?.is_stalled &&
+    (typedFailure || !steps.some((step) => step.state === "blocked"))
+  ) {
+    const failureFacts = typedFailureFacts(stall);
+    const step: NarrativeStep = {
       id: "stall-summary",
       actor: "Harness",
-      title: "Dispatch is blocked",
+      title: asString(stall.title) || "Dispatch is blocked",
       summary: stallCopy(stall),
       detail:
+        asString(stall.detail) ||
         stallCopy(stall) ||
         "The sprint is waiting on a dispatch gate or missing worker capability.",
       timestamp: projection?.generated_at || "",
@@ -3456,8 +3473,11 @@ function buildProcessSteps(
           value: asString(stall.state, "stalled").replace(/_/g, " "),
         },
         { label: "phase", value: phase.replace(/_/g, " ") },
+        ...failureFacts,
       ],
-    });
+    };
+    if (typedFailure) steps.unshift(step);
+    else steps.push(step);
   }
 
   // Surface the canonical result as a stream milestone regardless of file type

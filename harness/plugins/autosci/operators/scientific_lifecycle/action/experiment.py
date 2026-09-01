@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from ...research_synthesis.base import build_node_result, stable_json_sha256
@@ -106,8 +107,26 @@ def _first_test_target(context: OperatorContext) -> dict[str, Any]:
     )
 
 
+def _dataset_manifest(context: OperatorContext) -> dict[str, Any]:
+    documents = load_documents(
+        context,
+        schemas=("dataset_manifest.v1",),
+        payload_keys=("dataset_manifest",),
+        required=False,
+    )
+    if not documents:
+        return {}
+    document = documents[0]
+    outputs = document.get("outputs") if isinstance(document.get("outputs"), dict) else document
+    manifest = outputs.get("dataset_manifest") if isinstance(outputs, dict) else None
+    if not isinstance(manifest, dict):
+        raise ResearchOperatorError("Dataset manifest is malformed", error_type="invalid_input")
+    return manifest
+
+
 def design_experiment(node_request: dict[str, Any], context: OperatorContext) -> dict[str, Any]:
     target = _first_test_target(context)
+    dataset_manifest = _dataset_manifest(context)
     hypothesis = target["hypothesis"]
     minimum = target["minimum_experiment"]
     requested_sandbox = context.payload.get("sandbox") if isinstance(context.payload.get("sandbox"), dict) else {}
@@ -143,15 +162,66 @@ def design_experiment(node_request: dict[str, Any], context: OperatorContext) ->
         "source_target_kind": target["target_kind"],
         "origin_evidence_ids": list(target["origin_evidence_ids"]),
     }
+    if dataset_manifest:
+        execution = dataset_manifest.get("execution")
+        dataset = dataset_manifest.get("dataset")
+        criteria = dataset_manifest.get("criteria_bindings")
+        if not isinstance(execution, dict) or not isinstance(dataset, dict) or not isinstance(criteria, list):
+            raise ResearchOperatorError(
+                "Dataset manifest does not contain an executable package contract",
+                error_type="invalid_input",
+            )
+        result_path = str(execution.get("result_path") or "").strip()
+        if not result_path:
+            raise ResearchOperatorError("Dataset manifest execution result_path is missing", error_type="invalid_input")
+        plan.update(
+            {
+                "experiment_family": str(dataset_manifest.get("experiment_family") or ""),
+                "dataset": dataset,
+                "model": dataset_manifest.get("model") if isinstance(dataset_manifest.get("model"), dict) else {},
+                "execution": execution,
+                "criteria_bindings": criteria,
+                "metrics": [
+                    "memory_reduction_ratio_int8",
+                    "memory_reduction_ratio_int4",
+                    "mean_reconstruction_mse_int8",
+                    "mean_reconstruction_mse_int4",
+                    "mean_reconstruction_cosine_int8",
+                    "mean_reconstruction_cosine_int4",
+                    "mean_quantize_dequantize_ms_int8",
+                    "mean_quantize_dequantize_ms_int4",
+                ],
+                "variables": ["cache_precision_bits", "context_tokens", "dataset_case_seed"],
+                "procedure": [
+                    "Load the exact hash-bound pretrained model state and retained public-dataset token cases.",
+                    "Run a real cached forward pass for every retained context and collect its key/value tensors.",
+                    "Quantize and dequantize every cache tensor at 8-bit and 4-bit precision.",
+                    "Record cache bytes, reconstruction error, cosine similarity, and quantization time per case.",
+                    "Recompute every acceptance criterion from the retained raw metrics.",
+                ],
+                "expected_artifacts": [
+                    "raw_measurement.json",
+                    "stdout.txt",
+                    "stderr.txt",
+                    "launch_receipt.json",
+                    "experiment_result.v1.json",
+                ],
+                "sandbox": {
+                    "mode": "process_restricted",
+                    "network": False,
+                    "write_scope": [str(Path(result_path).parent).replace("\\", "/")],
+                },
+            }
+        )
     if target["target_kind"] == "idea":
         plan["source_idea_id"] = target["target_id"]
     else:
         plan["source_claim_id"] = target["target_id"]
         if target.get("acceptance_criteria"):
             plan["claim_acceptance_criteria"] = list(target["acceptance_criteria"])
-    if isinstance(context.payload.get("execution"), dict):
+    if not dataset_manifest and isinstance(context.payload.get("execution"), dict):
         plan["execution"] = dict(context.payload["execution"])
-    if isinstance(context.payload.get("criteria_bindings"), list):
+    if not dataset_manifest and isinstance(context.payload.get("criteria_bindings"), list):
         plan["criteria_bindings"] = list(context.payload["criteria_bindings"])
     if plan["sandbox"]["mode"] not in SANDBOX_MODES or plan["sandbox"]["network"]:
         raise ResearchOperatorError("Experiment plan must use an isolated no-network sandbox", error_type="safety_violation")
@@ -187,7 +257,8 @@ def _approval_decision(context: OperatorContext, plan: dict[str, Any]) -> dict[s
         reasons.append("sandbox mode is not isolated")
     if bool(sandbox.get("network", False)):
         reasons.append("experiment requests network access")
-    declared_scopes = {str(item).replace("\\", "/").rstrip("/") for item in context.write_scope}
+    approved_write_scope = auth.get("approved_write_scope") if isinstance(auth.get("approved_write_scope"), list) else context.write_scope
+    declared_scopes = {str(item).replace("\\", "/").rstrip("/") for item in approved_write_scope}
     requested_scopes = {str(item).replace("\\", "/").rstrip("/") for item in sandbox.get("write_scope") or []}
     if not requested_scopes or not requested_scopes.issubset(declared_scopes):
         reasons.append("sandbox write scope exceeds the node request")
@@ -238,7 +309,12 @@ def approve_experiment(node_request: dict[str, Any], context: OperatorContext) -
 
 
 def _approval_contract(context: OperatorContext) -> dict[str, Any]:
-    documents = load_documents(context, schemas=("experiment_approval.v1",), required=False)
+    documents = load_documents(
+        context,
+        schemas=("experiment_approval.v1",),
+        payload_keys=("experiment_approval",),
+        required=False,
+    )
     for document in documents:
         outputs = document.get("outputs") if isinstance(document.get("outputs"), dict) else document
         approval = outputs.get("approval") if isinstance(outputs, dict) else None
@@ -247,6 +323,73 @@ def _approval_contract(context: OperatorContext) -> dict[str, Any]:
         if isinstance(document.get("approval"), dict):
             return document["approval"]
     return {}
+
+
+def _allows_unavailable_as_inconclusive(context: OperatorContext) -> bool:
+    task_contract = (
+        context.payload.get("task_contract")
+        if isinstance(context.payload.get("task_contract"), dict)
+        else {}
+    )
+    request_text = " ".join(
+        str(value or "")
+        for value in (
+            context.payload.get("availability_policy"),
+            context.payload.get("objective"),
+            task_contract.get("user_intent"),
+        )
+    ).casefold()
+    return (
+        bool(context.payload.get("inconclusive_when_unavailable"))
+        or ("inconclusive" in request_text and "unavailable" in request_text)
+    )
+
+
+def _unavailable_experiment_result(
+    context: OperatorContext,
+    *,
+    plan: dict[str, Any],
+    approval: dict[str, Any],
+    reason: str,
+    unavailable_resource: str,
+) -> dict[str, Any]:
+    evidence_id = f"availability:{unavailable_resource}:unavailable"
+    result = {
+        "experiment_id": require_text(plan.get("experiment_id"), "experiment_id"),
+        "outcome": "inconclusive",
+        "metrics": [],
+        "evidence_ids": [evidence_id],
+        "approval_ref": approval["approval_ref"],
+        "plan_sha256": approval["plan_sha256"],
+        "sandbox_enforced": False,
+        "execution_attempted": False,
+        "availability": {
+            "status": "unavailable",
+            "resource": unavailable_resource,
+            "reason": reason,
+        },
+    }
+    limitation = (
+        f"Experiment execution was not attempted because {unavailable_resource} was unavailable: {reason}"
+    )
+    artifact, evidence, hashes = write_evidence_artifact(
+        context,
+        operator_id=RUNNER_ID,
+        schema="experiment_result.v1",
+        outputs={"result": result},
+        filename="experiment_result.v1.json",
+        artifact_id="experiment_result",
+        status="inconclusive",
+        limitations=[limitation],
+    )
+    return build_node_result(
+        context,
+        status="completed",
+        output_artifacts=[artifact],
+        evidence=[evidence],
+        hashes=hashes,
+        limitations=[limitation],
+    )
 
 
 def run_experiment(node_request: dict[str, Any], context: OperatorContext) -> dict[str, Any]:
@@ -264,6 +407,14 @@ def run_experiment(node_request: dict[str, Any], context: OperatorContext) -> di
         raise ResearchOperatorError("Hash-bound approval evidence is required", error_type="approval_required")
     executor = context.services.get("experiment_executor")
     if not callable(executor):
+        if _allows_unavailable_as_inconclusive(context):
+            return _unavailable_experiment_result(
+                context,
+                plan=plan,
+                approval=approval,
+                reason="experiment_executor service is unavailable",
+                unavailable_resource="executor",
+            )
         raise ResearchOperatorError("experiment_executor service is unavailable", error_type="environment_unavailable")
     try:
         raw = executor(
@@ -272,7 +423,19 @@ def run_experiment(node_request: dict[str, Any], context: OperatorContext) -> di
             timeout_seconds=int(plan["resource_limits"]["timeout_seconds"]),
             max_output_bytes=int(plan["resource_limits"]["max_output_bytes"]),
         )
-    except ResearchOperatorError:
+    except ResearchOperatorError as exc:
+        if _allows_unavailable_as_inconclusive(context) and exc.error_type in {
+            "environment_unavailable",
+            "missing_input",
+        }:
+            unavailable_resource = "dataset" if exc.error_type == "missing_input" else "executor"
+            return _unavailable_experiment_result(
+                context,
+                plan=plan,
+                approval=approval,
+                reason=str(exc),
+                unavailable_resource=unavailable_resource,
+            )
         raise
     except Exception as exc:
         raise service_failure("experiment_executor", exc) from exc
@@ -292,11 +455,35 @@ def run_experiment(node_request: dict[str, Any], context: OperatorContext) -> di
         "approval_ref": approval["approval_ref"],
         "plan_sha256": approval["plan_sha256"],
         "sandbox_enforced": True,
+        "execution_attempted": True,
     }
     if isinstance(raw.get("criteria_results"), dict):
         result["criteria_results"] = {
             str(key): value for key, value in raw["criteria_results"].items() if isinstance(value, bool)
         }
+    runtime = raw.get("runtime") if isinstance(raw.get("runtime"), dict) else {}
+    if runtime:
+        result["runtime"] = {
+            key: value
+            for key, value in runtime.items()
+            if key != "artifacts"
+        }
+    extra_artifacts = [
+        dict(item)
+        for item in runtime.get("artifacts") or []
+        if isinstance(item, dict)
+        and item.get("artifact_id")
+        and item.get("path")
+        and item.get("sha256")
+    ]
+    extra_hashes = [
+        {
+            "hash_id": str(item["artifact_id"]),
+            "algorithm": "sha256",
+            "value": str(item["sha256"]),
+        }
+        for item in extra_artifacts
+    ]
     return completed_result(
         context,
         operator_id=RUNNER_ID,
@@ -305,6 +492,8 @@ def run_experiment(node_request: dict[str, Any], context: OperatorContext) -> di
         filename="experiment_result.v1.json",
         artifact_id="experiment_result",
         limitations=[str(item) for item in raw.get("limitations") or [] if str(item).strip()],
+        extra_artifacts=extra_artifacts,
+        extra_hashes=extra_hashes,
     )
 
 

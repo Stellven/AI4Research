@@ -16,11 +16,12 @@
         },
         "materialization": {
           "type": "object",
-          "required": ["kind", "path"],
+          "required": ["kind", "path", "route"],
           "additionalProperties": false,
           "properties": {
             "kind": {"enum": ["file", "directory"]},
-            "path": {"type": "string", "minLength": 1}
+            "path": {"type": "string", "minLength": 1},
+            "route": {"enum": ["sprint_private", "workspace_publish"]}
           }
         }
       }
@@ -43,7 +44,7 @@
     },
     "node": {
       "type": "object",
-      "required": ["node_id", "logical_operator", "objective", "depends_on", "consumes", "produces", "requirement_ids", "operator_requirements", "gate_requirement"],
+      "required": ["node_id", "logical_operator", "objective", "depends_on", "consumes", "produces", "workspace_reads", "requirement_ids", "operator_requirements", "gate_requirement"],
       "additionalProperties": false,
       "properties": {
         "node_id": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9._-]{0,63}$"},
@@ -52,6 +53,18 @@
         "depends_on": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
         "consumes": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
         "produces": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/artifact_output"}},
+        "workspace_reads": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["kind", "path"],
+            "additionalProperties": false,
+            "properties": {
+              "kind": {"const": "file"},
+              "path": {"type": "string", "minLength": 1}
+            }
+          }
+        },
         "requirement_ids": {"type": "array", "items": {"type": "string", "minLength": 1}, "uniqueItems": true},
         "operator_requirements": {"$ref": "#/$defs/operator_requirements"},
         "gate_requirement": {"type": "string", "minLength": 1}

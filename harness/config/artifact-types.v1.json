@@ -57,6 +57,7 @@
     {"artifact_type": "schema:schemas/evidence/artifact_review.v1.schema.json", "controller_input": false},
     {"artifact_type": "schema:schemas/evidence/claim_verdict.v1.schema.json", "controller_input": false},
     {"artifact_type": "schema:schemas/evidence/code_evidence_map.v1.schema.json", "controller_input": false},
+    {"artifact_type": "schema:schemas/evidence/dataset_manifest.v1.schema.json", "controller_input": false, "lineage_family": "experiment"},
     {"artifact_type": "schema:schemas/evidence/experiment_approval.v1.schema.json", "controller_input": false, "lineage_family": "experiment"},
     {"artifact_type": "schema:schemas/evidence/experiment_plan.v1.schema.json", "controller_input": false, "lineage_family": "experiment"},
     {"artifact_type": "schema:schemas/evidence/experiment_result.v1.schema.json", "controller_input": false, "minimum_execution_trust": "measured_execution", "lineage_family": "experiment"},
@@ -70,6 +71,7 @@
     {"artifact_type": "schema:schemas/evidence/research_memory_update.v1.schema.json", "controller_input": false},
     {"artifact_type": "schema:schemas/evidence/research_method.v1.schema.json", "controller_input": false},
     {"artifact_type": "schema:schemas/evidence/research_paper.v1.schema.json", "controller_input": false},
+    {"artifact_type": "schema:schemas/evidence/research_source_assessment.v1.schema.json", "controller_input": false},
     {"artifact_type": "schema:schemas/evidence/scientific_report_plan.v1.schema.json", "controller_input": false},
     {"artifact_type": "schema:schemas/evidence/scientific_report.v1.schema.json", "controller_input": false},
     {"artifact_type": "schema:schemas/evidence/workflow_evolution.v1.schema.json", "controller_input": false}

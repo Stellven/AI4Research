@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -215,6 +216,19 @@ def _contract_value(text: str, key: str) -> str:
     return ""
 
 
+def _elastic_frozen_authority(sid: str) -> dict[str, Any]:
+    """Recognize only the fully verified native Planner runtime mode."""
+    lib_dir = HARNESS_DIR / "lib"
+    if str(lib_dir) not in sys.path:
+        sys.path.insert(0, str(lib_dir))
+    try:
+        from elastic_planner_runtime import frozen_scheduler_authority
+
+        return frozen_scheduler_authority(SPRINTS_DIR, sid)
+    except Exception as exc:
+        return {"ok": False, "errors": [f"{type(exc).__name__}:{exc}"]}
+
+
 def route(sid: str) -> dict[str, Any]:
     sf = SPRINTS_DIR / f"{sid}.status.json"
     status = _read_json(sf)
@@ -235,6 +249,8 @@ def route(sid: str) -> dict[str, Any]:
     handoff = _artifact_path(sid, "handoff.md")
     eval_md = _artifact_path(sid, "eval.md")
     eval_json = _artifact_path(sid, "eval.json")
+    elastic_authority = _elastic_frozen_authority(sid)
+    elastic_scheduler = bool(elastic_authority.get("ok"))
 
     # Try triface (spec/state/closure) first; fall back to legacy task_graph.json
     _triface_ok, _triface_reason = _triface_graph_valid(sid)
@@ -245,7 +261,7 @@ def route(sid: str) -> dict[str, Any]:
         if _triface_ok is None and _triface_reason == "spec_missing":
             # spec just not created yet — use legacy result
             pass
-    if graph_ok:
+    if graph_ok and not elastic_scheduler:
         cert_ok, cert_reason = _plan_certificate_ready(graph)
         if not cert_ok:
             graph_ok, graph_reason = False, cert_reason
@@ -267,7 +283,8 @@ def route(sid: str) -> dict[str, Any]:
         "handoff": _nonempty(handoff),
         "eval": _nonempty(eval_md) or _nonempty(eval_json),
     }
-    planner_ready = artifacts["prd"] and artifacts["design"] and artifacts["plan"] and artifacts["task_graph"]
+    legacy_planner_ready = artifacts["prd"] and artifacts["design"] and artifacts["plan"] and artifacts["task_graph"]
+    planner_ready = legacy_planner_ready or (elastic_scheduler and artifacts["task_graph"])
     requirements_ready = artifacts["prd"]
 
     contract_bypass = _contract_flag(text, "bypass_pm") or _contract_flag(text, "bypass pm")
@@ -321,7 +338,15 @@ def route(sid: str) -> dict[str, Any]:
     elif planner_ready and blocked_prerequisites and not operator_bypass:
         role, stage, reason = "none", "dependency_blocked", "external_prerequisite_blocked"
     elif planner_ready or operator_bypass:
-        role, stage, reason = "builder_main", "planning_complete", "planner_artifacts_and_task_graph_ready"
+        role, stage, reason = (
+            "builder_main",
+            "planning_complete",
+            (
+                "elastic_frozen_scheduler_authority_ready"
+                if elastic_scheduler
+                else "planner_artifacts_and_task_graph_ready"
+            ),
+        )
     elif requirements_ready:
         role, stage, reason = "planner", "prd_ready", "pm_prd_ready"
     else:
@@ -340,6 +365,7 @@ def route(sid: str) -> dict[str, Any]:
         "artifacts": artifacts,
         "graph_reason": graph_reason,
         "blocked_prerequisites": blocked_prerequisites,
+        "elastic_scheduler_authority": elastic_authority,
         "violations": violations,
     }
 

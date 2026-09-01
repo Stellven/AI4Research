@@ -982,6 +982,24 @@ Authoritative discovery scope:
     assert "constraint_satisfied" not in query
 
 
+def test_topic_discovery_query_keeps_domain_for_semicolon_coverage_list() -> None:
+    full_query = """Retrieve a KV-cache efficiency landscape.
+
+Authoritative discovery scope:
+- [R5] The systematic study must cover KV cache compression, quantization, selection, eviction, and sparsification methods. Required coverage: compression; quantization; selection; eviction; sparsification
+- [R6] The study scope is long-context large language model inference. Required coverage: long-context large language model inference
+"""
+
+    query = _topic_from_snapshot(
+        {"seeds": [{"seed_kind": "topic", "content": full_query}]},
+        {"task_contract": {"user_intent": full_query}},
+    )
+
+    assert "KV cache" in query
+    assert "long-context large language model inference" in query
+    assert "Required coverage" not in query
+
+
 def test_research_model_retries_429_retry_after_on_same_route(tmp_path: Path) -> None:
     calls = []
 

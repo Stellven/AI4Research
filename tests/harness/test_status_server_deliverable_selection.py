@@ -74,6 +74,43 @@ def test_nested_governed_final_report_outranks_pm_transcript(tmp_path, monkeypat
     assert selected[0]["supporting"] is False
 
 
+def test_native_direct_response_report_is_dashboard_result_without_graph(tmp_path, monkeypatch) -> None:
+    mod = _load_status_server()
+    harness = tmp_path / "harness"
+    sprints = harness / "sprints"
+    reports = harness / "reports"
+    sid = "sprint-native-direct-answer"
+    sprints.mkdir(parents=True)
+    (sprints / f"{sid}.status.json").write_text(
+        json.dumps(
+            {
+                "sprint_id": sid,
+                "status": "passed",
+                "phase": "direct_response_complete",
+                "execution_mode": "direct_response",
+            }
+        ),
+        encoding="utf-8",
+    )
+    (sprints / f"{sid}.direct-response-report.md").write_text(
+        "# Answer\n\nPhotosynthesis converts light energy into stored chemical energy.\n",
+        encoding="utf-8",
+    )
+    (sprints / f"{sid}.elastic-planner.pm-result.md").write_text(
+        "internal closeout transcript\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(mod, "HARNESS_DIR", harness)
+    monkeypatch.setattr(mod, "SPRINTS_DIR", sprints)
+    monkeypatch.setattr(mod, "REPORTS_DIR", reports)
+
+    rows = mod._discover_sprint_deliverables(sid)
+    selected = [row for row in rows if row.get("result")]
+
+    assert len(selected) == 1
+    assert selected[0]["name"] == f"{sid}.direct-response-report.md"
+
+
 def test_final_report_outranks_larger_research_context_html(tmp_path, monkeypatch) -> None:
     """Research source captures are evidence, not the user-facing report."""
     mod = _load_status_server()

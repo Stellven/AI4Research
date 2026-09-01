@@ -53,6 +53,13 @@ OPERATOR_SPECS: dict[str, OperatorSpec] = {
         "research_papers",
         operators.ingest_discovered_sources,
     ),
+    "source_assess": _spec(
+        "source_assess",
+        "autosci-evidence-source-assess",
+        "research_source_assessment.v1",
+        "research_source_assessment.v1.json",
+        operators.assess_research_sources,
+    ),
     "material_ingest": _spec(
         "material_ingest", "autosci-evidence-material-ingest", "research_paper.v1", "research_material.v1.json", operators.ingest_source
     ),
@@ -178,6 +185,10 @@ def _execute_named(
 
 def execute_literature_discover(node_request, *, services=None, workspace_root=None):
     return _execute_named("literature_discover", node_request, services=services, workspace_root=workspace_root)
+
+
+def execute_source_assess(node_request, *, services=None, workspace_root=None):
+    return _execute_named("source_assess", node_request, services=services, workspace_root=workspace_root)
 
 
 def execute_evidence_import(node_request, *, services=None, workspace_root=None):

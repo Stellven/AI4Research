@@ -555,6 +555,69 @@ def test_terminal_failure_recovery_is_generation_fenced_and_reopens_only_depende
     assert "node_not_terminal_failed" in replay["reason"]
 
 
+def test_terminal_failure_recovery_reopens_only_fail_run_ledger_cancellations(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    harness = tmp_path / "harness"
+    sprints = harness / "sprints"
+    run = harness / "run"
+    sprints.mkdir(parents=True)
+    run.mkdir(parents=True)
+    monkeypatch.setattr(gnd, "HARNESS_DIR", harness)
+    monkeypatch.setattr(gnd, "SPRINTS_DIR", sprints)
+    monkeypatch.setattr(gnd, "DISPATCH_LEDGER", run / "dispatch-ledger.jsonl")
+    monkeypatch.setattr(gs, "HARNESS_DIR", harness)
+    monkeypatch.setattr(gs, "SPRINTS_DIR", sprints)
+    graph = {
+        "sprint_id": SID,
+        "nodes": [
+            {"id": "S3", "status": "failed", "depends_on": [], "repair_attempts": 1},
+            {"id": "S4", "status": "cancelled", "depends_on": ["S3"]},
+            {"id": "S5", "status": "cancelled", "depends_on": ["S4"]},
+            {"id": "manual-cancel", "status": "cancelled", "depends_on": ["S3"]},
+        ],
+        "node_results": {
+            "S3": {"status": "failed"},
+            "S4": {"status": "cancelled"},
+            "S5": {"status": "cancelled"},
+            "manual-cancel": {"status": "cancelled"},
+        },
+        "gate_results": {},
+        "required_gates": [],
+    }
+    graph_path = sprints / f"{SID}.task_graph.json"
+    gs.save_graph(graph_path, graph)
+    gnd.DISPATCH_LEDGER.write_text(
+        json.dumps(
+            {
+                "kind": "scheduler_input_failure_policy_exhausted",
+                "sid": SID,
+                "node": "S3",
+                "on_exhausted": "fail_run",
+                "cancelled_nodes": ["S4", "S5"],
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    recovered = gnd.escalate_terminal_failure_to_human_review(
+        graph_path,
+        "S3",
+        expected_repair_generation=1,
+        actor="release-owner",
+        reason="fixed native closeout",
+    )
+
+    assert recovered["ok"] is True
+    assert recovered["reopened_descendants"] == ["S4", "S5"]
+    saved = gs.load_graph(graph_path)
+    assert gs.node_status(saved, "S4") == "pending"
+    assert gs.node_status(saved, "S5") == "pending"
+    assert gs.node_status(saved, "manual-cancel") == "cancelled"
+
+
 def test_human_review_history_keeps_generation_monotonic_after_terminal_projection() -> None:
     prior = {
         "schema_version": gs.HUMAN_REVIEW_SCHEMA_VERSION,

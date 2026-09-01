@@ -18,6 +18,7 @@ from requirement_compiler import (  # noqa: E402
     RequirementCompilationError,
     compile_requirement_ir,
     evaluate_requirement_ir_format,
+    requirement_ir_id_for_intent,
 )
 
 
@@ -67,6 +68,9 @@ def test_all_25_intent_ir_fixtures_compile_to_template_shape() -> None:
 
         assert first == second, case["case_id"]
         assert set(first) == set(template), case["case_id"]
+        assert first["requirement_ir_id"] == requirement_ir_id_for_intent(
+            intent["intent_ir_id"]
+        )
         assert first["intent_ir_ref"] == {
             "intent_ir_id": intent["intent_ir_id"],
             "sha256": digest,

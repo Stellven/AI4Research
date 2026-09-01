@@ -437,6 +437,7 @@ def compile_bundle(
             "dispatch_task_type": capsule_node["dispatch_task_type"],
             "depends_on": list(plan_node["depends_on"]),
             "requirement_ids": list(plan_node["requirement_ids"]),
+            "capability_capsule_id": capsule_id,
             "capsule_binding": {
                 "capsule_ids": [capsule_id],
                 "composition_id": None,

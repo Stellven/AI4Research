@@ -348,13 +348,28 @@ export type PaneSupply = {
   [key: string]: unknown;
 };
 
+export type TypedFailure = {
+  code?: string;
+  stage?: string | null;
+  before_execution?: boolean;
+  retry_safe?: boolean | null;
+  node_id?: string | null;
+  operator_id?: string | null;
+  receipt_ref?: string | null;
+  task_id?: string | null;
+};
+
 export type StallSummary = {
   is_stalled?: boolean;
   state?: string;
+  severity?: string;
+  title?: string;
+  detail?: string;
   reason?: string;
   reasons?: string[];
   blocked_nodes?: string[];
   explanation?: string;
+  failure?: TypedFailure;
   [key: string]: unknown;
 };
 

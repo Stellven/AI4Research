@@ -319,6 +319,13 @@ def build_route_proof(
     for stage in stages.values():
         op_id = str(stage.get("operator_id") or "").strip()
         op = operators.get(op_id, {})
+        # Provider policy constrains model-provider selection.  A registered
+        # local operator may carry a backend/provider label solely to name the
+        # implementation that executed it (for example,
+        # ``research_operator_registry``).  Preserve that attribution in the
+        # proof, but do not misclassify it as a forbidden model route when the
+        # frozen registry explicitly declares the operator provider-neutral.
+        stage["model_provider_neutral"] = bool(op.get("model_provider_neutral"))
         if not stage.get("provider"):
             provider = _normalize_provider(op.get("provider") or op.get("vendor") or op.get("backend"))
             if provider:
@@ -375,6 +382,8 @@ def build_route_proof(
             or has_succeeded_call
         )
         if not should_check:
+            continue
+        if stage.get("model_provider_neutral") is True:
             continue
         if not stage_allowed:
             if provider:

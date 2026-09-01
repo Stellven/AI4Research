@@ -76,23 +76,42 @@ RUNTIME_NODE_SPEC_FIELDS = {
 }
 SCHEDULER_RUNTIME_MUTABLE_NODE_FIELDS = RUNTIME_NODE_SPEC_FIELDS | {
     "attempt",
+    "blocked_by",
+    "blocked_by_failed_dependency",
     "candidate_observations",
+    "candidate_wait_attempts",
+    "dispatch_failure_streak",
+    "dispatch_retry_reason",
+    "eval_artifact_snapshot",
+    "evaluation_plan_requested",
+    "evaluation_plan_runtime",
+    "evaluation_plan_updated_at",
     "evaluation_results",
     "evaluation_state",
     "execution_attempt",
     "execution_attempt_error",
     "failure_policy_exhausted",
+    "last_dispatch_failure_at",
+    "last_dispatch_failure_reason",
+    "last_operator_submission_failure",
     "lease_id",
+    "next_action",
+    "note",
     "repair_attempts",
+    "retryable",
+    "retry_after",
     "result_path",
     "selected_operator",
+    "skip_reason",
     "scheduler_candidate_observations",
+    "wait_classification",
 }
 SCHEDULER_RUNTIME_STATIC_NODE_FIELDS = {
     "id", "goal", "logical_operator", "dispatch_task_type", "task_type",
     "depends_on", "requirement_ids", "capsule_binding", "capability_capsule_id",
     "required_capabilities", "physical_candidates", "artifact_contract",
-    "artifact_routes", "evaluation_binding", "evaluation_plan",
+    "artifact_routes", "output_routes", "workspace_reads",
+    "workspace_publish_scope", "evaluation_binding", "evaluation_plan",
     "evaluator_gate", "evaluation_policy",
     "resource_requirements", "effects", "priority", "failure_policy",
     "max_repair_attempts", "on_failure_exhausted", "read_scope", "write_scope",
@@ -2571,7 +2590,86 @@ def _frozen_candidate_rank(candidate: dict[str, Any]) -> int:
         return 0
 
 
-def _assign_frozen_worker(node: dict[str, Any], workers: list[dict[str, Any]]) -> dict[str, Any]:
+def _frozen_wait_max_attempts() -> int:
+    try:
+        return max(1, int(os.environ.get("SOLAR_FROZEN_CANDIDATE_WAIT_MAX_ATTEMPTS", "12")))
+    except (TypeError, ValueError):
+        return 12
+
+
+def _frozen_wait_retry_seconds() -> int:
+    try:
+        return max(1, int(os.environ.get("SOLAR_FROZEN_CANDIDATE_RETRY_SECONDS", "30")))
+    except (TypeError, ValueError):
+        return 30
+
+
+def _frozen_unavailability_classification(observations: list[dict[str, Any]]) -> str:
+    """Classify whether any frozen candidate can become ready without replanning."""
+    transient_tokens = (
+        "worker_capacity_exhausted",
+        "lease",
+        "busy",
+        "running",
+        "draining",
+        "cooldown",
+        "quota_exhausted",
+        "graph_active_assignment",
+    )
+    permanent_tokens = (
+        "operator_not_present",
+        "not_registered",
+        "provider_incompatible",
+        "provider_mismatch",
+        "operator_disabled",
+        "operator_unavailable",
+        "runtime_disabled",
+        "auth_expired",
+        "policy_incompatible",
+    )
+    reasons = [
+        str(item.get("reason") or "").strip().lower()
+        for item in observations
+        if isinstance(item, dict)
+    ]
+    if any(any(token in reason for token in transient_tokens) for reason in reasons):
+        return "transient"
+    if reasons and all(any(token in reason for token in permanent_tokens) for reason in reasons):
+        return "static_incompatible"
+    # Unknown runtime states receive a bounded wait rather than an immediate
+    # permanent refusal; the attempt budget still prevents an infinite loop.
+    return "transient_unknown"
+
+
+def _frozen_wait_deferred_or_blocked(
+    graph: dict[str, Any],
+    node: dict[str, Any],
+) -> bool:
+    result = _node_results(graph).get(str(node.get("id") or ""), {})
+    if not isinstance(result, dict):
+        return False
+    classification = str(result.get("wait_classification") or "").strip()
+    if result.get("retryable") is False and classification in {
+        "static_incompatible",
+        "transient_exhausted",
+    }:
+        return True
+    retry_after = _parse_ts(result.get("retry_after"))
+    now = _parse_ts(_now())
+    return bool(
+        result.get("retryable") is True
+        and classification in {"transient", "transient_unknown"}
+        and retry_after
+        and now
+        and retry_after > now
+    )
+
+
+def _assign_frozen_worker(
+    node: dict[str, Any],
+    workers: list[dict[str, Any]],
+    prior_result: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Select only the first currently available frozen physical candidate.
 
     Static admission has already checked skills, capabilities, effects, and
@@ -2653,11 +2751,48 @@ def _assign_frozen_worker(node: dict[str, Any], workers: list[dict[str, Any]]) -
             "queued": [],
         }
 
+    classification = _frozen_unavailability_classification(observations)
+    prior = prior_result if isinstance(prior_result, dict) else {}
+    prior_attempts = 0
+    if str(prior.get("wait_classification") or "") in {"transient", "transient_unknown"}:
+        try:
+            prior_attempts = max(0, int(prior.get("candidate_wait_attempts") or 0))
+        except (TypeError, ValueError):
+            prior_attempts = 0
+    attempts = prior_attempts + 1
+    retryable = classification != "static_incompatible"
+    reason = (
+        "frozen_physical_plan_unsatisfiable"
+        if not retryable
+        else "frozen_physical_candidates_temporarily_unavailable"
+    )
+    next_action = (
+        "Update the provider/operator configuration and accept a new frozen plan."
+        if not retryable
+        else "Wait for a frozen candidate lease, cooldown, or capacity state to clear."
+    )
+    retry_after = ""
+    if retryable and attempts >= _frozen_wait_max_attempts():
+        retryable = False
+        classification = "transient_exhausted"
+        reason = "frozen_physical_candidate_wait_exhausted"
+        next_action = "Inspect frozen candidate runtime state, then accept a new frozen plan."
+    elif retryable:
+        retry_after = (
+            datetime.datetime.now(datetime.UTC)
+            + datetime.timedelta(seconds=_frozen_wait_retry_seconds())
+        ).strftime("%Y-%m-%dT%H:%M:%SZ")
+
     return {
         "assigned": [],
         "queued": [{
             "node": node_id,
-            "reason": "frozen_physical_candidates_unavailable",
+            "reason": reason,
+            "retryable": retryable,
+            "retry_after": retry_after,
+            "next_action": next_action,
+            "wait_classification": classification,
+            "candidate_wait_attempts": attempts,
             "details": {"candidate_observations": observations},
         }],
     }
@@ -2876,6 +3011,14 @@ def assign_ready(graph: dict[str, Any], workers: list[dict[str, Any]],
         return {"ok": True, "assigned": [], "queued": [], "batch": [], "blocked_prerequisites": blocked}
     ready = ready_nodes(graph)
     if frozen_graph:
+        ready = [
+            node
+            for node in ready
+            if not (
+                _is_frozen_scheduler_node(graph, node)
+                and _frozen_wait_deferred_or_blocked(graph, node)
+            )
+        ]
         ready = sorted(
             ready,
             key=lambda node: (-int(node.get("priority") or 0), str(node.get("id") or "")),
@@ -2928,7 +3071,8 @@ def assign_ready(graph: dict[str, Any], workers: list[dict[str, Any]],
             continue
         available_workers = _workers_with_used_panes_marked_busy(workers, used_panes)
         if _is_frozen_scheduler_node(graph, node):
-            result = _assign_frozen_worker(node, available_workers)
+            prior_result = _node_results(graph).get(str(node.get("id") or ""), {})
+            result = _assign_frozen_worker(node, available_workers, prior_result)
         else:
             result = assign_workers([node], available_workers)
         if result.get("assigned"):
@@ -3869,6 +4013,7 @@ def enqueue_ready(graph: dict[str, Any], graph_path: str, workers: list[dict[str
         if frozen_node:
             capsule_binding = node.get("capsule_binding") if isinstance(node.get("capsule_binding"), dict) else {}
             capsule_ids = [str(value) for value in capsule_binding.get("capsule_ids") or [] if str(value)]
+            primary_capsule_id = str(node.get("capability_capsule_id") or "").strip()
             compiled_plan = {
                 "logical_plan_node": {
                     "node_id": node.get("id"),
@@ -3882,7 +4027,7 @@ def enqueue_ready(graph: dict[str, Any], graph_path: str, workers: list[dict[str
                 "node_id": node_id,
                 "logical_operator": str(node.get("logical_operator") or ""),
                 "selected": bool(capsule_ids),
-                "capability_capsule_id": capsule_ids[0] if capsule_ids else "",
+                "capability_capsule_id": primary_capsule_id,
                 "capsule_ids": capsule_ids,
                 "composition_id": capsule_binding.get("composition_id"),
                 "contract_sha256": capsule_binding.get("contract_sha256"),
@@ -3969,7 +4114,7 @@ def enqueue_ready(graph: dict[str, Any], graph_path: str, workers: list[dict[str
         node["logical_plan_node"] = dict(compiled_plan.get("logical_plan_node") or {})
         node["capsule_plan_ir"] = capsule_plan_ir
         node["physical_plan_ir"] = physical_plan_ir
-        if capsule_plan_ir.get("capability_capsule_id"):
+        if not frozen_node and capsule_plan_ir.get("capability_capsule_id"):
             node["capability_native"] = True
             node["capability_capsule_id"] = str(capsule_plan_ir.get("capability_capsule_id") or "")
         if not frozen_node:
@@ -4038,16 +4183,50 @@ def enqueue_ready(graph: dict[str, Any], graph_path: str, workers: list[dict[str
 
     blocked_workers: list[dict[str, Any]] = []
     for item in queued:
-        if item.get("reason") == "frozen_physical_candidates_unavailable":
+        if str(item.get("reason") or "").startswith("frozen_physical_"):
             node_id = str(item.get("node") or "")
             if node_id and node_id in nodes_by_id:
-                set_node_status(graph, node_id, "queued")
-                graph.setdefault("node_results", {}).setdefault(node_id, {})
-                graph["node_results"][node_id]["blocking_reason"] = item["reason"]
-                graph["node_results"][node_id]["candidate_observations"] = (
-                    item.get("details", {}).get("candidate_observations", [])
+                target_status = "queued" if bool(item.get("retryable")) else "worker_blocked"
+                prior_status = node_status(graph, node_id)
+                updated_at = _now()
+                node = nodes_by_id[node_id]
+                node["status"] = target_status
+                node["updated_at"] = updated_at
+                runtime_result = {
+                    "status": target_status,
+                    "blocking_reason": item["reason"],
+                    "retryable": bool(item.get("retryable")),
+                    "retry_after": str(item.get("retry_after") or ""),
+                    "next_action": str(item.get("next_action") or ""),
+                    "wait_classification": str(item.get("wait_classification") or ""),
+                    "candidate_wait_attempts": int(item.get("candidate_wait_attempts") or 0),
+                    "candidate_observations": item.get("details", {}).get("candidate_observations", []),
+                    "updated_at": updated_at,
+                }
+                prior_runtime_result = _node_results(graph).get(node_id, {})
+                if isinstance(prior_runtime_result, dict) and isinstance(
+                    prior_runtime_result.get("pre_work_refusal"), dict
+                ):
+                    runtime_result["pre_work_refusal"] = deepcopy(
+                        prior_runtime_result["pre_work_refusal"]
+                    )
+                graph.setdefault("node_results", {})[node_id] = runtime_result
+                _ledger_transition(
+                    graph,
+                    node_id,
+                    prior_status,
+                    target_status,
+                    "enqueue_ready:frozen_candidate_availability",
                 )
-                graph["node_results"][node_id]["updated_at"] = _now()
+                if not runtime_result["retryable"]:
+                    blocked_workers.append(
+                        {
+                            "node": node_id,
+                            "reason": item["reason"],
+                            "details": item.get("details", {}),
+                            "next_action": runtime_result["next_action"],
+                        }
+                    )
             continue
         if item.get("reason") != "no_matching_worker":
             continue

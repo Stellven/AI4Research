@@ -239,6 +239,29 @@ def load_json(path: Path) -> dict:
         return {}
 
 
+def elastic_planner_owns_sprint(sid: str) -> bool:
+    """Return true only for a valid native-Elastic ownership receipt."""
+    if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,191}", str(sid or "")):
+        return False
+    owner = load_json(SPRINTS / sid / "elastic-planner" / "owner.json")
+    return bool(
+        owner.get("schema_version") == "solar.elastic_planner_owner.v1"
+        and owner.get("artifact_role") == "control_plane_receipt"
+        and owner.get("sprint_id") == sid
+        and owner.get("state") in {"claimed", "submitted", "finalized"}
+    )
+
+
+def elastic_frozen_scheduler_authority(sid: str) -> dict:
+    """Return verified frozen runtime authority; ownership alone is not enough."""
+    try:
+        from elastic_planner_runtime import frozen_scheduler_authority
+
+        return frozen_scheduler_authority(SPRINTS, sid)
+    except Exception as exc:
+        return {"ok": False, "errors": [f"{type(exc).__name__}:{exc}"]}
+
+
 def save_json(path: Path, data: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
@@ -1274,6 +1297,15 @@ def retry_queue(state: dict, dispatch: bool, cooldown: int, epic_filter: str = "
                 )
                 continue
             if item.get("type") == "ready_for_planner":
+                if elastic_planner_owns_sprint(sid):
+                    append_event(
+                        sid,
+                        "autopilot_queue_drop_elastic_owned_planner_handoff",
+                        "info",
+                        {"target": target, "type": item.get("type"), "reason": "native_elastic_planner_owns_sprint"},
+                    )
+                    actions.append({"sid": sid, "action": item.get("type"), "dropped": "elastic_planner_owned", "target": target})
+                    continue
                 files = sprint_files(sid)
                 if not planner_outputs_missing(files):
                     append_event(
@@ -2666,25 +2698,29 @@ def dispatch_ready_graph_nodes(sid: str, lease: bool = True) -> dict:
     if load_graph is None or validate_graph is None:
         return {"ok": False, "reason": "graph_scheduler_unavailable"}
     graph = load_graph(path)
-    try:
-        import plan_validator  # type: ignore
+    elastic_authority = elastic_frozen_scheduler_authority(sid)
+    if elastic_authority.get("ok"):
+        plan_guard = {"ok": True, "authority": "frozen_scheduler_input"}
+    else:
+        try:
+            import plan_validator  # type: ignore
 
-        plan_guard = plan_validator.check_planner_graph_dispatchable(
-            graph, sprints_dir=SPRINTS, sid=sid
-        )
-    except Exception as guard_exc:
-        if str(os.environ.get("SOLAR_PLAN_VALIDATOR") or "").strip().lower() not in {"0", "false", "no", "off"}:
-            detail = " ".join(str(guard_exc).split())[:300]
-            return {
-                "ok": False,
-                "reason": "plan_validator_dispatch_refused",
-                "errors": [
-                    f"PLAN_VALIDATOR_UNCHECKABLE:{type(guard_exc).__name__}"
-                    + (f":{detail}" if detail else "")
-                ],
-                "sprint_id": sid,
-            }
-        plan_guard = {"ok": True}
+            plan_guard = plan_validator.check_planner_graph_dispatchable(
+                graph, sprints_dir=SPRINTS, sid=sid
+            )
+        except Exception as guard_exc:
+            if str(os.environ.get("SOLAR_PLAN_VALIDATOR") or "").strip().lower() not in {"0", "false", "no", "off"}:
+                detail = " ".join(str(guard_exc).split())[:300]
+                return {
+                    "ok": False,
+                    "reason": "plan_validator_dispatch_refused",
+                    "errors": [
+                        f"PLAN_VALIDATOR_UNCHECKABLE:{type(guard_exc).__name__}"
+                        + (f":{detail}" if detail else "")
+                    ],
+                    "sprint_id": sid,
+                }
+            plan_guard = {"ok": True}
     if not plan_guard.get("ok"):
         return {
             "ok": False,
@@ -2839,7 +2875,10 @@ def normalize_status_to_workflow_route(sid: str, status: dict, route: dict) -> b
         }.get(role)
         if not fields:
             return False
-        if role in {"builder", "builder_main"}:
+        elastic_scheduler = bool(
+            (route.get("elastic_scheduler_authority") or {}).get("ok")
+        )
+        if role in {"builder", "builder_main"} and not elastic_scheduler:
             try:
                 import plan_validator  # type: ignore
 
@@ -2963,6 +3002,9 @@ def inspect_sprints(epic_filter: str = "") -> list[dict]:
             continue
 
         route = workflow_guard_route(str(sid))
+        elastic_scheduler = bool(
+            (route.get("elastic_scheduler_authority") or {}).get("ok")
+        )
         if route.get("reason") == "external_prerequisite_blocked":
             raw_findings.append(
                 {
@@ -3026,7 +3068,7 @@ def inspect_sprints(epic_filter: str = "") -> list[dict]:
                 }
             )
             continue
-        if files["plan"] and files["task_graph"] and handoff in (GRAPH_READY_HANDOFFS | GRAPH_EVAL_HANDOFFS):
+        if (files["plan"] or elastic_scheduler) and files["task_graph"] and handoff in (GRAPH_READY_HANDOFFS | GRAPH_EVAL_HANDOFFS):
             gs = graph_status(sid)
             if gs.get("parent_ready"):
                 raw_findings.append(
@@ -3064,7 +3106,7 @@ def inspect_sprints(epic_filter: str = "") -> list[dict]:
                         "graph": gs,
                     }
                 )
-        if files["plan"] and files["task_graph"] and handoff in ("builder", "builder_main", "builder_parallel", "builder-lab") and not files["handoff"]:
+        if not elastic_scheduler and files["plan"] and files["task_graph"] and handoff in ("builder", "builder_main", "builder_parallel", "builder-lab") and not files["handoff"]:
             raw_findings.append(
                 {
                     "sid": sid,
@@ -3074,7 +3116,7 @@ def inspect_sprints(epic_filter: str = "") -> list[dict]:
                     "message": instruction_for(status, files),
                 }
             )
-        if st in ("active", "approved", "reviewing") and phase and not files["plan"] and not files["handoff"] and handoff in ("builder", "builder_main", "builder_parallel", "builder-lab"):
+        if not elastic_scheduler and st in ("active", "approved", "reviewing") and phase and not files["plan"] and not files["handoff"] and handoff in ("builder", "builder_main", "builder_parallel", "builder-lab"):
             raw_findings.append(
                 {
                     "sid": sid,
@@ -3807,6 +3849,17 @@ def apply_findings(findings: list[dict], dispatch: bool, state: dict, cooldown: 
             mark_action(state, f, result)
             actions.append(result)
         elif ftype in ("ready_for_pm", "ready_for_planner", "ready_for_builder", "ready_for_evaluator", "active_without_handoff", "pane_compacting_stall", "pane_idle_with_pending_artifact"):
+            if ftype == "ready_for_planner" and elastic_planner_owns_sprint(sid):
+                result = {
+                    "sid": sid,
+                    "action": ftype,
+                    "skipped": "native_elastic_planner_owns_sprint",
+                    "target": f.get("target", ""),
+                }
+                append_event(sid, "autopilot_legacy_planner_suppressed", "info", result)
+                mark_action(state, f, result)
+                actions.append(result)
+                continue
             status_path = SPRINTS / f"{sid}.status.json"
             status = load_json(status_path)
             status_changed = False

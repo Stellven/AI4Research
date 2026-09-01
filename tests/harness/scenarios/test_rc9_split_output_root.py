@@ -296,6 +296,17 @@ def test_dispatcher_publishes_only_when_active_and_sprint_workspaces_agree(
     graph_path.write_text(json.dumps(graph), encoding="utf-8")
 
     reconciled = graph_node_dispatcher._reconcile_existing_dispatches(graph, graph_path)
+    graph_scheduler.save_graph(graph_path, graph)
+    (sprints / "sid.status.json").write_text(
+        json.dumps({"status": "active", "phase": "running", "history": []}),
+        encoding="utf-8",
+    )
+    graph_node_dispatcher._mark_parent_sprint_passed_if_ready(
+        "sid",
+        graph_scheduler.parent_ready_check(graph_scheduler.load_graph(graph_path)),
+        False,
+        graph_path=graph_path,
+    )
 
     assert any(
         row.get("node") == "S1" and row.get("status") == "passed"
@@ -306,6 +317,6 @@ def test_dispatcher_publishes_only_when_active_and_sprint_workspaces_agree(
     publish = json.loads((sprints / "sid.S1-publish.json").read_text(encoding="utf-8"))
     assert len(publish["manifest_digest"]) == 64
     assert len(publish["published_digest"]) == 64
-    receipt = graph["nodes"][0]["closeout_receipt"]
+    receipt = graph_scheduler.load_graph(graph_path)["nodes"][0]["closeout_receipt"]
     assert receipt["publication"]["manifest_digest"] == receipt["manifest"]["content_digest"]
     assert receipt["publication"]["published_digest"] == publish["published_digest"]

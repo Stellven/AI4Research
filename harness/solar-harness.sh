@@ -1898,6 +1898,7 @@ intake_request() {
       --actor "${SOLAR_INTENT_ACTOR:-user}" \
       --device "${SOLAR_INTENT_DEVICE:-}" \
       --repo "$intake_workspace_root" \
+      --cwd "$intake_workspace_root" \
       --text "$req" \
       --json 2>&1)
     intent_rc=$?
@@ -4056,16 +4057,62 @@ print(json.dumps({
         else
           rm -f "$_SS_PID" "$_SS_PORT_FILE"
           _ss_py="${SOLAR_PYTHON:-$(command -v python3 || echo python3)}"
+          # A shared tmux server retains the environment of the client that
+          # created it.  The status server is also the dashboard intake
+          # authority, so inheriting another harness's sprint/intent/workspace
+          # roots can display stale sessions and submit a new request into the
+          # wrong run.  Freeze every routing-critical, non-secret setting into
+          # this pane command instead of consulting tmux's global environment.
+          _ss_sprints_dir="${HARNESS_SPRINTS_DIR:-$HARNESS_DIR/sprints}"
+          _ss_intents_dir="${SOLAR_INTENT_GATEWAY_DIR:-$HARNESS_DIR/intents}"
+          _ss_workspace_root="${SOLAR_INTAKE_WORKSPACE_ROOT:-$(active_workspace_root 2>/dev/null || true)}"
+          _ss_runtime_env=(
+            "HOME=$HOME"
+            "USERPROFILE=${USERPROFILE:-$HOME}"
+            "SOLAR_HOME=${SOLAR_HOME:-$HOME/.solar}"
+            "HARNESS_DIR=$HARNESS_DIR"
+            "SOLAR_HARNESS_DIR=$HARNESS_DIR"
+            "HARNESS_SPRINTS_DIR=$_ss_sprints_dir"
+            "SPRINTS_DIR=$_ss_sprints_dir"
+            "SOLAR_HARNESS_SPRINTS_DIR=$_ss_sprints_dir"
+            "SOLAR_INTENT_GATEWAY_DIR=$_ss_intents_dir"
+            "SOLAR_INTAKE_WORKSPACE_ROOT=$_ss_workspace_root"
+            "SOLAR_INTENT_CONSUMER_WORKSPACE_ROOT=${SOLAR_INTENT_CONSUMER_WORKSPACE_ROOT:-$_ss_workspace_root}"
+            "SOLAR_BIND_HOST=${SOLAR_BIND_HOST:-127.0.0.1}"
+            "SOLAR_STATUS_PORT_START=$_SS_PORT_START"
+            "SOLAR_STATUS_PORT_END=$_SS_PORT_END"
+            "CODEX_HOME=${CODEX_HOME:-$HOME/.codex}"
+            "SOLAR_PRODUCT_MODE=${SOLAR_PRODUCT_MODE:-0}"
+            "SOLAR_WORKFLOW_ROUTER=${SOLAR_WORKFLOW_ROUTER:-0}"
+            "SOLAR_CODEX_ALLOW_PM_OPERATOR_DISPATCH=${SOLAR_CODEX_ALLOW_PM_OPERATOR_DISPATCH:-0}"
+            "SOLAR_GRAPH_BUILDER_OPERATOR_POOL=${SOLAR_GRAPH_BUILDER_OPERATOR_POOL:-0}"
+            "SOLAR_GRAPH_EVAL_OPERATOR_POOL=${SOLAR_GRAPH_EVAL_OPERATOR_POOL:-0}"
+            "SOLAR_COORD_MULTITASK_SELFCOMPLETE=${SOLAR_COORD_MULTITASK_SELFCOMPLETE:-0}"
+            "SOLAR_PANE_RUNTIME=${SOLAR_PANE_RUNTIME:-codex}"
+            "SOLAR_PM_DEFAULT_PROVIDERS=${SOLAR_PM_DEFAULT_PROVIDERS:-}"
+            "SOLAR_MULTI_TASK_DEFAULT_PROVIDERS=${SOLAR_MULTI_TASK_DEFAULT_PROVIDERS:-}"
+            "SOLAR_INTENT_COMPILER_PROVIDER=${SOLAR_INTENT_COMPILER_PROVIDER:-}"
+            "SOLAR_INTENT_REVIEWER_PROVIDER=${SOLAR_INTENT_REVIEWER_PROVIDER:-}"
+            "SOLAR_INTENT_COMPILER_MODEL=${SOLAR_INTENT_COMPILER_MODEL:-}"
+            "SOLAR_INTENT_REVIEWER_MODEL=${SOLAR_INTENT_REVIEWER_MODEL:-}"
+            "SOLAR_INTENT_MODEL_TIMEOUT_SEC=${SOLAR_INTENT_MODEL_TIMEOUT_SEC:-}"
+            "SOLAR_HARNESS_SESSION=${SOLAR_HARNESS_SESSION:-$SESSION_NAME}"
+            "SOLAR_HARNESS_LAB_SESSION=${SOLAR_HARNESS_LAB_SESSION:-$LAB_SESSION_NAME}"
+            "SOLAR_HARNESS_BG_SESSION=${SOLAR_HARNESS_BG_SESSION:-$BG_SESSION_NAME}"
+          )
+          _ss_env_prefix="env"
+          for _ss_assignment in "${_ss_runtime_env[@]}"; do
+            _ss_env_prefix+=" $(printf '%q' "$_ss_assignment")"
+          done
+          _ss_cd_q=$(printf '%q' "$HARNESS_DIR")
+          _ss_py_q=$(printf '%q' "$_ss_py")
+          _ss_script_q=$(printf '%q' "$HARNESS_DIR/lib/symphony/status-server.py")
+          _ss_log_q=$(printf '%q' "$_SS_LOG")
           if command -v tmux >/dev/null 2>&1; then
-            # A tmux server keeps a global environment from its first client.
-            # Multiple installed harnesses can share that server, so relying on
-            # inherited HARNESS_DIR/HOME makes a later session write the first
-            # harness's pid/port/token files. Bind ownership-critical paths in
-            # the pane command itself; session-name scoping alone is not enough.
             tmux new-session -d -s "$_SS_TMUX_SESSION" \
-              "cd '$HARNESS_DIR' && exec env HOME='$HOME' USERPROFILE='${USERPROFILE:-$HOME}' SOLAR_HOME='${SOLAR_HOME:-$HOME/.solar}' HARNESS_DIR='$HARNESS_DIR' SOLAR_HARNESS_DIR='$HARNESS_DIR' SOLAR_BIND_HOST='${SOLAR_BIND_HOST:-127.0.0.1}' '$_ss_py' '$HARNESS_DIR/lib/symphony/status-server.py' >> '$_SS_LOG' 2>&1"
+              "cd $_ss_cd_q && exec $_ss_env_prefix $_ss_py_q $_ss_script_q >> $_ss_log_q 2>&1"
           else
-            nohup "$_ss_py" "$HARNESS_DIR/lib/symphony/status-server.py" >> "$_SS_LOG" 2>&1 &
+            nohup env "${_ss_runtime_env[@]}" "$_ss_py" "$HARNESS_DIR/lib/symphony/status-server.py" >> "$_SS_LOG" 2>&1 &
           fi
           _ready=0
           for _i in {1..40}; do

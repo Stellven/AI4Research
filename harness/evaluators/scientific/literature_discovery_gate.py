@@ -22,6 +22,9 @@ ONLINE_SOURCE_CHANNELS = {
     "s2",
     "search_s2",
     "semantic_scholar",
+    "openalex",
+    "crossref",
+    "europe_pmc",
     "web",
 }
 FIXTURE_SOURCE_CHANNELS = {"fixture", "local_fixture", "smoke_fixture"}

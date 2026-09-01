@@ -1,0 +1,111 @@
+capability_capsule_id: cap.scientific-experiment-aware-report-draft
+capsule_kind: capability
+metadata:
+  name: Experiment-aware Scientific Report Draft
+  description: Draft one combined report from its plan, source-grounded claim verdicts and methods, and the exact measured experiment plan/result pair.
+applicability:
+  task_types:
+    - scientific-research
+    - report-drafting
+    - experiment-reporting
+  positive_signals:
+    - combined research and experiment report
+    - measured experiment results
+  negative_signals:
+    - research-only report
+    - design-only experiment
+contract:
+  inputs:
+    required:
+      - name: scientific_report_plan
+        schema_ref: schemas/evidence/scientific_report_plan.v1.schema.json
+      - name: claim_verdict
+        schema_ref: schemas/evidence/claim_verdict.v1.schema.json
+      - name: research_method
+        schema_ref: schemas/evidence/research_method.v1.schema.json
+      - name: research_source_assessment
+        schema_ref: schemas/evidence/research_source_assessment.v1.schema.json
+      - name: experiment_plan
+        schema_ref: schemas/evidence/experiment_plan.v1.schema.json
+      - name: experiment_result
+        schema_ref: schemas/evidence/experiment_result.v1.schema.json
+  outputs:
+    required:
+      - name: scientific_report
+        schema_ref: schemas/evidence/scientific_report.v1.schema.json
+  preconditions:
+    - check: experiment_aware_plan_available
+      description: A combined report plan and matched literature/experiment evidence are available.
+  postconditions:
+    - check: measured_results_rendered
+      description: Experiment design, measured metrics, evidence IDs, outcome, and limitations appear in the report.
+  invariants:
+    - Supplied measured evidence is rendered and not silently dropped.
+    - A recorded outcome is not described as broader scientific reproduction.
+    - Source relevance and credibility decisions remain qualified by their metadata-only truth boundary.
+composition:
+  consumes:
+    - schema_ref: schemas/evidence/scientific_report_plan.v1.schema.json
+      purpose: Combined report structure and evidence assignment.
+    - schema_ref: schemas/evidence/claim_verdict.v1.schema.json
+      purpose: Literature and measured claim verdicts.
+    - schema_ref: schemas/evidence/research_method.v1.schema.json
+      purpose: Source-grounded methods.
+    - schema_ref: schemas/evidence/research_source_assessment.v1.schema.json
+      purpose: Source selection, exclusion, unresolved status, and benchmark candidates.
+    - schema_ref: schemas/evidence/experiment_plan.v1.schema.json
+      purpose: Experiment design and execution boundary.
+    - schema_ref: schemas/evidence/experiment_result.v1.schema.json
+      purpose: Measured metrics, outcome, and evidence IDs.
+  produces:
+    - schema_ref: schemas/evidence/scientific_report.v1.schema.json
+      purpose: Combined evidence-linked scientific report.
+  compatible_with:
+    - cap.research-publication-produce
+  incompatible_with: []
+  requires_after:
+    - cap.research-experiment-aware-report-plan
+effects:
+  read:
+    - typed scientific evidence, experiment evidence, and report plan
+  write:
+    - artifacts/scientific/scientific_report/
+  execute:
+    - plugins/autosci/operators/scientific_lifecycle/action/delivery.py
+  network:
+    - none
+  cost:
+    - bounded drafting cost
+  risk:
+    - narrative generation can overstate measured evidence without review
+bindings:
+  skills:
+    required: []
+    optional:
+      - autosci.report_draft
+  mcp_capabilities: {}
+  data_refs:
+    - schemas/evidence/scientific_report_plan.v1.schema.json
+    - schemas/evidence/scientific_report.v1.schema.json
+    - schemas/evidence/experiment_plan.v1.schema.json
+    - schemas/evidence/experiment_result.v1.schema.json
+    - schemas/evidence/research_source_assessment.v1.schema.json
+  secret_refs: []
+verification:
+  self_check:
+    - Validate emitted evidence against scientific_report.v1.schema.json.
+    - Confirm the measured-results section preserves exact result evidence IDs and limitations.
+    - Confirm the source-assessment section preserves selected, excluded, and unresolved decisions.
+  external_verifier:
+    required: true
+  pass_conditions:
+    - The report contains the requested measured experiment results and their limitations.
+    - Requirement bindings remain visible for independent evaluation.
+operator_compatibility:
+  preferred:
+    - autosci-report-worker
+  forbidden:
+    - BackendFullWorkflowRunner
+provenance:
+  owner: opensolar
+  source_phase: elastic_planner_experiment_report_handoff

@@ -2,7 +2,7 @@ capability_capsule_id: cap.research-single-testable-claim-extract
 capsule_kind: capability
 metadata:
   name: Single Testable Research Claim Selection
-  description: Extract source-anchored claims and deterministically retain exactly one testable claim using disclosed ranking criteria.
+  description: Extract source-anchored claims and deterministically retain exactly one validation-priority testable claim using disclosed objective-alignment, evidence, and specificity criteria.
 applicability:
   task_types:
     - scientific-research
@@ -30,7 +30,7 @@ contract:
       description: Retained paper evidence includes source-anchored claim-like text.
   postconditions:
     - check: exactly_one_claim_selected
-      description: The output contains exactly one unverified source-anchored claim and a disclosed selection trace.
+      description: The output contains exactly one unverified source-anchored claim and a disclosed validation-priority selection trace tied to the frozen node objective.
   invariants:
     - Does not generate a synthetic claim when no source claim is available.
     - Does not mark the selected claim verified.
@@ -59,7 +59,7 @@ effects:
   cost:
     - bounded local extraction and ranking
   risk:
-    - deterministic testability ranking may not select the most scientifically important claim
+    - deterministic objective alignment is a bounded validation-priority heuristic, not a universal scientific-importance judgment
 bindings:
   skills:
     required: []
@@ -79,7 +79,7 @@ verification:
     required: false
   pass_conditions:
     - Exactly one source-anchored unverified claim is emitted.
-    - Selection criteria and candidate count are retained.
+    - Selection criteria, frozen priority objective, objective-term overlap, and candidate count are retained.
 operator_compatibility:
   preferred:
     - claim_select_one_worker

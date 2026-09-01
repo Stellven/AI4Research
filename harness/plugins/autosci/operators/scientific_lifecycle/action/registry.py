@@ -11,7 +11,7 @@ from ...research_synthesis.base import (
     build_node_result,
     error_result,
 )
-from . import delivery, experiment, idea
+from . import dataset, delivery, experiment, idea
 from .common import IMPLEMENTATION_PACKAGE, OPERATOR_VERSION
 
 
@@ -19,6 +19,7 @@ Operator = Callable[[dict[str, Any], OperatorContext], dict[str, Any]]
 
 
 _OPERATORS: dict[str, tuple[Operator, str]] = {
+    "dataset_prepare": (dataset.prepare_dataset, dataset.PREPARER_ID),
     "idea_generate": (idea.generate_ideas, idea.GENERATOR_ID),
     "idea_evaluate": (idea.evaluate_ideas, idea.EVALUATOR_ID),
     "experiment_design": (experiment.design_experiment, experiment.DESIGNER_ID),
@@ -84,7 +85,12 @@ def execute_operator(
         result["secret_redaction_assertion"] = {"no_secrets_observed": True, "redaction_review": "passed"}
         return result
     try:
-        return get_operator(str(node_request.get("node_id") or ""))(node_request, context)
+        implementation_node_id = str(
+            node_request.get("implementation_node_id")
+            or node_request.get("node_id")
+            or ""
+        )
+        return get_operator(implementation_node_id)(node_request, context)
     except ResearchOperatorError as exc:
         return error_result(context, exc)
     except Exception as exc:  # fail closed at the package boundary

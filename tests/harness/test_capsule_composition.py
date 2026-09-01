@@ -17,7 +17,9 @@ import elastic_planner
 
 
 REQUEST_ENVELOPE = "schema:request-envelope.schema.json"
+REQUIREMENT_IR = "requirement_ir.v1"
 PAPER = "schema:schemas/evidence/research_paper.v1.schema.json"
+SOURCE_ASSESSMENT = "schema:schemas/evidence/research_source_assessment.v1.schema.json"
 CLAIMS = "schema:schemas/evidence/research_claims.v1.schema.json"
 METHODS = "schema:schemas/evidence/research_method.v1.schema.json"
 IDEAS = "schema:schemas/evidence/idea_candidate.v1.schema.json"
@@ -104,7 +106,7 @@ def test_discovery_to_ingestion_and_internal_report_plan_compose_exactly() -> No
         _catalog(), available_inputs=[LITERATURE], target_outputs=[PAPER]
     )
     report = composition.search_composition_candidates(
-        _catalog(), available_inputs=[CLAIM_VERDICT], target_outputs=[REPORT]
+        _catalog(), available_inputs=[REQUIREMENT_IR, CLAIM_VERDICT], target_outputs=[REPORT]
     )
 
     assert ingest["verdict"] == "candidates_found"
@@ -252,7 +254,7 @@ def test_report_composition_carries_method_evidence_into_plan_and_draft() -> Non
     report = "schema:schemas/evidence/scientific_report.v1.schema.json"
     search = composition.search_composition_candidates(
         catalog,
-        available_inputs=[CLAIM_VERDICT, METHODS],
+        available_inputs=[REQUIREMENT_IR, CLAIM_VERDICT, METHODS, SOURCE_ASSESSMENT],
         target_outputs=[report],
         allowed_effects=["read", "write", "execute"],
     )
@@ -269,6 +271,41 @@ def test_report_composition_carries_method_evidence_into_plan_and_draft() -> Non
     )
     for step in candidate["steps"]:
         assert METHODS in step["consumes"]
+        assert SOURCE_ASSESSMENT in step["consumes"]
+
+
+def test_combined_report_composition_consumes_plan_and_measured_result() -> None:
+    catalog = _catalog()
+    search = composition.search_composition_candidates(
+        catalog,
+        available_inputs=[
+            REQUIREMENT_IR,
+            CLAIM_VERDICT,
+            METHODS,
+            SOURCE_ASSESSMENT,
+            EXPERIMENT_PLAN,
+            EXPERIMENT_RESULT,
+        ],
+        target_outputs=[REPORT],
+        allowed_effects=["read", "write", "execute"],
+    )
+
+    assert search["verdict"] == "candidates_found"
+    candidate = next(
+        row
+        for row in search["candidates"]
+        if [step["capsule_id"] for step in row["steps"]]
+        == [
+            "cap.research-experiment-aware-report-plan",
+            "cap.scientific-experiment-aware-report-draft",
+        ]
+    )
+    consumed = {
+        artifact_type
+        for step in candidate["steps"]
+        for artifact_type in step["consumes"]
+    }
+    assert {SOURCE_ASSESSMENT, EXPERIMENT_PLAN, EXPERIMENT_RESULT}.issubset(consumed)
 
 
 def test_composer_honors_multi_input_hyperedges() -> None:
@@ -556,7 +593,7 @@ def test_real_ab_design_composition_is_exact_and_auditable() -> None:
 
     result = composition.search_composition_candidates(
         _catalog(),
-        available_inputs=[REQUEST_ENVELOPE],
+        available_inputs=[REQUEST_ENVELOPE, REQUIREMENT_IR],
         target_outputs=[EXPERIMENT_PLAN],
         max_depth=10,
     )
@@ -647,7 +684,7 @@ def test_requirement_only_ab_frontier_fails_without_fake_adapter() -> None:
 def test_research_only_publication_path_uses_plan_draft_and_review() -> None:
     result = composition.search_composition_candidates(
         _catalog(),
-        available_inputs=[REQUEST_ENVELOPE],
+        available_inputs=[REQUEST_ENVELOPE, REQUIREMENT_IR],
         target_outputs=[PUBLICATION_BUNDLE],
         max_depth=16,
         max_states=1000,

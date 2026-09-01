@@ -2,7 +2,7 @@ capability_capsule_id: cap.research-claim-extract
 capsule_kind: capability
 metadata:
   name: Scientific Claim Extract
-  description: Extract source-anchored scientific claims and hypotheses without assigning verification verdicts.
+  description: Extract a bounded collection of source-anchored scientific claims and hypotheses across every normalized paper supplied to the invocation, without assigning verification verdicts.
 applicability:
   task_types:
     - scientific-research
@@ -35,6 +35,8 @@ contract:
   postconditions:
     - check: claims_source_anchored
       description: Each claim has text, source anchor, testability, and evidence ids.
+    - check: supplied_paper_collection_processed
+      description: Extraction considers every normalized paper in the supplied collection until the declared bounded claim limit is reached.
   invariants:
     - Extracted claims default to unverified.
     - Claim extraction does not produce verdicts.
@@ -92,3 +94,7 @@ operator_compatibility:
 provenance:
   owner: opensolar
   source_phase: phase2_autosci_solar_native_capsules
+implementation:
+  trust_class: evidence_transform
+  entrypoint: plugins.autosci.operators.scientific_lifecycle.evidence.registry:execute_claim_extract
+  required_services: []

@@ -159,18 +159,57 @@ def write_evidence_artifact(
     clean_outputs = redact_secrets(outputs, context.secret_refs, context.secret_values)
     output_hash = stable_json_sha256(clean_outputs)
     final_artifact_id = artifact_id or schema.removesuffix(".v1")
+    linked_artifacts: list[dict[str, str]] = []
+    for index, item in enumerate(context.payload.get("source_artifacts") or []):
+        if not isinstance(item, dict):
+            raise ResearchOperatorError(
+                f"source_artifacts[{index}] must be an object",
+                error_type="invalid_input",
+            )
+        raw_path = str(item.get("path") or "").strip()
+        expected_digest = str(item.get("sha256") or "").strip().lower()
+        if not raw_path or not expected_digest:
+            raise ResearchOperatorError(
+                f"source_artifacts[{index}] requires path and sha256",
+                error_type="missing_artifact_hash",
+            )
+        source_path = validate_scoped_path(
+            raw_path,
+            context.read_scope,
+            workspace_root=context.workspace_root,
+            must_exist=True,
+            # Scheduler-owned controller inputs (for example RequirementIR)
+            # are exact, hash-bound file routes beside the runtime workspace.
+            # Permit only an exact declared external file here; ordinary reads
+            # and every write remain confined to the workspace root.
+            allow_external_exact=True,
+        )
+        actual_digest = sha256_bytes(source_path.read_bytes())
+        if actual_digest != expected_digest:
+            raise ResearchOperatorError(
+                f"source_artifacts[{index}] hash mismatch",
+                error_type="artifact_hash_mismatch",
+            )
+        linked_artifacts.append(
+            {
+                "type": "input_evidence",
+                "path": display_path(source_path, context.workspace_root),
+                "sha256": actual_digest,
+            }
+        )
+
     payload = {
         "schema": schema,
         "task_id": str(context.node_request.get("task_id") or ""),
         "sprint_id": str(context.node_request.get("run_id") or ""),
-        "node_id": str(context.node_request.get("node_id") or ""),
+        "node_id": context.output_node_id,
         "status": status,
         "inputs": {
             "request_sha256": input_hash,
             "artifact_sha256": [str(item.get("sha256")) for item in context.input_artifact_refs()],
         },
         "outputs": clean_outputs,
-        "artifacts": [],
+        "artifacts": linked_artifacts,
         "provenance": {
             "artifact_id": final_artifact_id,
             "operator_id": operator_id,
@@ -179,7 +218,7 @@ def write_evidence_artifact(
             "task_id": str(context.node_request.get("task_id") or ""),
             "run_id": str(context.node_request.get("run_id") or ""),
             "workflow_id": str(context.node_request.get("workflow_id") or ""),
-            "node_id": str(context.node_request.get("node_id") or ""),
+            "node_id": context.output_node_id,
             "timestamp": evidence_timestamp(context),
             "input_sha256": input_hash,
             "output_sha256": output_hash,

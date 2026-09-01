@@ -54,11 +54,18 @@ def _normalized_candidates(values: Any) -> list[dict[str, Any]]:
             continue
         source_channels = [str(item) for item in value.get("source_channels") or [] if str(item).strip()]
         if not source_channels:
-            source_channels = [str(value.get("source") or "injected_provider")]
+            source_channels = [
+                str(value.get("provider") or value.get("source") or "injected_provider")
+            ]
         candidates.append(
             {
                 **value,
-                "candidate_id": str(value.get("candidate_id") or value.get("paperId") or f"candidate-{index:03d}"),
+                "candidate_id": str(
+                    value.get("candidate_id")
+                    or value.get("source_id")
+                    or value.get("paperId")
+                    or f"candidate-{index:03d}"
+                ),
                 "title": title,
                 "source_channels": source_channels,
                 "ranking_score": float(value.get("ranking_score") or 0.0),
@@ -83,25 +90,43 @@ def literature_discovery(context: OperatorContext, spec: OperatorSpec) -> dict[s
         )
     else:
         wiki_root = context.workspace_root / ".autosci-no-wiki-input"
+    production_backend = context.services.get("discover_sources")
     backend = context.services.get("discover_literature") or discover_literature
     try:
-        raw = backend(
-            query=query,
-            mode=mode,
-            anchors=list(payload.get("anchors") or []),
-            negative_ids=list(payload.get("negative_ids") or []),
-            venue=str(payload.get("venue") or ""),
-            year=payload.get("year"),
-            limit=int(payload.get("limit") or 10),
-            wiki_root=wiki_root,
-            workspace_root=context.workspace_root,
-            repository_root=context.workspace_root,
-            allow_network_fetch=bool(payload.get("allow_network_fetch", True)),
-            no_citation_expand=bool(payload.get("no_citation_expand", False)),
-            fixture_fallback=False,
-            max_retries=payload.get("max_retries"),
-            max_retry_wait_seconds=payload.get("max_retry_wait_seconds"),
-        )
+        if callable(production_backend):
+            production_payload = dict(payload)
+            production_payload.setdefault("topic", query)
+            raw = production_backend(
+                seed_snapshot={
+                    "schema": "research_seed_snapshot.v1",
+                    "seeds": [
+                        {
+                            "seed_id": "planner-topic",
+                            "seed_kind": "topic",
+                            "content": query,
+                        }
+                    ],
+                },
+                payload=production_payload,
+            )
+        else:
+            raw = backend(
+                query=query,
+                mode=mode,
+                anchors=list(payload.get("anchors") or []),
+                negative_ids=list(payload.get("negative_ids") or []),
+                venue=str(payload.get("venue") or ""),
+                year=payload.get("year"),
+                limit=int(payload.get("limit") or 10),
+                wiki_root=wiki_root,
+                workspace_root=context.workspace_root,
+                repository_root=context.workspace_root,
+                allow_network_fetch=bool(payload.get("allow_network_fetch", True)),
+                no_citation_expand=bool(payload.get("no_citation_expand", False)),
+                fixture_fallback=False,
+                max_retries=payload.get("max_retries"),
+                max_retry_wait_seconds=payload.get("max_retry_wait_seconds"),
+            )
     except Exception as exc:
         evidence = evidence_document(
             context,
@@ -343,6 +368,229 @@ def ingest_discovered_sources(context: OperatorContext, spec: OperatorSpec) -> d
     }
 
 
+def assess_research_sources(context: OperatorContext, spec: OperatorSpec) -> dict[str, Any]:
+    """Resolve source relevance and metadata credibility without claiming truth.
+
+    This reuses the fixed research workflow's existing authority and topic-
+    relevance classification.  The new artifact makes those decisions
+    available to generated scientific plans and records unresolved cases
+    instead of silently promoting a ranked discovery candidate.
+    """
+
+    from ...research_synthesis.source_validation import (  # local import avoids a registry import cycle
+        _authority_class,
+        _relevance_class,
+    )
+
+    discovery_documents = load_evidence_inputs(
+        context,
+        "literature_discovery.v1",
+        payload_keys=("literature_discovery", "discovery_evidence"),
+    )
+    paper_documents = load_evidence_inputs(
+        context,
+        "research_paper.v1",
+        payload_keys=("research_paper", "paper_evidence"),
+    )
+    if not discovery_documents:
+        raise _product_error("Source assessment requires literature_discovery.v1 input")
+    if not paper_documents:
+        raise _product_error("Source assessment requires parsed research_paper.v1 input")
+
+    discovery = discovery_documents[0]
+    discovery_outputs = discovery.get("outputs") if isinstance(discovery.get("outputs"), dict) else {}
+    query = str(discovery_outputs.get("query") or "").strip()
+    if not query:
+        raise _product_error("Source assessment discovery input has no query")
+    candidates = [
+        item for item in discovery_outputs.get("candidates") or [] if isinstance(item, dict)
+    ]
+    if not candidates:
+        raise _product_error("Source assessment discovery input has no candidates")
+
+    papers: dict[str, dict[str, Any]] = {}
+    for document in paper_documents:
+        values = document.get("outputs") if isinstance(document.get("outputs"), dict) else {}
+        paper = values.get("paper") if isinstance(values.get("paper"), dict) else None
+        if not paper:
+            continue
+        paper_id = str(paper.get("paper_id") or "").strip()
+        if paper_id:
+            papers[paper_id] = paper
+
+    assessments: list[dict[str, Any]] = []
+    benchmark_candidates: list[dict[str, Any]] = []
+    unresolved_questions: list[str] = []
+    for candidate in candidates:
+        source_id = str(candidate.get("candidate_id") or "").strip()
+        if not source_id:
+            continue
+        paper = papers.get(source_id, {})
+        channels = [
+            str(item).strip()
+            for item in candidate.get("source_channels") or []
+            if str(item).strip()
+        ] or ["unknown"]
+        identifiers = paper.get("identifiers") if isinstance(paper.get("identifiers"), dict) else {}
+        section_text = " ".join(
+            str(section.get("text") or "")
+            for section in paper.get("sections") or []
+            if isinstance(section, dict)
+        )[:4000]
+        source_for_validation = {
+            **candidate,
+            "source_id": source_id,
+            "provider": channels[0],
+            "canonical_id": str(
+                identifiers.get("doi")
+                or identifiers.get("arxiv")
+                or candidate.get("doi")
+                or candidate.get("arxiv_id")
+                or ""
+            ),
+            "url": str(candidate.get("source_ref") or candidate.get("url") or paper.get("source_ref") or ""),
+            "content_summary": str(
+                candidate.get("abstract")
+                or paper.get("abstract")
+                or section_text
+                or candidate.get("ranking_rationale")
+                or ""
+            ),
+            "acquisition_channel": "live_search",
+            "provenance": {"provider": channels[0], "source_channels": channels},
+        }
+        relevance_raw = _relevance_class(source_for_validation, query)
+        authority_raw = _authority_class(source_for_validation)
+        relevance_class = str(relevance_raw.get("class") or "unknown")
+        authority_class = str(authority_raw.get("class") or "unattributed")
+        if relevance_class in {"off_topic", "low"}:
+            relevance_status = "not_relevant"
+        elif relevance_class == "unknown":
+            relevance_status = "unresolved"
+        else:
+            relevance_status = "relevant"
+        if authority_class in {"authoritative", "bibliographic"}:
+            credibility_status = "credible"
+        elif authority_class == "traceable":
+            credibility_status = "traceable"
+        else:
+            credibility_status = "unresolved"
+
+        parse_status = str(paper.get("parse_status") or "not_available")
+        if parse_status not in {"parsed", "partial", "failed"}:
+            parse_status = "not_available"
+        if relevance_status == "not_relevant":
+            decision = "excluded"
+        elif (
+            relevance_status == "relevant"
+            and credibility_status == "credible"
+            and parse_status in {"parsed", "partial"}
+        ):
+            decision = "selected"
+        else:
+            decision = "unresolved"
+            unresolved_questions.append(
+                f"Source {source_id} remains unresolved: relevance={relevance_status}, "
+                f"credibility={credibility_status}, ingestion={parse_status}."
+            )
+
+        assessments.append(
+            {
+                "source_id": source_id,
+                "title": str(candidate.get("title") or paper.get("title") or source_id),
+                "source_ref": str(source_for_validation.get("url") or ""),
+                "source_channels": channels,
+                "relevance": {
+                    "status": relevance_status,
+                    "score": relevance_raw.get("score"),
+                    "basis": [
+                        *[str(item) for item in relevance_raw.get("proof") or [] if str(item).strip()],
+                        str(candidate.get("ranking_rationale") or "Discovery supplied no ranking rationale."),
+                    ],
+                },
+                "credibility": {
+                    "status": credibility_status,
+                    "authority_class": authority_class,
+                    "score": float(authority_raw.get("score") or 0.0),
+                    "basis": [str(item) for item in authority_raw.get("proof") or [] if str(item).strip()],
+                },
+                "ingestion": {"status": parse_status, "paper_id": str(paper.get("paper_id") or "")},
+                "decision": decision,
+                "evidence_ids": sorted(
+                    {
+                        f"literature_discovery:{source_id}",
+                        *([f"research_paper:{source_id}"] if paper else []),
+                    }
+                ),
+            }
+        )
+
+        benchmark_text = " ".join(
+            [
+                str(candidate.get("title") or ""),
+                str(candidate.get("abstract") or paper.get("abstract") or ""),
+            ]
+        ).lower()
+        explicit_kind = str(candidate.get("record_kind") or candidate.get("type") or "").lower()
+        benchmark_signal = explicit_kind in {"benchmark", "dataset"} or any(
+            token in benchmark_text
+            for token in ("benchmark", "dataset", "corpus", "question answering", "question-answering")
+        )
+        if benchmark_signal:
+            benchmark_candidates.append(
+                {
+                    "source_id": source_id,
+                    "title": str(candidate.get("title") or paper.get("title") or source_id),
+                    "identification_basis": (
+                        f"Discovery record kind declared {explicit_kind}."
+                        if explicit_kind in {"benchmark", "dataset"}
+                        else "Title or abstract contains an explicit benchmark/dataset/question-answering signal."
+                    ),
+                    "availability_status": (
+                        "public_reference_present"
+                        if str(source_for_validation.get("url") or "")
+                        else "candidate_only"
+                    ),
+                }
+            )
+
+    if not assessments:
+        raise _product_error("Source assessment produced no source decisions")
+    if not benchmark_candidates:
+        unresolved_questions.append(
+            "No public question-answering benchmark was independently identified in the retained discovery and paper evidence."
+        )
+    selected = [item["source_id"] for item in assessments if item["decision"] == "selected"]
+    excluded = [item["source_id"] for item in assessments if item["decision"] == "excluded"]
+    unresolved = [item["source_id"] for item in assessments if item["decision"] == "unresolved"]
+    evidence = evidence_document(
+        context,
+        spec,
+        {
+            "query": query,
+            "assessments": assessments,
+            "selected_source_ids": selected,
+            "excluded_source_ids": excluded,
+            "unresolved_source_ids": unresolved,
+            "benchmark_candidates": benchmark_candidates,
+            "unresolved_questions": unresolved_questions,
+        },
+        status="completed",
+        limitations=[
+            "Credibility classifies source authority and traceability from retained metadata; it does not establish scientific truth.",
+            "Benchmark identification records candidates from explicit metadata or title/abstract signals; dataset availability and suitability require experiment-time verification.",
+        ],
+    )
+    return {
+        "evidence": evidence,
+        "outcome_class": SUCCESS,
+        "summary": (
+            f"Assessed {len(assessments)} source(s): {len(selected)} selected, "
+            f"{len(excluded)} excluded, {len(unresolved)} unresolved."
+        ),
+    }
+
+
 def _first_evidence(context: OperatorContext, schemas: tuple[str, ...], keys: tuple[str, ...]) -> dict[str, Any]:
     values = load_evidence_inputs(context, *schemas, payload_keys=keys)
     if not values:
@@ -527,38 +775,77 @@ def graph_update(context: OperatorContext, spec: OperatorSpec) -> dict[str, Any]
 
 def _extract_claim_rows(context: OperatorContext, *, limit: int) -> list[dict[str, Any]]:
     papers = _papers_from(context)
-    claims: list[dict[str, Any]] = []
-    claims_by_text: dict[str, dict[str, Any]] = {}
     limit = max(1, min(int(limit), 50))
     cue = re.compile(r"\b(?:show|shows|demonstrat|improv|reduc|increas|achiev|outperform|result|found|find)\w*\b", re.IGNORECASE)
+    anchor_counts = Counter(
+        anchor
+        for paper in papers
+        for _title, _text, anchor in _section_texts(paper)
+        if anchor
+    )
+    candidates_by_text: dict[str, dict[str, Any]] = {}
+    paper_candidate_keys: list[list[str]] = []
     for paper in papers:
-        for _title, text, anchor in _section_texts(paper):
+        paper_id = str(paper.get("paper_id") or "paper-unresolved")
+        keys: list[str] = []
+        seen_in_paper: set[str] = set()
+        for _title, text, raw_anchor in _section_texts(paper):
+            anchor = (
+                f"{paper_id}::{raw_anchor}"
+                if raw_anchor and anchor_counts[raw_anchor] > 1
+                else raw_anchor
+            )
             sentences = _source_sentences(text, minimum_length=30)
-            selected = [item for item in sentences if len(item) >= 30 and cue.search(item)]
+            selected = [
+                item
+                for item in sentences
+                if 30 <= len(item) <= 1_000 and cue.search(item)
+            ]
             for sentence in selected:
                 normalized_sentence = " ".join(sentence.split()).casefold()
-                existing = claims_by_text.get(normalized_sentence)
-                if existing is not None:
-                    if anchor not in existing["evidence_ids"]:
-                        existing["evidence_ids"].append(anchor)
-                    continue
-                claim = {
+                existing = candidates_by_text.get(normalized_sentence)
+                if existing is None:
+                    existing = {
+                        "text": sentence,
+                        "claim_type": "result",
+                        "source_anchor": anchor,
+                        "testability": "testable" if re.search(r"\d|%|compared|than", sentence, re.IGNORECASE) else "partially_testable",
+                        "verification_status": "unverified",
+                        "evidence_ids": [anchor],
+                    }
+                    candidates_by_text[normalized_sentence] = existing
+                elif anchor not in existing["evidence_ids"]:
+                    existing["evidence_ids"].append(anchor)
+                if normalized_sentence not in seen_in_paper:
+                    keys.append(normalized_sentence)
+                    seen_in_paper.add(normalized_sentence)
+        if keys:
+            paper_candidate_keys.append(keys)
+
+    claims: list[dict[str, Any]] = []
+    selected_keys: set[str] = set()
+    round_index = 0
+    while len(claims) < limit:
+        added = False
+        for keys in paper_candidate_keys:
+            if round_index >= len(keys):
+                continue
+            key = keys[round_index]
+            if key in selected_keys:
+                continue
+            claims.append(
+                {
                     "claim_id": f"claim-{len(claims) + 1:03d}",
-                    "text": sentence,
-                    "claim_type": "result",
-                    "source_anchor": anchor,
-                    "testability": "testable" if re.search(r"\d|%|compared|than", sentence, re.IGNORECASE) else "partially_testable",
-                    "verification_status": "unverified",
-                    "evidence_ids": [anchor],
+                    **candidates_by_text[key],
                 }
-                claims.append(claim)
-                claims_by_text[normalized_sentence] = claim
-                if len(claims) >= limit:
-                    break
+            )
+            selected_keys.add(key)
+            added = True
             if len(claims) >= limit:
                 break
-        if len(claims) >= limit:
+        if not added and all(round_index >= len(keys) for keys in paper_candidate_keys):
             break
+        round_index += 1
     if not claims:
         raise _product_error("No claim-like source sentences were found; synthetic claims were not generated")
     return claims
@@ -583,15 +870,54 @@ def extract_claims(context: OperatorContext, spec: OperatorSpec) -> dict[str, An
 
 
 def select_one_testable_claim(context: OperatorContext, spec: OperatorSpec) -> dict[str, Any]:
-    """Select exactly one source-anchored claim using disclosed stable criteria."""
+    """Select one validation-priority claim using disclosed stable criteria.
+
+    The selection remains deterministic, but it is not based on testability
+    alone.  A node may supply its scientific objective through the frozen task
+    contract; lexical alignment to that objective becomes the first tie-break
+    among testable claims, followed by retained evidence and specificity.
+    """
 
     claims = _extract_claim_rows(context, limit=50)
     rank = {"testable": 0, "partially_testable": 1, "unknown": 2, "not_testable": 3}
 
-    def selection_key(claim: dict[str, Any]) -> tuple[int, int, int, str]:
+    task_contract = (
+        context.payload.get("task_contract")
+        if isinstance(context.payload.get("task_contract"), dict)
+        else {}
+    )
+    priority_text = " ".join(
+        str(value or "")
+        for value in (
+            context.payload.get("priority_objective"),
+            context.payload.get("topic"),
+            context.payload.get("title"),
+            task_contract.get("user_intent"),
+        )
+    )
+    stopwords = {
+        "about", "after", "again", "against", "among", "and", "before",
+        "claim", "claims", "exactly", "from", "highest", "into", "most",
+        "one", "priority", "research", "select", "selected", "that", "the",
+        "then", "this", "using", "validation", "with",
+    }
+    priority_terms = {
+        token
+        for token in re.findall(r"[a-z0-9][a-z0-9_-]{2,}", priority_text.casefold())
+        if token not in stopwords
+    }
+
+    def topical_overlap(claim: dict[str, Any]) -> int:
+        claim_terms = set(
+            re.findall(r"[a-z0-9][a-z0-9_-]{2,}", str(claim.get("text") or "").casefold())
+        )
+        return len(priority_terms & claim_terms)
+
+    def selection_key(claim: dict[str, Any]) -> tuple[int, int, int, int, str]:
         evidence_ids = [str(item) for item in claim.get("evidence_ids") or [] if str(item).strip()]
         return (
             rank.get(str(claim.get("testability") or "unknown"), 2),
+            -topical_overlap(claim),
             -len(evidence_ids),
             -len(str(claim.get("text") or "")),
             str(claim.get("claim_id") or ""),
@@ -608,15 +934,19 @@ def select_one_testable_claim(context: OperatorContext, spec: OperatorSpec) -> d
                 "candidate_count": len(claims),
                 "criteria": [
                     "prefer testable over partially_testable, unknown, and not_testable",
+                    "prefer greater lexical alignment with the frozen validation objective",
                     "prefer more retained evidence identifiers",
                     "prefer the more specific claim text when earlier criteria tie",
                     "break remaining ties by stable claim identifier",
                 ],
+                "priority_objective": priority_text.strip(),
+                "selected_objective_term_overlap": topical_overlap(selected),
             },
         },
         limitations=[
-            "The operator selects one claim by disclosed deterministic testability and evidence criteria; "
-            "it does not assert that the selected claim is the most scientifically important claim."
+            "The operator selects one claim for validation by disclosed deterministic testability, "
+            "objective-alignment, evidence, and specificity criteria. It does not assert universal "
+            "scientific importance beyond the frozen validation objective."
         ],
     )
     return {

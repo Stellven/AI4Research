@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import subprocess
 import time
 from copy import deepcopy
@@ -60,6 +61,22 @@ def codex_compatible_schema(schema: dict[str, Any]) -> dict[str, Any]:
         value.pop("$schema", None)
         value.pop("$id", None)
         value.pop("uniqueItems", None)
+        if "const" in value and "type" not in value:
+            constant = value["const"]
+            if isinstance(constant, bool):
+                value["type"] = "boolean"
+            elif constant is None:
+                value["type"] = "null"
+            elif isinstance(constant, str):
+                value["type"] = "string"
+            elif isinstance(constant, int):
+                value["type"] = "integer"
+            elif isinstance(constant, float):
+                value["type"] = "number"
+            elif isinstance(constant, list):
+                value["type"] = "array"
+            elif isinstance(constant, dict):
+                value["type"] = "object"
         if "oneOf" in value:
             value["anyOf"] = value.pop("oneOf")
         declared_type = value.get("type")
@@ -109,6 +126,128 @@ def _load_json(path: Path) -> dict[str, Any]:
     return payload
 
 
+_CODEX_EVENT_TYPES = {
+    "thread.started",
+    "turn.started",
+    "turn.completed",
+    "turn.failed",
+    "item.started",
+    "item.updated",
+    "item.completed",
+    "error",
+}
+
+
+def _parse_codex_json_events(output: str) -> dict[str, Any]:
+    events: list[dict[str, Any]] = []
+    malformed = False
+    unknown_types: set[str] = set()
+    messages: list[str] = []
+    codes: list[str] = []
+    for raw_line in output.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+        try:
+            event = json.loads(line)
+        except (TypeError, ValueError):
+            malformed = True
+            continue
+        if not isinstance(event, dict):
+            malformed = True
+            continue
+        events.append(event)
+        event_type = str(event.get("type") or "").strip()
+        if event_type not in _CODEX_EVENT_TYPES:
+            unknown_types.add(event_type or "<missing>")
+        error = event.get("error") if isinstance(event.get("error"), dict) else {}
+        for candidate in (event.get("message"), error.get("message")):
+            if isinstance(candidate, str) and candidate.strip():
+                messages.append(candidate.strip())
+        for candidate in (event.get("code"), error.get("code")):
+            if isinstance(candidate, str) and candidate.strip():
+                codes.append(candidate.strip())
+    event_types = [str(event.get("type") or "") for event in events]
+    return {
+        "complete": bool(events) and not malformed and not unknown_types,
+        "malformed": malformed,
+        "event_count": len(events),
+        "unknown_event_types": sorted(unknown_types),
+        "terminal_event_type": event_types[-1] if event_types else "",
+        "messages": messages,
+        "codes": codes,
+    }
+
+
+def _provider_failure(parsed: dict[str, Any], *, returncode: int) -> tuple[str, str]:
+    searchable = " ".join([*parsed.get("codes", []), *parsed.get("messages", [])]).lower()
+    if not parsed.get("complete"):
+        return "malformed_provider_events", "Provider returned an incomplete or unsupported event stream."
+    if "invalid_json_schema" in searchable or "invalid json schema" in searchable:
+        return "invalid_json_schema", "Provider rejected the supplied output JSON schema."
+    if any(token in searchable for token in ("usage limit", "quota", "rate limit", "rate_limit")):
+        return "provider_quota", "Provider refused the call because capacity or quota was unavailable."
+    if any(token in searchable for token in ("unauthorized", "authentication", "invalid api key")):
+        return "provider_auth", "Provider authentication failed."
+    if returncode == 0:
+        return "provider_output_missing", "Provider completed without a readable structured output."
+    return "provider_error", "Provider call failed; raw provider detail was not retained."
+
+
+def _model_call_receipt(
+    model: "CodexJsonModel",
+    *,
+    started: float,
+    status: str,
+    exit_code: int | None,
+    parsed: dict[str, Any] | None,
+    error: tuple[str, str] | None,
+) -> dict[str, Any]:
+    summary = parsed or {}
+    return {
+        "schema_version": "solar.model_call_receipt.v1",
+        "provider": model.provider,
+        "model": model.model or "configured_default",
+        "status": status,
+        "exit_code": exit_code,
+        "duration_ms": round((time.monotonic() - started) * 1000, 3),
+        "provider_events": {
+            "complete": bool(summary.get("complete")),
+            "event_count": int(summary.get("event_count") or 0),
+            "terminal_event_type": str(summary.get("terminal_event_type") or ""),
+        },
+        "error": {"code": error[0], "detail": error[1]} if error else None,
+    }
+
+
+MODEL_CALL_DEADLINE_ENV = "SOLAR_MODEL_CALL_DEADLINE_UNIX"
+MIN_MODEL_CALL_SECONDS = 5
+
+
+def model_call_deadline(env: dict[str, str] | None = None) -> float | None:
+    """Return the outer process's shared absolute deadline when configured."""
+
+    raw = str(
+        (env if env is not None else os.environ).get(MODEL_CALL_DEADLINE_ENV) or ""
+    ).strip()
+    if not raw:
+        return None
+    try:
+        return float(raw)
+    except ValueError:
+        return None
+
+
+def effective_call_timeout(timeout_seconds: int, *, now: float | None = None) -> float:
+    """Bound one provider call by the remaining shared process deadline."""
+
+    deadline = model_call_deadline()
+    if deadline is None:
+        return float(timeout_seconds)
+    remaining = deadline - (time.time() if now is None else now)
+    return min(float(timeout_seconds), remaining)
+
+
 @dataclass
 class CodexJsonModel:
     """Fresh, schema-bound Codex invocation for one semantic boundary."""
@@ -126,9 +265,31 @@ class CodexJsonModel:
         output_path = work_dir / "model_output.json"
         provider_schema_path = work_dir / "model_output.schema.json"
         write_json(provider_schema_path, codex_compatible_schema(_load_json(schema_path)))
+        call_timeout = effective_call_timeout(self.timeout_seconds)
+        if call_timeout < MIN_MODEL_CALL_SECONDS:
+            error = (
+                "planner_deadline_exhausted",
+                (
+                    f"Only {max(call_timeout, 0):.0f}s of the shared deadline remained; "
+                    "the call was not started."
+                ),
+            )
+            write_json(
+                work_dir / "model_call_receipt.json",
+                _model_call_receipt(
+                    self,
+                    started=time.monotonic(),
+                    status="failed",
+                    exit_code=None,
+                    parsed=None,
+                    error=error,
+                ),
+            )
+            raise IntentCompilerError(f"{self.provider} model call failed [{error[0]}]")
         command = [
             "codex",
             "exec",
+            "--json",
             "--ephemeral",
             "--ignore-user-config",
             "--ignore-rules",
@@ -150,30 +311,70 @@ class CodexJsonModel:
                 input=prompt,
                 text=True,
                 capture_output=True,
-                timeout=self.timeout_seconds,
+                timeout=call_timeout,
                 cwd=work_dir,
                 check=False,
             )
         except subprocess.TimeoutExpired as exc:
-            raise IntentCompilerError(
-                f"{self.provider} model call timed out after {self.timeout_seconds}s"
-            ) from exc
-        if process.returncode != 0:
-            detail = " ".join(
-                str(process.stderr or process.stdout or "").strip().split()
-            )[-2000:]
-            raise IntentCompilerError(
-                f"{self.provider} model call failed with exit {process.returncode}"
-                + (f": {detail}" if detail else "")
+            error = (
+                "provider_timeout",
+                f"Provider call exceeded the {call_timeout:.0f}s timeout.",
             )
-        if not output_path.exists():
-            raise IntentCompilerError(f"{self.provider} model call produced no structured output")
-        payload = _load_json(output_path)
-        receipt = {
-            "provider": self.provider,
-            "model": self.model or "configured_default",
-            "duration_ms": round((time.monotonic() - started) * 1000, 3),
-        }
+            write_json(
+                work_dir / "model_call_receipt.json",
+                _model_call_receipt(
+                    self,
+                    started=started,
+                    status="failed",
+                    exit_code=None,
+                    parsed=None,
+                    error=error,
+                ),
+            )
+            raise IntentCompilerError(f"{self.provider} model call failed [{error[0]}]") from exc
+        parsed = _parse_codex_json_events(process.stdout)
+        terminal_success = (
+            parsed.get("complete") is True
+            and parsed.get("terminal_event_type") == "turn.completed"
+        )
+        if process.returncode != 0 or not terminal_success or not output_path.exists():
+            error = _provider_failure(parsed, returncode=process.returncode)
+            write_json(
+                work_dir / "model_call_receipt.json",
+                _model_call_receipt(
+                    self,
+                    started=started,
+                    status="failed",
+                    exit_code=process.returncode,
+                    parsed=parsed,
+                    error=error,
+                ),
+            )
+            raise IntentCompilerError(f"{self.provider} model call failed [{error[0]}]")
+        try:
+            payload = _load_json(output_path)
+        except (IntentCompilerError, OSError, ValueError) as exc:
+            error = ("provider_output_invalid", "Provider output was not a readable JSON object.")
+            write_json(
+                work_dir / "model_call_receipt.json",
+                _model_call_receipt(
+                    self,
+                    started=started,
+                    status="failed",
+                    exit_code=process.returncode,
+                    parsed=parsed,
+                    error=error,
+                ),
+            )
+            raise IntentCompilerError(f"{self.provider} model call failed [{error[0]}]") from exc
+        receipt = _model_call_receipt(
+            self,
+            started=started,
+            status="succeeded",
+            exit_code=process.returncode,
+            parsed=parsed,
+            error=None,
+        )
         write_json(work_dir / "model_call_receipt.json", receipt)
         return payload
 
@@ -269,6 +470,11 @@ def _assert_schema(payload: dict[str, Any], schema_path: Path, label: str) -> No
         )
 
 
+def _collection_items(payload: dict[str, Any], key: str) -> list[Any]:
+    value = payload.get(key)
+    return value if isinstance(value, list) else []
+
+
 def _all_semantic_ids(intent_ir: dict[str, Any]) -> list[str]:
     keys = (
         ("goals", "goal_id"),
@@ -281,53 +487,74 @@ def _all_semantic_ids(intent_ir: dict[str, Any]) -> list[str]:
     return [
         str(item.get(id_key) or "")
         for collection, id_key in keys
-        for item in intent_ir.get(collection, [])
+        for item in _collection_items(intent_ir, collection)
         if isinstance(item, dict)
     ]
 
 
 def _iter_spans(intent_ir: dict[str, Any]):
     for collection in ("goals", "outcomes", "constraints", "ambiguities", "conflicts"):
-        for index, item in enumerate(intent_ir.get(collection, [])):
+        for index, item in enumerate(_collection_items(intent_ir, collection)):
             if not isinstance(item, dict):
                 continue
-            for span_index, span in enumerate(item.get("source_spans", [])):
+            source_spans = item.get("source_spans")
+            for span_index, span in enumerate(source_spans if isinstance(source_spans, list) else []):
                 yield f"{collection}.{index}.source_spans.{span_index}", span
 
 
-def _iter_unknown_refs(value: Any):
+def _iter_expression_references(value: Any, path: str):
+    """Yield every typed semantic reference in a constraint expression."""
     if isinstance(value, dict):
-        if "unknown_ref" in value:
-            yield str(value["unknown_ref"])
-        for child in value.values():
-            yield from _iter_unknown_refs(child)
+        for reference_key in ("ref", "unknown_ref"):
+            if reference_key in value:
+                yield f"{path}.{reference_key}", reference_key, str(value[reference_key])
+        for key, child in value.items():
+            yield from _iter_expression_references(child, f"{path}.{key}")
     elif isinstance(value, list):
-        for child in value:
-            yield from _iter_unknown_refs(child)
+        for index, child in enumerate(value):
+            yield from _iter_expression_references(child, f"{path}.{index}")
 
 
-_OPERATOR_ARITY: dict[str, tuple[int, int | None]] = {
-    "all_of": (2, None),
-    "any_of": (2, None),
-    "not": (1, 1),
-    "equals": (2, 2),
-    "not_equals": (2, 2),
-    "contains_all": (2, 2),
-    "contains_any": (2, 2),
-    "contains_none": (2, 2),
-    "at_least": (2, 2),
-    "at_most": (2, 2),
-    "less_than": (2, 2),
-    "less_than_or_equal": (2, 2),
-    "greater_than": (2, 2),
-    "greater_than_or_equal": (2, 2),
-    "exactly": (2, 2),
-    "select_by": (2, 2),
-    "bounded_by": (2, 2),
-    "before": (2, 2),
-    "after": (2, 2),
-    "implies": (2, 2),
-    "triggers": (2, 2),
+_SEMANTIC_ID_REFERENCE = re.compile(r"^([A-Z][0-9]+)(?:\..+)?$")
+
+
+def _semantic_reference_root(reference: str) -> str | None:
+    """Return an ID-looking reference root while preserving symbolic data paths."""
+    match = _SEMANTIC_ID_REFERENCE.fullmatch(reference)
+    return match.group(1) if match else None
+
+
+_ANY_EXPRESSION_SHAPE = frozenset({"ref", "unknown_ref", "literal", "set", "op"})
+_SET_EXPRESSION_SHAPE = frozenset({"set"})
+
+# This is the deterministic expression-language contract, not a prompt-specific
+# exception. Every schema operator has an explicit arity and positional shape
+# policy. Most binary relations intentionally accept any well-formed expression
+# because a symbolic ref carries no static scalar/temporal type. Collection
+# membership is different: its right operand is the enumerated comparison set,
+# so accepting a scalar changes the machine meaning and must fail before review.
+_OPERATOR_CONTRACTS: dict[str, dict[str, Any]] = {
+    "all_of": {"arity": (2, None), "positional_shapes": ()},
+    "any_of": {"arity": (2, None), "positional_shapes": ()},
+    "not": {"arity": (1, 1), "positional_shapes": (_ANY_EXPRESSION_SHAPE,)},
+    "equals": {"arity": (2, 2), "positional_shapes": (_ANY_EXPRESSION_SHAPE,) * 2},
+    "not_equals": {"arity": (2, 2), "positional_shapes": (_ANY_EXPRESSION_SHAPE,) * 2},
+    "contains_all": {"arity": (2, 2), "positional_shapes": (_ANY_EXPRESSION_SHAPE, _SET_EXPRESSION_SHAPE)},
+    "contains_any": {"arity": (2, 2), "positional_shapes": (_ANY_EXPRESSION_SHAPE, _SET_EXPRESSION_SHAPE)},
+    "contains_none": {"arity": (2, 2), "positional_shapes": (_ANY_EXPRESSION_SHAPE, _SET_EXPRESSION_SHAPE)},
+    "at_least": {"arity": (2, 2), "positional_shapes": (_ANY_EXPRESSION_SHAPE,) * 2},
+    "at_most": {"arity": (2, 2), "positional_shapes": (_ANY_EXPRESSION_SHAPE,) * 2},
+    "less_than": {"arity": (2, 2), "positional_shapes": (_ANY_EXPRESSION_SHAPE,) * 2},
+    "less_than_or_equal": {"arity": (2, 2), "positional_shapes": (_ANY_EXPRESSION_SHAPE,) * 2},
+    "greater_than": {"arity": (2, 2), "positional_shapes": (_ANY_EXPRESSION_SHAPE,) * 2},
+    "greater_than_or_equal": {"arity": (2, 2), "positional_shapes": (_ANY_EXPRESSION_SHAPE,) * 2},
+    "exactly": {"arity": (2, 2), "positional_shapes": (_ANY_EXPRESSION_SHAPE,) * 2},
+    "select_by": {"arity": (2, 2), "positional_shapes": (_ANY_EXPRESSION_SHAPE,) * 2},
+    "bounded_by": {"arity": (2, 2), "positional_shapes": (_ANY_EXPRESSION_SHAPE,) * 2},
+    "before": {"arity": (2, 2), "positional_shapes": (_ANY_EXPRESSION_SHAPE,) * 2},
+    "after": {"arity": (2, 2), "positional_shapes": (_ANY_EXPRESSION_SHAPE,) * 2},
+    "implies": {"arity": (2, 2), "positional_shapes": (_ANY_EXPRESSION_SHAPE,) * 2},
+    "triggers": {"arity": (2, 2), "positional_shapes": (_ANY_EXPRESSION_SHAPE,) * 2},
 }
 
 
@@ -344,12 +571,15 @@ def _iter_operator_expressions(value: Any, path: str):
 
 def _expression_arity_errors(intent_ir: dict[str, Any]) -> list[dict[str, Any]]:
     errors: list[dict[str, Any]] = []
-    for index, constraint in enumerate(intent_ir.get("constraints", [])):
+    for index, constraint in enumerate(_collection_items(intent_ir, "constraints")):
         expression = constraint.get("expression") if isinstance(constraint, dict) else None
         for path, node in _iter_operator_expressions(expression, f"constraints.{index}.expression"):
             operator = str(node.get("op") or "")
             arguments = node.get("args") if isinstance(node.get("args"), list) else []
-            minimum, maximum = _OPERATOR_ARITY.get(operator, (1, None))
+            contract = _OPERATOR_CONTRACTS.get(operator)
+            if contract is None:
+                continue
+            minimum, maximum = contract["arity"]
             if len(arguments) < minimum or (maximum is not None and len(arguments) > maximum):
                 expected = str(minimum) if minimum == maximum else f"at least {minimum}"
                 errors.append(
@@ -363,8 +593,98 @@ def _expression_arity_errors(intent_ir: dict[str, Any]) -> list[dict[str, Any]]:
     return errors
 
 
+def _expression_shape(value: Any) -> str:
+    if not isinstance(value, dict):
+        return "invalid"
+    for shape in ("ref", "unknown_ref", "literal", "set", "op"):
+        if shape in value:
+            return shape
+    return "invalid"
+
+
+def _expression_operand_shape_errors(intent_ir: dict[str, Any]) -> list[dict[str, Any]]:
+    errors: list[dict[str, Any]] = []
+    for index, constraint in enumerate(_collection_items(intent_ir, "constraints")):
+        expression = constraint.get("expression") if isinstance(constraint, dict) else None
+        for path, node in _iter_operator_expressions(expression, f"constraints.{index}.expression"):
+            operator = str(node.get("op") or "")
+            contract = _OPERATOR_CONTRACTS.get(operator)
+            arguments = node.get("args") if isinstance(node.get("args"), list) else []
+            if contract is None:
+                continue
+            for argument_index, allowed_shapes in enumerate(contract["positional_shapes"]):
+                if argument_index >= len(arguments):
+                    continue
+                actual_shape = _expression_shape(arguments[argument_index])
+                if actual_shape in allowed_shapes:
+                    continue
+                errors.append(
+                    {
+                        "code": "INVALID_EXPRESSION_OPERAND_SHAPE",
+                        "path": f"{path}.args.{argument_index}",
+                        "message": (
+                            f"Operator {operator!r} argument {argument_index + 1} requires "
+                            f"one of {sorted(allowed_shapes)}; received {actual_shape!r}."
+                        ),
+                        "repairable": True,
+                    }
+                )
+    return errors
+
+
+_DISTINCT_CARDINALITY_QUALIFIER = re.compile(r"\b(?:distinct|unique)\b", re.IGNORECASE)
+_CARDINALITY_OPERATORS = frozenset({"at_least", "at_most", "exactly"})
+
+
+def _distinct_cardinality_errors(intent_ir: dict[str, Any]) -> list[dict[str, Any]]:
+    """Reject count formulas that silently discard a distinctness qualifier.
+
+    IntentIR's bounded expression language can compare a count, but it has no
+    uniqueness/distinct-count operator.  A literal preserves that user
+    condition honestly; a plain cardinality formula does not.  Catching this
+    mechanically also lets the single repair receive this defect alongside
+    independent semantic-review defects instead of discovering it one
+    generation later.
+    """
+    errors: list[dict[str, Any]] = []
+    for index, constraint in enumerate(_collection_items(intent_ir, "constraints")):
+        if not isinstance(constraint, dict):
+            continue
+        statement = str(constraint.get("statement") or "")
+        if not _DISTINCT_CARDINALITY_QUALIFIER.search(statement):
+            continue
+        expression = constraint.get("expression")
+        cardinality_nodes = [
+            (path, node)
+            for path, node in _iter_operator_expressions(
+                expression, f"constraints.{index}.expression"
+            )
+            if str(node.get("op") or "") in _CARDINALITY_OPERATORS
+        ]
+        if not cardinality_nodes:
+            continue
+        for path, _node in cardinality_nodes:
+            errors.append(
+                {
+                    "code": "DISTINCT_CARDINALITY_NOT_REPRESENTABLE",
+                    "path": path,
+                    "message": (
+                        "The constraint requires distinct or unique items, but the bounded "
+                        "expression language can compare only an ordinary count. Preserve "
+                        "the exact condition as a literal expression."
+                    ),
+                    "repairable": True,
+                }
+            )
+    return errors
+
+
 def validate_intent(
-    raw_input: dict[str, Any], intent_ir: dict[str, Any], *, generation: int
+    raw_input: dict[str, Any],
+    intent_ir: dict[str, Any],
+    *,
+    generation: int,
+    semantic_schema_errors: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     checks = {
         "raw_intent_reference": [],
@@ -375,11 +695,12 @@ def validate_intent(
         "constraint_expression_integrity": [],
         "unknown_resolution_integrity": [],
     }
-    schema_errors = _schema_errors(intent_ir, INTENT_SCHEMA)
+    schema_errors = [*(semantic_schema_errors or []), *_schema_errors(intent_ir, INTENT_SCHEMA)]
     checks["controlled_value_integrity"].extend(schema_errors)
     raw_id = raw_input["raw_intent_id"]
     raw_hash = raw_input["raw"]["sha256"]
-    raw_ref = intent_ir.get("raw_intent_ref", {})
+    raw_ref_value = intent_ir.get("raw_intent_ref", {})
+    raw_ref = raw_ref_value if isinstance(raw_ref_value, dict) else {}
     if raw_ref.get("raw_intent_id") != raw_id or raw_ref.get("raw_text_sha256") != raw_hash:
         checks["raw_intent_reference"].append(
             {
@@ -429,10 +750,11 @@ def validate_intent(
             )
     valid_ids = set(ids)
     for collection in ("conflicts", "unknowns"):
-        for index, item in enumerate(intent_ir.get(collection, [])):
+        for index, item in enumerate(_collection_items(intent_ir, collection)):
             if not isinstance(item, dict):
                 continue
-            for reference in item.get("derived_from", []):
+            derived_from = item.get("derived_from")
+            for reference in derived_from if isinstance(derived_from, list) else []:
                 if reference not in valid_ids:
                     checks["derived_reference_integrity"].append(
                         {
@@ -442,25 +764,49 @@ def validate_intent(
                             "repairable": True,
                         }
                     )
+    expression_ids = {
+        str(item.get(id_key))
+        for collection, id_key in (
+            ("goals", "goal_id"),
+            ("outcomes", "outcome_id"),
+            ("constraints", "constraint_id"),
+        )
+        for item in _collection_items(intent_ir, collection)
+        if isinstance(item, dict) and item.get(id_key)
+    }
     unknown_ids = {
         str(item.get("unknown_id"))
-        for item in intent_ir.get("unknowns", [])
-        if isinstance(item, dict)
+        for item in _collection_items(intent_ir, "unknowns")
+        if isinstance(item, dict) and item.get("unknown_id")
     }
-    for index, constraint in enumerate(intent_ir.get("constraints", [])):
+    for index, constraint in enumerate(_collection_items(intent_ir, "constraints")):
         if not isinstance(constraint, dict):
             continue
-        for reference in _iter_unknown_refs(constraint.get("expression")):
-            if reference not in unknown_ids:
+        expression_path = f"constraints.{index}.expression"
+        for path, reference_kind, reference in _iter_expression_references(
+            constraint.get("expression"), expression_path
+        ):
+            reference_root = (
+                reference if reference_kind == "unknown_ref" else _semantic_reference_root(reference)
+            )
+            must_resolve = reference_kind == "unknown_ref" or reference_root is not None
+            allowed_ids = unknown_ids if reference_kind == "unknown_ref" else expression_ids
+            if must_resolve and reference_root not in allowed_ids:
                 checks["constraint_expression_integrity"].append(
                     {
                         "code": "UNKNOWN_EXPRESSION_REFERENCE",
-                        "path": f"constraints.{index}.expression",
-                        "message": f"Unknown unknown_ref: {reference}",
+                        "path": path,
+                        "message": f"Unknown {reference_kind}: {reference}",
                         "repairable": True,
                     }
                 )
     checks["constraint_expression_integrity"].extend(_expression_arity_errors(intent_ir))
+    checks["constraint_expression_integrity"].extend(
+        _expression_operand_shape_errors(intent_ir)
+    )
+    checks["constraint_expression_integrity"].extend(
+        _distinct_cardinality_errors(intent_ir)
+    )
     errors = [error for values in checks.values() for error in values]
     check_rows = [
         {
@@ -510,13 +856,34 @@ Use conflicts for mutually incompatible instructions. Use resolution=clarify whe
 resolution=reject only when the request is inherently impossible or forbidden. Do not invent execution.
 The structured expression is the machine contract and must mean the same thing as the statement. Use before/after
 for ordering, triggers/implies for condition-action rules, and strict comparison operators when the boundary is strict.
+The expression language is intentionally small. If it cannot faithfully express per-item correspondence,
+quantification, matching, or another semantic relation, preserve the exact user condition as a literal expression
+instead of approximating it with a weaker operator. In particular, implies is a Boolean condition operator; it does
+not prove that every item in one collection has a matching item in another collection.
+An imperative such as "use", "produce", "include", or "do not" is a requirement, not a preference; do not weaken it
+to "should" or category=preference. A source-acquisition requirement such as "use live public sources" constrains
+workflow source inputs or source channels, not words that merely appear in the final artifact. Represent it with a
+symbolic workflow/source data-path ref rather than a deliverable-text ref. A conditional provenance rule such as
+"do not claim X unless X was actually run" means a claim of execution implies retained execution evidence; it does
+not prohibit truthful claims when that evidence exists.
 Use contains_none to prohibit any listed value from appearing in a set or collection.
+contains_all, contains_any, and contains_none take exactly two operands: the left operand identifies the
+collection being checked and the right operand must be {"set": [...]} even when it contains one item. Never
+place a scalar literal, ref, unknown_ref, or nested operator in the right operand of a contains_* expression.
+all_of and any_of take two or more expressions; not takes one; every other operator takes exactly two.
+When an expression ref uses an IntentIR semantic ID, it must name an existing goal, outcome, or constraint ID.
+Symbolic data-path refs are allowed. Use unknown_ref, not ref, to name an existing unknown ID. Never invent aliases
+such as O1 when the corresponding outcome ID is D1.
 Do not use all_of merely to represent an ordered approval or a conditional rollback.
 """.strip()
     payload: dict[str, Any] = {"instruction": instruction, "input": raw_input}
     if generation:
         payload["repair_instruction"] = (
-            "Correct only the listed errors. Preserve every unaffected meaning and do not add requirements."
+            "Correct every listed error in one response. Preserve every unaffected statement, strength, scope, "
+            "source span, and meaning; do not add requirements. Recheck every constraint after the repair so a "
+            "mechanical correction does not turn source use into deliverable wording, weaken a requirement into "
+            "a preference, or erase a condition. When a requested relation cannot be represented exactly by the "
+            "available expression operators, use an exact literal expression rather than an approximate formula."
         )
         payload["previous_intent_ir"] = previous
         payload["defects"] = defects
@@ -526,15 +893,19 @@ Do not use all_of merely to represent an ordered approval or a conditional rollb
 def compile_candidate(
     raw_input: dict[str, Any], model: JsonModel, work_dir: Path, *, generation: int,
     previous: dict[str, Any] | None = None, defects: list[dict[str, Any]] | None = None,
-) -> dict[str, Any]:
+    include_schema_errors: bool = False,
+) -> dict[str, Any] | tuple[dict[str, Any], list[dict[str, Any]]]:
     semantic = model.generate(
         _compiler_prompt(raw_input, generation=generation, previous=previous, defects=defects or []),
         SEMANTIC_SCHEMA,
         work_dir / "compiler_call",
     )
+    semantic_schema_errors = _schema_errors(semantic, SEMANTIC_SCHEMA)
+    semantic_body = semantic if isinstance(semantic, dict) else {}
     raw_id = raw_input["raw_intent_id"]
     suffix = raw_id.removeprefix("raw-intent-").removeprefix("intent-")
-    return {
+    candidate = {
+        **semantic_body,
         "schema_version": "solar.intent_ir.v3",
         "artifact_role": "runtime_artifact",
         "intent_ir_id": f"intent-ir-{suffix}",
@@ -548,8 +919,10 @@ def compile_candidate(
             "provider": model.provider,
             "model": model.model or "configured_default",
         },
-        **semantic,
     }
+    if include_schema_errors:
+        return candidate, semantic_schema_errors
+    return candidate
 
 
 def _fidelity_prompt(raw_input: dict[str, Any], intent_ir: dict[str, Any]) -> str:
@@ -557,9 +930,14 @@ def _fidelity_prompt(raw_input: dict[str, Any], intent_ir: dict[str, Any]) -> st
 You are an independent semantic reviewer. Compare the original input with IntentIR.
 Report an error only when the IntentIR materially changes or omits a requested deliverable, scope,
 constraint, authorization, or meaning. Awkward wording and harmless differences are warnings or passes.
+Inspect every goal, outcome, and constraint independently and report all material defects in this response; do not
+stop after finding one failure class, because the compiler receives only one bounded repair.
 Treat constraint.expression as authoritative machine meaning. If its logic differs from the statement or source,
 report a repairable error even when the prose is correct. In particular, verify strict limits, ordering, conditions,
 approval-before-action, and stop/rollback triggers.
+An exact literal expression is valid when the bounded expression language has no operator for the source relation;
+do not demand unsupported quantifiers or per-item matching. Reject an operator formula that falsely approximates
+such a relation, but accept a literal that preserves the source condition without claiming machine precision.
 Do not fail because a discoverable fact is unknown before the workflow. Do fail unrequested execution.
 Do not report source-span bounds; the deterministic validator owns that mechanical check.
 Check all six required check kinds exactly once. Every issue must cite raw-input character spans.
@@ -688,8 +1066,16 @@ def decide_acceptance(
     elif fidelity.get("status") == "fail":
         reasons.append("IntentIR meaning-preservation review failed.")
     else:
-        blocking = [item for item in intent_ir.get("ambiguities", []) if item.get("blocking")]
-        conflicts = list(intent_ir.get("conflicts") or [])
+        blocking = [
+            item
+            for item in _collection_items(intent_ir, "ambiguities")
+            if isinstance(item, dict) and item.get("blocking")
+        ]
+        conflicts = [
+            item
+            for item in _collection_items(intent_ir, "conflicts")
+            if isinstance(item, dict)
+        ]
         rejected = [item for item in conflicts if item.get("resolution") == "reject"]
         if rejected:
             reasons.extend(str(item.get("description")) for item in rejected)
@@ -751,6 +1137,13 @@ def _repairable_errors(*artifacts: dict[str, Any] | None) -> list[dict[str, Any]
     ]
 
 
+def _candidate_is_schema_readable(validation: dict[str, Any]) -> bool:
+    """Semantic review is safe when the candidate passed its structural schema."""
+    return not any(
+        error.get("code") == "SCHEMA_INVALID" for error in validation.get("errors", [])
+    )
+
+
 def run_pipeline(
     raw: dict[str, Any], output_dir: Path, compiler_model: JsonModel, reviewer_model: JsonModel
 ) -> dict[str, Any]:
@@ -788,21 +1181,27 @@ def run_pipeline(
                     },
                 )
             previous = intent_ir
-            intent_ir = compile_candidate(
+            intent_ir, semantic_schema_errors = compile_candidate(
                 raw_input,
                 compiler_model,
                 generation_dir,
                 generation=generation,
                 previous=previous,
                 defects=defects,
+                include_schema_errors=True,
             )
             if generation == 1:
                 repair_completed = True
             write_json(generation_dir / "intent_ir.json", intent_ir)
-            validation = validate_intent(raw_input, intent_ir, generation=generation)
+            validation = validate_intent(
+                raw_input,
+                intent_ir,
+                generation=generation,
+                semantic_schema_errors=semantic_schema_errors,
+            )
             write_json(generation_dir / "intent_validation.json", validation)
             fidelity = None
-            if validation["status"] != "fail":
+            if _candidate_is_schema_readable(validation):
                 fidelity = review_fidelity(raw_input, intent_ir, reviewer_model, generation_dir)
                 write_json(generation_dir / "intent_fidelity.json", fidelity)
             if not _repairable_errors(validation, fidelity):

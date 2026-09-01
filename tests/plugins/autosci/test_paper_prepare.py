@@ -108,6 +108,40 @@ def test_prepare_pdf_prefers_arxiv_source_when_recovered(monkeypatch: pytest.Mon
     assert any("Fetched method section" in section.get("text", "") for section in paper["sections"])
 
 
+def test_arxiv_doi_url_is_ingested_as_the_canonical_arxiv_source(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    downloaded: list[str] = []
+
+    def fake_download(arxiv_id: str, dest_dir: Path, *, timeout: int = 30) -> dict[str, object]:
+        downloaded.append(arxiv_id)
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        dest_dir.joinpath("main.tex").write_text(
+            "\\title{Canonical DOI-to-arXiv Source}\n"
+            "\\begin{document}\n"
+            "\\begin{abstract}A retained source abstract.\\end{abstract}\n"
+            "\\section{Results}\n"
+            "The method improves retained-context quality by 10 percent.\n"
+            "\\end{document}\n",
+            encoding="utf-8",
+        )
+        return {"success": True, "format": "directory", "error": None}
+
+    monkeypatch.setattr(paper_prepare, "_download_arxiv_source", fake_download)
+    paper = paper_prepare.read_paper_source(
+        "https://doi.org/10.48550/arxiv.2410.08584",
+        raw_root=tmp_path / "raw",
+        workspace_root=tmp_path,
+        repository_root=HARNESS,
+    )
+
+    assert downloaded == ["2410.08584"]
+    assert paper["status"] == "completed"
+    assert paper["identifiers"]["arxiv"] == "2410.08584"
+    assert any("retained-context quality" in section["text"] for section in paper["sections"])
+
+
 def test_bridge_pdf_ingest_generates_synthetic_tex_when_network_disabled(tmp_path: Path) -> None:
     pdf_path = tmp_path / "raw" / "papers" / "2401.00002.pdf"
     write_pdf(

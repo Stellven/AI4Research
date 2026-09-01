@@ -58,4 +58,3 @@ assert "state_transition" in types, types
 assert "activity_succeeded" in types, types
 print("PASS graph parent pass uses runtime_status and session log")
 PY
-

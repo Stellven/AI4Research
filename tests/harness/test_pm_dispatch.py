@@ -91,6 +91,130 @@ def test_select_operator_by_role_prefers_capsule_operator_constraints(monkeypatc
     assert operator_id == "builder-b"
 
 
+def test_provider_policy_allows_declared_provider_neutral_native_operator(monkeypatch):
+    pm_dispatch = _load_pm_dispatch()
+    monkeypatch.setattr(
+        pm_dispatch,
+        "load_registry",
+        lambda: {
+            "version": 1,
+            "operators": {
+                "claim_verify_worker": {
+                    "enabled": True,
+                    "available": True,
+                    "roles": ["evaluator"],
+                    "role": "evaluator",
+                    "backend": "research_operator_registry",
+                    "model_provider_neutral": True,
+                    "task_classes": ["claim-verification"],
+                }
+            },
+        },
+    )
+    monkeypatch.setattr(pm_dispatch, "is_dispatchable", lambda op: (True, ""))
+
+    operator_id, _, reason = pm_dispatch.select_operator_by_role(
+        role="evaluator",
+        task_type="claim-verification",
+        prefer_operator="claim_verify_worker",
+        allowed_providers={"openai"},
+        strict_preference=True,
+    )
+
+    assert reason == ""
+    assert operator_id == "claim_verify_worker"
+
+
+def test_builder_pool_does_not_exclude_native_registry_operator(monkeypatch):
+    pm_dispatch = _load_pm_dispatch()
+    monkeypatch.setattr(
+        pm_dispatch,
+        "load_registry",
+        lambda: {
+            "version": 1,
+            "operators": {
+                "discovery_ingest_worker": {
+                    "enabled": True,
+                    "available": True,
+                    "roles": ["builder"],
+                    "role": "builder",
+                    "backend": "research_operator_registry",
+                    "model_provider_neutral": True,
+                    "runtime_binding": {
+                        "registry": "plugins.autosci.operators.scientific_lifecycle.evidence.registry",
+                        "node_id": "discovery_ingest",
+                    },
+                },
+                "model-builder": {
+                    "enabled": True,
+                    "available": True,
+                    "roles": ["builder"],
+                    "role": "builder",
+                    "backend": "command",
+                },
+            },
+        },
+    )
+    monkeypatch.setattr(pm_dispatch, "is_dispatchable", lambda op: (True, ""))
+    monkeypatch.setattr(
+        pm_dispatch,
+        "_load_concurrency_policy_module",
+        lambda: types.SimpleNamespace(
+            load_policy=lambda: {"builder_pool": {"enabled": True}},
+            builder_pool_enabled=lambda _policy: True,
+            pool_member_ids=lambda _registry: ["model-builder"],
+        ),
+    )
+
+    operator_id, _, reason = pm_dispatch.select_operator_by_role(
+        role="builder",
+        task_type="literature-ingestion",
+        prefer_operator="discovery_ingest_worker",
+        allowed_providers={"openai"},
+        strict_preference=True,
+    )
+
+    assert reason == ""
+    assert operator_id == "discovery_ingest_worker"
+
+
+def test_elastic_planner_role_uses_bounded_second_operator_when_first_is_busy(monkeypatch):
+    pm_dispatch = _load_pm_dispatch()
+    operators = {
+        operator_id: {
+            "enabled": True,
+            "available": True,
+            "roles": ["elastic-planner"],
+            "role": "elastic-planner",
+            "backend": "command",
+            "task_classes": ["elastic_planning"],
+            "preferred_for": ["elastic_planning"],
+            "provider": "openai",
+            "model": "configured-by-elastic-planner",
+        }
+        for operator_id in ("solar-elastic-planner", "solar-elastic-planner-2")
+    }
+    monkeypatch.setattr(pm_dispatch, "load_registry", lambda: {"version": 1, "operators": operators})
+    monkeypatch.setattr(
+        pm_dispatch,
+        "is_dispatchable",
+        lambda op: (
+            (False, "runtime_state=leased")
+            if op.get("operator_id") == "solar-elastic-planner"
+            else (True, "")
+        ),
+    )
+    monkeypatch.setattr(pm_dispatch, "DEFAULT_OPERATOR_PROVIDERS", frozenset({"openai"}))
+
+    operator_id, _, reason = pm_dispatch.select_operator_by_role(
+        role="elastic-planner",
+        task_type="elastic_planning",
+    )
+
+    assert reason == ""
+    assert operator_id == "solar-elastic-planner-2"
+
+
 def test_scientific_research_rejects_spark_without_research_capability(monkeypatch):
     pm_dispatch = _load_pm_dispatch()
     monkeypatch.setattr(
@@ -490,6 +614,184 @@ def test_planner_alternative_exhaustion_is_persisted_for_gui(monkeypatch, tmp_pa
     assert [
         item["operator_id"] for item in records[-1]["operator_selection_exclusions"]
     ] == ["builder-primary", "builder-fallback"]
+
+
+def test_frozen_graph_refusal_persists_restart_correlation(monkeypatch, tmp_path):
+    pm_dispatch = _load_pm_dispatch()
+    monkeypatch.setenv("SOLAR_PM_DISPATCH_ALLOW_DIRECT", "1")
+    monkeypatch.setattr(pm_dispatch, "HARNESS_DIR", tmp_path)
+    monkeypatch.setattr(pm_dispatch, "SPRINTS_DIR", tmp_path / "sprints")
+    monkeypatch.setattr(pm_dispatch, "PM_INBOX_DIR", tmp_path / "run" / "pm-inbox")
+    monkeypatch.setattr(pm_dispatch, "DEFAULT_OPERATOR_PROVIDERS", frozenset())
+    monkeypatch.setattr(pm_dispatch, "load_task_graph_node", lambda *_args: None)
+    monkeypatch.setattr(
+        pm_dispatch,
+        "load_registry",
+        lambda: {
+            "version": 1,
+            "operators": {
+                "builder-primary": {
+                    "enabled": True,
+                    "available": True,
+                    "roles": ["builder"],
+                    "launch_cmd_kind": "command",
+                    "task_classes": ["implementation"],
+                }
+            },
+        },
+    )
+    monkeypatch.setattr(pm_dispatch, "is_dispatchable", lambda _operator: (False, "runtime_state=leased"))
+    records: list[dict] = []
+    monkeypatch.setattr(pm_dispatch, "write_pm_task_record", lambda _task_id, record: records.append(dict(record)))
+    context = {
+        "source": "graph_node_dispatcher",
+        "graph": str(tmp_path / "sprints" / "sprint-refusal.task_graph.json"),
+        "dispatch_id": "graph-sprint-refusal-N1-attempt-2",
+        "original_assigned_pane": "operator:builder-primary",
+        "queue_item_id": "queue-frozen-2",
+    }
+    args = argparse.Namespace(
+        role="builder",
+        objective="implement safely",
+        operator="",
+        operator_alternative=["builder-primary"],
+        sprint="sprint-refusal",
+        node="N1",
+        task_type="implementation",
+        context=json.dumps(context),
+        dry_run=False,
+    )
+
+    assert pm_dispatch.cmd_submit(args) == 1
+    refusal = records[-1]
+    assert refusal["status"] == "failed_no_dispatchable_operator"
+    assert refusal["graph_dispatch_id"] == "graph-sprint-refusal-N1-attempt-2"
+    assert refusal["selected_frozen_operator_id"] == "builder-primary"
+    assert refusal["queue_item_id"] == "queue-frozen-2"
+    assert refusal["graph_path"] == context["graph"]
+    assert refusal["dispatch_id"].startswith("dispatch-pm-sprint-refusal-N1-")
+    assert refusal["attempt_id"] == "1"
+    assert refusal["correlation_id"] == "sprint-refusal:N1"
+    assert refusal["exit_code"] == 1
+
+
+def test_frozen_graph_uses_declared_specialized_host_role_for_exact_operator(monkeypatch):
+    pm_dispatch = _load_pm_dispatch()
+    registry = {
+        "version": 1,
+        "operators": {
+            "source-assessor": {
+                "enabled": True,
+                "available": True,
+                "role": "scientific-source-assessor",
+            }
+        },
+    }
+    monkeypatch.setattr(pm_dispatch, "load_registry", lambda: registry)
+    context = json.dumps(
+        {
+            "source": "graph_node_dispatcher",
+            "graph": "/tmp/sprint.task_graph.json",
+            "dispatch_id": "graph-sprint-source-assessment-1",
+            "original_assigned_pane": "operator:source-assessor",
+            "physical_host_role": "scientific-source-assessor",
+            "queue_item_id": "queue-1",
+        }
+    )
+
+    assert pm_dispatch._frozen_operator_selection_role(
+        context,
+        ["source-assessor"],
+        "builder",
+    ) == "scientific-source-assessor"
+    assert pm_dispatch._frozen_operator_selection_role(
+        context,
+        ["a-different-operator"],
+        "builder",
+    ) == "builder"
+
+
+def test_native_scientific_lifecycle_binding_is_research_capability():
+    pm_dispatch = _load_pm_dispatch()
+    native_operator = {
+        "backend": "research_operator_registry",
+        "role": "scientific-source-assessor",
+        "runtime_binding": {
+            "registry": "plugins.autosci.operators.scientific_lifecycle.evidence.registry",
+            "node_id": "source_assess",
+        },
+    }
+
+    assert pm_dispatch._operator_reject_reason_for_task(
+        native_operator,
+        "scientific-source-assessor",
+        "scientific-research",
+    ) == ""
+    assert pm_dispatch._operator_reject_reason_for_task(
+        {"role": "scientific-source-assessor"},
+        "scientific-source-assessor",
+        "scientific-research",
+    ) == "operator_lacks_scientific_research_capability"
+
+
+def test_frozen_pm_envelope_forwards_registry_and_graph_authority(monkeypatch, tmp_path):
+    pm_dispatch = _load_pm_dispatch()
+    sprints = tmp_path / "sprints"
+    work_dir = sprints / "sprint-1" / "workdir"
+    work_dir.mkdir(parents=True)
+    monkeypatch.setattr(pm_dispatch, "SPRINTS_DIR", sprints)
+    monkeypatch.setattr(pm_dispatch, "_graph_path_for_sprint", lambda _sid: str(sprints / "sprint-1.task_graph.json"))
+    graph_node = {
+        "id": "source_assessment",
+        "goal": "Assess sources",
+        "acceptance": ["check source assessment"],
+        "requirement_ids": ["R1"],
+        "read_scope": ["inputs/discovery.json"],
+        "write_scope": ["outputs/source_assessment.json"],
+        "artifact_contract": {"inputs": ["literature_discovery.v1"]},
+        "artifact_routes": {"consumes": {}, "produces": {}},
+        "capsule_binding": {"capsule_id": "cap.research-source-assess"},
+        "resource_requirements": {"network": "forbidden"},
+        "physical_candidates": [{"operator_id": "source-assessor", "rank": 2}],
+    }
+    context = json.dumps(
+        {
+            "source": "graph_node_dispatcher",
+            "graph_dispatch_id": "graph-dispatch-1",
+            "selected_frozen_operator_id": "source-assessor",
+            "scheduler_input_sha256": "a" * 64,
+            "frozen_candidate_ids": ["source-assessor"],
+        }
+    )
+    envelope = pm_dispatch._build_pm_operator_envelope(
+        task_id="task-1",
+        sprint_id="sprint-1",
+        node_id="source_assessment",
+        operator_id="source-assessor",
+        operator={
+            "backend": "research_operator_registry",
+            "runtime_binding": {"registry": "plugins.autosci.example", "node_id": "source_assess"},
+        },
+        task_type="scientific-research",
+        objective="Assess sources",
+        dispatch_file=tmp_path / "dispatch.md",
+        result_path=str(tmp_path / "result.md"),
+        context=context,
+        role="builder",
+        work_dir=str(work_dir),
+        task_graph_node=graph_node,
+    )
+
+    assert envelope["runtime_binding"] == {
+        "registry": "plugins.autosci.example",
+        "node_id": "source_assess",
+    }
+    assert envelope["artifact_contract"] == graph_node["artifact_contract"]
+    assert envelope["artifact_routes"] == graph_node["artifact_routes"]
+    assert envelope["capsule_binding"] == graph_node["capsule_binding"]
+    assert envelope["resource_requirements"] == graph_node["resource_requirements"]
+    assert envelope["physical_candidate_rank"] == 2
+    assert envelope["handoff_path"] == str(sprints / "sprint-1.source_assessment-handoff.md")
 
 
 def test_missing_operator_runtime_never_bypasses_lease_with_direct_inbox(monkeypatch, tmp_path):

@@ -42,12 +42,21 @@ MUTABLE_NODE_FIELDS = {
 RUNTIME_PROJECTION_NODE_FIELDS = {
     "assigned_to",
     "attempt",
+    "blocked_by",
+    "blocked_by_failed_dependency",
     "candidate_observations",
+    "candidate_wait_attempts",
     "blocking_reason",
     "closeout_receipt",
+    "dispatch_failure_streak",
     "dispatch_id",
+    "dispatch_retry_reason",
+    "eval_artifact_snapshot",
     "eval_json",
     "evaluation_results",
+    "evaluation_plan_requested",
+    "evaluation_plan_runtime",
+    "evaluation_plan_updated_at",
     "evaluation_state",
     "execution_attempt",
     "execution_attempt_error",
@@ -55,14 +64,23 @@ RUNTIME_PROJECTION_NODE_FIELDS = {
     "gate_status",
     "human_review",
     "lease_id",
+    "last_dispatch_failure_at",
+    "last_dispatch_failure_reason",
+    "last_operator_submission_failure",
+    "next_action",
+    "note",
     "queued_pane",
     "repair_attempts",
+    "retry_after",
+    "retryable",
     "result",
     "result_path",
     "selected_operator",
+    "skip_reason",
     "scheduler_candidate_observations",
     "status",
     "updated_at",
+    "wait_classification",
     "worker_match_details",
 }
 RUNTIME_PROJECTION_ROOT_FIELDS = {
@@ -75,6 +93,7 @@ RUNTIME_PROJECTION_ROOT_FIELDS = {
     "runtime_input_bindings",
     "runtime_state_filename",
     "runtime_work_dir",
+    "workspace_authority_ref",
     "nodes",
 }
 RUNTIME_PROJECTION_ROOT_MUTABLE_FIELDS = {
@@ -177,6 +196,8 @@ def semantic_errors(value: dict[str, Any]) -> list[str]:
     raw_nodes = graph.get("nodes") if isinstance(graph.get("nodes"), list) else []
     errors: list[str] = []
     nodes: dict[str, dict[str, Any]] = {}
+    workspace_publishers: dict[str, str] = {}
+    workspace_authority_required = False
     duplicate_ids: set[str] = set()
     for raw in raw_nodes:
         if not isinstance(raw, dict):
@@ -186,6 +207,17 @@ def semantic_errors(value: dict[str, Any]) -> list[str]:
             duplicate_ids.add(node_id)
         else:
             nodes[node_id] = raw
+        primary_capsule_id = str(raw.get("capability_capsule_id") or "")
+        binding = raw.get("capsule_binding") if isinstance(raw.get("capsule_binding"), dict) else {}
+        capsule_ids = {
+            str(item)
+            for item in binding.get("capsule_ids") or []
+            if str(item)
+        }
+        if primary_capsule_id and primary_capsule_id not in capsule_ids:
+            errors.append(
+                f"PRIMARY_CAPSULE_NOT_IN_BINDING:{node_id}:{primary_capsule_id}"
+            )
         forbidden = sorted(MUTABLE_NODE_FIELDS.intersection(raw))
         if forbidden:
             errors.append(f"MUTABLE_FIELD_IN_FROZEN_NODE:{node_id}:{','.join(forbidden)}")
@@ -199,8 +231,42 @@ def semantic_errors(value: dict[str, Any]) -> list[str]:
             errors.append(f"NETWORK_REQUIRED_WITHOUT_EFFECT:{node_id}")
         if network == "forbidden" and "network" in effects:
             errors.append(f"NETWORK_FORBIDDEN_WITH_EFFECT:{node_id}")
+        contract = raw.get("artifact_contract") if isinstance(raw.get("artifact_contract"), dict) else {}
+        produced = [str(value) for value in contract.get("produces") or []]
+        routes = [row for row in raw.get("output_routes") or [] if isinstance(row, dict)]
+        routed = [str(row.get("artifact_type") or "") for row in routes]
+        if len(routed) != len(set(routed)) or sorted(routed) != sorted(produced):
+            errors.append(f"OUTPUT_ROUTE_SET_MISMATCH:{node_id}")
+        for row in routes:
+            try:
+                _safe_relative_path(row.get("relative_path"), code="OUTPUT_ROUTE_PATH_INVALID")
+            except SchedulerInputError:
+                errors.append(f"OUTPUT_ROUTE_PATH_INVALID:{node_id}:{row.get('relative_path')}")
+            if str(row.get("route_kind") or "") == "workspace_publish":
+                workspace_authority_required = True
+                relative = str(row.get("relative_path") or "")
+                previous = workspace_publishers.get(relative)
+                if previous is not None:
+                    errors.append(
+                        f"WORKSPACE_OUTPUT_PATH_CONFLICT:{relative}:{previous}:{node_id}"
+                    )
+                workspace_publishers[relative] = node_id
+        for row in raw.get("workspace_reads") or []:
+            if not isinstance(row, dict):
+                continue
+            try:
+                _safe_relative_path(row.get("relative_path"), code="WORKSPACE_READ_PATH_INVALID")
+            except SchedulerInputError:
+                errors.append(f"WORKSPACE_READ_PATH_INVALID:{node_id}:{row.get('relative_path')}")
+            if str(row.get("kind") or "") == "directory":
+                errors.append(f"WORKSPACE_DIRECTORY_READ_UNSUPPORTED:{node_id}:{row.get('relative_path')}")
+            workspace_authority_required = True
     for node_id in sorted(duplicate_ids):
         errors.append(f"DUPLICATE_NODE_ID:{node_id}")
+    if workspace_authority_required and not isinstance(
+        value.get("workspace_authority_ref"), dict
+    ):
+        errors.append("WORKSPACE_AUTHORITY_REQUIRED")
 
     for node_id, node in nodes.items():
         for dependency in node.get("depends_on") or []:
@@ -230,23 +296,41 @@ def semantic_errors(value: dict[str, Any]) -> list[str]:
     for node_id in sorted(nodes):
         visit(node_id)
 
-    producers: dict[str, str] = {}
+    producers: dict[str, list[str]] = {}
     for node_id, node in nodes.items():
         contract = node.get("artifact_contract") if isinstance(node.get("artifact_contract"), dict) else {}
         for artifact in contract.get("produces") or []:
             artifact = str(artifact)
-            if artifact in producers:
-                errors.append(f"DUPLICATE_ARTIFACT_PRODUCER:{artifact}:{producers[artifact]}:{node_id}")
-            else:
-                producers[artifact] = node_id
+            producers.setdefault(artifact, []).append(node_id)
     if not any(error.startswith("DAG_CYCLE:") for error in errors):
         for node_id, node in nodes.items():
             ancestors = _ancestor_ids(node_id, nodes)
             contract = node.get("artifact_contract") if isinstance(node.get("artifact_contract"), dict) else {}
             for artifact in contract.get("consumes") or []:
-                producer = producers.get(str(artifact))
-                if producer is not None and producer not in ancestors:
-                    errors.append(f"ARTIFACT_PRODUCER_NOT_ANCESTOR:{node_id}:{artifact}:{producer}")
+                candidates = [
+                    producer for producer in producers.get(str(artifact), [])
+                    if producer in ancestors
+                ]
+                if producers.get(str(artifact)) and not candidates:
+                    errors.append(
+                        f"ARTIFACT_PRODUCER_NOT_ANCESTOR:{node_id}:{artifact}:"
+                        + ",".join(sorted(producers[str(artifact)]))
+                    )
+                if len(candidates) > 1:
+                    closest = [
+                        producer
+                        for producer in candidates
+                        if not any(
+                            producer in _ancestor_ids(other, nodes)
+                            for other in candidates
+                            if other != producer
+                        )
+                    ]
+                    if len(closest) != 1:
+                        errors.append(
+                            f"ARTIFACT_PRODUCER_AMBIGUOUS:{node_id}:{artifact}:"
+                            + ",".join(sorted(closest))
+                        )
     return errors
 
 
@@ -274,17 +358,25 @@ def _atomic_json_write(path: Path, value: dict[str, Any]) -> None:
     os.replace(temporary, path)
 
 
-def _runtime_node(node: dict[str, Any], artifact_paths: dict[str, str] | None = None) -> dict[str, Any]:
+def _runtime_node(
+    node: dict[str, Any],
+    *,
+    consume_paths: dict[str, str] | None = None,
+    produce_paths: dict[str, str] | None = None,
+    workspace_read_paths: list[str] | None = None,
+) -> dict[str, Any]:
     binding = deepcopy(node["evaluation_binding"])
     semantic_evaluators = list(binding.get("semantic_evaluator_ids") or [])
     deterministic_gates = list(binding.get("deterministic_gate_ids") or [])
     failure = deepcopy(node["failure_policy"])
     candidates = sorted(deepcopy(node["physical_candidates"]), key=lambda item: (item["rank"], item["operator_id"]))
-    artifact_paths = artifact_paths or {}
+    consume_paths = consume_paths or {}
+    produce_paths = produce_paths or {}
+    workspace_read_paths = workspace_read_paths or []
     consumes = list(node["artifact_contract"]["consumes"])
     produces = list(node["artifact_contract"]["produces"])
-    consume_paths = {
-        item: artifact_paths.get(item) or CONTROLLER_DISPATCH_ROUTES.get(item) or item
+    resolved_consumes = {
+        item: consume_paths.get(item) or CONTROLLER_DISPATCH_ROUTES.get(item) or item
         for item in consumes
     }
     return {
@@ -296,13 +388,15 @@ def _runtime_node(node: dict[str, Any], artifact_paths: dict[str, str] | None = 
         "depends_on": deepcopy(node["depends_on"]),
         "requirement_ids": deepcopy(node["requirement_ids"]),
         "capsule_binding": deepcopy(node["capsule_binding"]),
-        "capability_capsule_id": node["capsule_binding"]["capsule_ids"][0],
+        "capability_capsule_id": node["capability_capsule_id"],
         "required_capabilities": deepcopy(node["capsule_binding"]["capsule_ids"]),
         "physical_candidates": candidates,
         "artifact_contract": deepcopy(node["artifact_contract"]),
+        "output_routes": deepcopy(node.get("output_routes") or []),
+        "workspace_reads": deepcopy(node.get("workspace_reads") or []),
         "artifact_routes": {
-            "consumes": consume_paths,
-            "produces": {item: artifact_paths.get(item) for item in produces},
+            "consumes": resolved_consumes,
+            "produces": {item: produce_paths.get(item) for item in produces},
         },
         "evaluation_binding": binding,
         "evaluator_gate": deepcopy(node.get("evaluator_gate") or {}),
@@ -319,8 +413,13 @@ def _runtime_node(node: dict[str, Any], artifact_paths: dict[str, str] | None = 
         "failure_policy": failure,
         "max_repair_attempts": max(0, int(failure["max_attempts"]) - 1),
         "on_failure_exhausted": failure["on_exhausted"],
-        "read_scope": [consume_paths[item] for item in consumes],
-        "write_scope": [artifact_paths.get(item) or item for item in produces],
+        "read_scope": [resolved_consumes[item] for item in consumes] + workspace_read_paths,
+        "write_scope": [produce_paths.get(item) or item for item in produces],
+        "workspace_publish_scope": [
+            f"workspace/{row['relative_path']}"
+            for row in node.get("output_routes") or []
+            if isinstance(row, dict) and row.get("route_kind") == "workspace_publish"
+        ],
         "acceptance": [
             *[f"deterministic gate: {item}" for item in deterministic_gates],
             *[f"semantic evaluator: {item}" for item in semantic_evaluators],
@@ -377,10 +476,189 @@ def _runtime_input_bindings(bindings: dict[str, str] | None) -> dict[str, dict[s
     return resolved
 
 
+def _safe_relative_path(value: Any, *, code: str) -> str:
+    text = str(value or "").strip().replace("\\", "/")
+    path = Path(text)
+    if (
+        not text
+        or path.is_absolute()
+        or any(part in {"", ".", ".."} for part in path.parts)
+        or (len(text) >= 2 and text[1] == ":")
+    ):
+        raise SchedulerInputError(f"{code}:{text}")
+    return path.as_posix()
+
+
+def _verified_workspace_authority(
+    value: dict[str, Any],
+) -> tuple[dict[str, Any] | None, Path | None]:
+    reference = value.get("workspace_authority_ref")
+    if reference is None:
+        return None, None
+    if not isinstance(reference, dict):
+        raise SchedulerInputError("WORKSPACE_AUTHORITY_REF_INVALID")
+    path = Path(str(reference.get("path") or "")).expanduser()
+    if not path.is_absolute() or not path.is_file():
+        raise SchedulerInputError("WORKSPACE_AUTHORITY_SOURCE_MISSING")
+    if file_sha256(path) != str(reference.get("sha256") or ""):
+        raise SchedulerInputError("WORKSPACE_AUTHORITY_SOURCE_HASH_MISMATCH")
+    authority = _read_json(path)
+    if (
+        str(authority.get("schema_version") or "") != "solar.workspace_authority.v1"
+        or str(authority.get("artifact_role") or "")
+        != "controller_frozen_authority"
+        or str(authority.get("sprint_id") or "") != str(value.get("sprint_id") or "")
+        or str(authority.get("authority_id") or "")
+        != str(reference.get("authority_id") or "")
+        or str(authority.get("workspace_root") or "")
+        != str(reference.get("workspace_root") or "")
+        or str(authority.get("path") or "") != str(path.resolve())
+    ):
+        raise SchedulerInputError("WORKSPACE_AUTHORITY_REFERENCE_TAMPERED")
+    root = Path(str(reference.get("workspace_root") or "")).expanduser()
+    if not root.is_absolute() or not root.is_dir() or root.is_symlink():
+        raise SchedulerInputError("WORKSPACE_AUTHORITY_ROOT_INVALID")
+    return authority, root.resolve()
+
+
+def _output_paths(
+    value: dict[str, Any],
+    work_dir: Path,
+) -> dict[str, dict[str, str]]:
+    paths: dict[str, dict[str, str]] = {}
+    claimed_workspace_paths: dict[str, str] = {}
+    for node in value["graph"]["nodes"]:
+        node_id = str(node["id"])
+        node_paths: dict[str, str] = {}
+        for row in node.get("output_routes") or []:
+            artifact_type = str(row.get("artifact_type") or "")
+            relative = _safe_relative_path(
+                row.get("relative_path"),
+                code="OUTPUT_ROUTE_PATH_INVALID",
+            )
+            route = str(row.get("route_kind") or "")
+            if route == "workspace_publish":
+                previous = claimed_workspace_paths.get(relative)
+                if previous is not None:
+                    raise SchedulerInputError(
+                        f"WORKSPACE_OUTPUT_PATH_CONFLICT:{relative}:{previous}:{node_id}"
+                    )
+                claimed_workspace_paths[relative] = node_id
+                target = work_dir / "workspace" / relative
+            elif route == "sprint_private":
+                target = work_dir / "private" / _bounded_record_component(
+                    node_id, fallback="node"
+                ) / relative
+            else:
+                raise SchedulerInputError(f"OUTPUT_ROUTE_KIND_INVALID:{node_id}:{route}")
+            node_paths[artifact_type] = str(target.resolve())
+        paths[node_id] = node_paths
+    return paths
+
+
+def _producer_for_consume(
+    value: dict[str, Any],
+    node_id: str,
+    artifact_type: str,
+) -> str | None:
+    nodes = {
+        str(row.get("id") or ""): row
+        for row in value["graph"]["nodes"]
+        if isinstance(row, dict)
+    }
+    ancestors = _ancestor_ids(node_id, nodes)
+    producers = [
+        producer_id
+        for producer_id in ancestors
+        if artifact_type
+        in set((nodes[producer_id].get("artifact_contract") or {}).get("produces") or [])
+    ]
+    if not producers:
+        return None
+    closest = [
+        producer_id
+        for producer_id in producers
+        if not any(
+            producer_id in _ancestor_ids(other, nodes)
+            for other in producers
+            if other != producer_id
+        )
+    ]
+    if len(closest) != 1:
+        raise SchedulerInputError(
+            f"ARTIFACT_PRODUCER_AMBIGUOUS:{node_id}:{artifact_type}:{','.join(sorted(closest))}"
+        )
+    return closest[0]
+
+
+def _runtime_route_inputs(
+    value: dict[str, Any],
+    output_paths: dict[str, dict[str, str]],
+    input_bindings: dict[str, dict[str, str]],
+) -> dict[str, dict[str, str]]:
+    result: dict[str, dict[str, str]] = {}
+    for node in value["graph"]["nodes"]:
+        node_id = str(node["id"])
+        consumes: dict[str, str] = {}
+        for artifact_type in (node.get("artifact_contract") or {}).get("consumes") or []:
+            artifact_type = str(artifact_type)
+            producer = _producer_for_consume(value, node_id, artifact_type)
+            if producer is not None:
+                consumes[artifact_type] = output_paths[producer][artifact_type]
+            elif artifact_type in input_bindings:
+                consumes[artifact_type] = input_bindings[artifact_type]["path"]
+        result[node_id] = consumes
+    return result
+
+
+def _runtime_workspace_reads(
+    value: dict[str, Any],
+    workspace_root: Path | None,
+) -> dict[str, list[str]]:
+    result: dict[str, list[str]] = {}
+    for node in value["graph"]["nodes"]:
+        node_id = str(node["id"])
+        rows = [row for row in node.get("workspace_reads") or [] if isinstance(row, dict)]
+        if rows and workspace_root is None:
+            raise SchedulerInputError("WORKSPACE_READ_WITHOUT_AUTHORITY")
+        resolved_rows: list[str] = []
+        for row in rows:
+            relative = _safe_relative_path(
+                row.get("relative_path"), code="WORKSPACE_READ_PATH_INVALID"
+            )
+            lexical = workspace_root / relative  # type: ignore[operator]
+            cursor = workspace_root
+            for part in Path(relative).parts:
+                cursor = cursor / part
+                if cursor.is_symlink():
+                    raise SchedulerInputError(f"WORKSPACE_READ_SYMLINK:{relative}")
+            path = lexical.resolve(strict=True)
+            try:
+                path.relative_to(workspace_root)  # type: ignore[arg-type]
+            except ValueError as exc:
+                raise SchedulerInputError(f"WORKSPACE_READ_ESCAPES_AUTHORITY:{relative}") from exc
+            kind = str(row.get("kind") or "")
+            if kind == "file" and path.is_file():
+                actual = file_sha256(path)
+            elif kind == "directory":
+                raise SchedulerInputError(
+                    f"WORKSPACE_DIRECTORY_READ_UNSUPPORTED:{relative}"
+                )
+            else:
+                raise SchedulerInputError(f"WORKSPACE_READ_KIND_MISMATCH:{relative}")
+            if actual != str(row.get("sha256") or ""):
+                raise SchedulerInputError(f"WORKSPACE_READ_HASH_MISMATCH:{relative}")
+            resolved_rows.append(str(path))
+        result[node_id] = resolved_rows
+    return result
+
+
 def _resume_existing_runtime_graph(
     graph_path: Path,
     state_path: Path,
     *,
+    expected_graph: dict[str, Any],
+    expected_state: dict[str, Any],
     scheduler_input_id: str,
     scheduler_input_sha256: str,
     run_contract_ref: dict[str, Any],
@@ -391,10 +669,7 @@ def _resume_existing_runtime_graph(
     state_exists = state_path.exists()
     if not graph_exists and not state_exists:
         return None
-    if graph_exists != state_exists:
-        raise SchedulerInputError("SCHEDULER_RUNTIME_PAIR_INCOMPLETE")
-
-    graph = _read_json(graph_path)
+    graph = _read_json(graph_path) if graph_exists else deepcopy(expected_graph)
     verification = verify_runtime_projection(graph, graph_path=graph_path)
     if not verification.get("ok"):
         errors = ",".join(str(item) for item in verification.get("errors") or [])
@@ -415,7 +690,7 @@ def _resume_existing_runtime_graph(
     if graph.get("runtime_input_bindings") != runtime_input_bindings:
         raise SchedulerInputError("SCHEDULER_RUNTIME_ARTIFACT_BINDINGS_CONFLICT")
 
-    state = _read_json(state_path)
+    state = _read_json(state_path) if state_exists else deepcopy(expected_state)
     node_ids = {
         str(node.get("id") or "")
         for node in graph.get("nodes") or []
@@ -445,6 +720,10 @@ def _resume_existing_runtime_graph(
     )
     if not state_valid:
         raise SchedulerInputError("SCHEDULER_RUNTIME_STATE_INVALID")
+    if graph_exists and not state_exists:
+        _atomic_json_write(state_path, expected_state)
+    elif state_exists and not graph_exists:
+        _atomic_json_write(graph_path, expected_graph)
     return graph_path
 
 
@@ -464,13 +743,10 @@ def prepare_runtime_graph(
     state_name = f"{sprint_id}.task_graph_state.json"
     work_dir = destination / sprint_id / "workdir"
     input_bindings = _runtime_input_bindings(artifact_bindings)
-    artifact_paths: dict[str, str] = {
-        artifact_type: item["path"] for artifact_type, item in input_bindings.items()
-    }
-    for node in value["graph"]["nodes"]:
-        for artifact in node["artifact_contract"]["produces"]:
-            safe_name = "".join(character if character.isalnum() or character in {"-", "_", "."} else "_" for character in artifact)
-            artifact_paths[artifact] = str((work_dir / "artifacts" / node["id"] / safe_name).resolve()) + os.sep
+    _authority, workspace_root = _verified_workspace_authority(value)
+    output_paths = _output_paths(value, work_dir)
+    consume_paths = _runtime_route_inputs(value, output_paths, input_bindings)
+    workspace_reads = _runtime_workspace_reads(value, workspace_root)
     source_ref = {
         "path": str(source),
         "scheduler_input_id": value["scheduler_input_id"],
@@ -487,7 +763,16 @@ def prepare_runtime_graph(
         "runtime_input_bindings": input_bindings,
         "runtime_state_filename": state_name,
         "runtime_work_dir": str(work_dir.resolve()),
-        "nodes": [_runtime_node(node, artifact_paths) for node in value["graph"]["nodes"]],
+        "workspace_authority_ref": deepcopy(value.get("workspace_authority_ref")),
+        "nodes": [
+            _runtime_node(
+                node,
+                consume_paths=consume_paths[str(node["id"])],
+                produce_paths=output_paths[str(node["id"])],
+                workspace_read_paths=workspace_reads[str(node["id"])],
+            )
+            for node in value["graph"]["nodes"]
+        ],
     }
     node_state = {
         node["id"]: {
@@ -514,6 +799,8 @@ def prepare_runtime_graph(
     resumed = _resume_existing_runtime_graph(
         graph_path,
         destination / state_name,
+        expected_graph=graph,
+        expected_state=state,
         scheduler_input_id=str(value["scheduler_input_id"]),
         scheduler_input_sha256=digest,
         run_contract_ref=run_contract_ref,
@@ -593,7 +880,6 @@ def verify_runtime_projection(
         if isinstance(graph.get("runtime_input_bindings"), dict)
         else {}
     )
-    artifact_paths: dict[str, str] = {}
     for artifact_type, item in input_bindings.items():
         if not isinstance(item, dict):
             return {"ok": False, "errors": ["RUNTIME_INPUT_BINDING_INVALID"]}
@@ -602,12 +888,24 @@ def verify_runtime_projection(
             return {"ok": False, "errors": [f"RUNTIME_INPUT_ARTIFACT_MISSING:{artifact_type}"]}
         if file_sha256(path) != str(item.get("sha256") or ""):
             return {"ok": False, "errors": [f"RUNTIME_INPUT_ARTIFACT_HASH_MISMATCH:{artifact_type}"]}
-        artifact_paths[str(artifact_type)] = str(path.resolve())
-    for node in value["graph"]["nodes"]:
-        for artifact in node["artifact_contract"]["produces"]:
-            safe_name = "".join(character if character.isalnum() or character in {"-", "_", "."} else "_" for character in artifact)
-            artifact_paths[artifact] = str((work_dir / "artifacts" / node["id"] / safe_name).resolve()) + os.sep
-    expected = [_runtime_node(node, artifact_paths) for node in value["graph"]["nodes"]]
+    try:
+        _authority, workspace_root = _verified_workspace_authority(value)
+        output_paths = _output_paths(value, work_dir)
+        consume_paths = _runtime_route_inputs(value, output_paths, input_bindings)
+        workspace_reads = _runtime_workspace_reads(value, workspace_root)
+    except SchedulerInputError as exc:
+        return {"ok": False, "errors": [str(exc)]}
+    if graph.get("workspace_authority_ref") != value.get("workspace_authority_ref"):
+        return {"ok": False, "errors": ["WORKSPACE_AUTHORITY_REFERENCE_TAMPERED"]}
+    expected = [
+        _runtime_node(
+            node,
+            consume_paths=consume_paths[str(node["id"])],
+            produce_paths=output_paths[str(node["id"])],
+            workspace_read_paths=workspace_reads[str(node["id"])],
+        )
+        for node in value["graph"]["nodes"]
+    ]
     actual_nodes = graph.get("nodes") if isinstance(graph.get("nodes"), list) else []
     if len(actual_nodes) != len(expected):
         return {"ok": False, "errors": ["SCHEDULER_RUNTIME_PROJECTION_TAMPERED"]}
@@ -627,6 +925,64 @@ def verify_runtime_projection(
         ):
             return {"ok": False, "errors": ["SCHEDULER_RUNTIME_PROJECTION_TAMPERED"]}
     return {"ok": True, "errors": []}
+
+
+def verify_runtime_pair(graph_path: str | Path) -> dict[str, Any]:
+    """Verify the immutable runtime projection and its mutable state ledger."""
+    path = Path(graph_path).expanduser().resolve()
+    if not path.is_file():
+        return {"ok": False, "errors": ["SCHEDULER_RUNTIME_GRAPH_MISSING"]}
+    try:
+        graph = _read_json(path)
+    except SchedulerInputError as exc:
+        return {"ok": False, "errors": [str(exc)]}
+    projection = verify_runtime_projection(graph, graph_path=path)
+    if not projection.get("ok"):
+        return projection
+    state_name = str(graph.get("runtime_state_filename") or "")
+    state_path = path.parent / state_name
+    if not state_path.is_file():
+        return {"ok": False, "errors": ["SCHEDULER_RUNTIME_STATE_MISSING"]}
+    try:
+        state = _read_json(state_path)
+    except SchedulerInputError as exc:
+        return {"ok": False, "errors": [str(exc)]}
+    source_ref = graph.get("scheduler_input_ref")
+    node_ids = {
+        str(node.get("id") or "")
+        for node in graph.get("nodes") or []
+        if isinstance(node, dict)
+    }
+    state_nodes = state.get("nodes") if isinstance(state.get("nodes"), dict) else {}
+    node_results = (
+        state.get("node_results")
+        if isinstance(state.get("node_results"), dict)
+        else {}
+    )
+    ready_nodes = state.get("ready_nodes") if isinstance(state.get("ready_nodes"), list) else None
+    revision = state.get("revision")
+    valid = (
+        state.get("schema_version") == "solar.task_graph_state.v1"
+        and state.get("artifact_role") == "mutable_execution_ledger"
+        and state.get("scheduler_input_ref") == source_ref
+        and state.get("run_contract_ref") == graph.get("run_contract_ref")
+        and set(state_nodes) == node_ids
+        and set(node_results) == node_ids
+        and ready_nodes is not None
+        and all(isinstance(node_id, str) and node_id in node_ids for node_id in ready_nodes)
+        and isinstance(revision, int)
+        and not isinstance(revision, bool)
+        and revision >= 0
+        and isinstance(state.get("events"), list)
+    )
+    if not valid:
+        return {"ok": False, "errors": ["SCHEDULER_RUNTIME_STATE_INVALID"]}
+    return {
+        "ok": True,
+        "errors": [],
+        "graph_path": str(path),
+        "state_path": str(state_path.resolve()),
+    }
 
 
 def write_dispatch_records(

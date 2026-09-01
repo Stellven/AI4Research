@@ -85,7 +85,9 @@ class TestParentReadyCloseout:
 
         # N1 is still reviewing (open), so parent_ready_check returns ready=False
         parent = {"ready": False, "node_count": 1, "open_nodes": ["N1"]}
-        result = gnd._mark_parent_sprint_passed_if_ready(sid, parent, dry_run=False)
+        result = gnd._mark_parent_sprint_passed_if_ready(
+            sid, parent, dry_run=False, verified_legacy_graph=True
+        )
         assert result is False
 
         # Verify status was NOT changed to passed
@@ -106,7 +108,9 @@ class TestParentReadyCloseout:
             "required_gates": ["gate-1"],
             "missing_gates": [],
         }
-        result = gnd._mark_parent_sprint_passed_if_ready(sid, parent, dry_run=False)
+        result = gnd._mark_parent_sprint_passed_if_ready(
+            sid, parent, dry_run=False, verified_legacy_graph=True
+        )
         assert result is True
 
         # Verify status was changed to passed
@@ -165,8 +169,13 @@ class TestParentReadyCloseout:
         monkeypatch.setattr(gnd, "dispatch_ready", lambda *a, **kw: {"ok": True})
 
         parent_passed_calls = []
-        def mock_mark_parent(sid, parent, dry_run):
-            parent_passed_calls.append({"sid": sid, "parent": parent, "dry_run": dry_run})
+        def mock_mark_parent(sid, parent, dry_run, **kwargs):
+            parent_passed_calls.append({
+                "sid": sid,
+                "parent": parent,
+                "dry_run": dry_run,
+                **kwargs,
+            })
             return False
         monkeypatch.setattr(gnd, "_mark_parent_sprint_passed_if_ready", mock_mark_parent)
 
@@ -199,13 +208,34 @@ class TestParentReadyCloseout:
             "open_nodes": [],
             "required_gates": ["gate-1"],
         }
-        result = gnd._mark_parent_sprint_passed_if_ready(sid, parent, dry_run=False)
+        result = gnd._mark_parent_sprint_passed_if_ready(
+            sid, parent, dry_run=False, verified_legacy_graph=True
+        )
         assert result is True
 
         events_file = sprints / f"{sid}.events.jsonl"
         if events_file.exists():
             lines = events_file.read_text().strip().splitlines()
             assert any("graph_parent_ready_passed" in line for line in lines)
+
+    def test_ready_parent_cannot_bypass_publication_without_graph_authority(self, tmp_harness):
+        import graph_node_dispatcher as gnd
+
+        _tmp_path, sprints, sid, _graph = tmp_harness
+        parent = {
+            "ready": True,
+            "node_count": 1,
+            "open_nodes": [],
+            "required_gates": ["gate-1"],
+        }
+
+        result = gnd._mark_parent_sprint_passed_if_ready(
+            sid, parent, dry_run=False
+        )
+
+        assert result is False
+        status = json.loads((sprints / f"{sid}.status.json").read_text())
+        assert status["status"] == "active"
 
 
 class TestParentReadyCheckIntegration:

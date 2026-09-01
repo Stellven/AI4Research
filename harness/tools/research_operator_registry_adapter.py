@@ -4,10 +4,12 @@
 from __future__ import annotations
 
 import argparse
+import datetime
 import hashlib
 import importlib
 import json
 import os
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -18,6 +20,10 @@ REPO_ROOT = HARNESS_DIR.parent
 RUN_DIR = Path(
     os.environ.get("SOLAR_MULTI_TASK_RUN_DIR")
     or HARNESS_DIR / "run" / "multi-task"
+)
+OPERATOR_LEASE_DIR = Path(
+    os.environ.get("SOLAR_OPERATOR_LEASE_DIR")
+    or HARNESS_DIR / "run" / "operator-leases"
 )
 SPRINTS_DIR = Path(
     os.environ.get("SPRINTS_DIR")
@@ -30,6 +36,7 @@ for entry in (str(HARNESS_DIR / "lib"), str(HARNESS_DIR), str(REPO_ROOT)):
 
 from physical_operator_worker import run_physical_operator  # noqa: E402
 from research_orchestration.runtime import default_production_resolver  # noqa: E402
+from plugins.autosci.services.codex_research import CodexResearchModelService  # noqa: E402
 import scheduler_input  # noqa: E402
 
 
@@ -41,12 +48,92 @@ _ALLOWED_REGISTRIES = {
     "plugins.autosci.operators.scientific_lifecycle.evidence.registry": "operator_id",
     "plugins.autosci.operators.scientific_lifecycle.registry": "implementation_operator_id",
 }
-_PAYLOAD_KEYS = {
-    "discovery_ingest": "discovery_evidence",
-    "claim_extract": "paper_evidence",
-    "idea_evaluate": "idea_candidate",
-    "experiment_design": "idea_candidate",
+_NODE_INPUT_PAYLOAD_KEYS = {
+    "literature_discover": {},
+    "discovery_ingest": {
+        "literature_discovery.v1": "discovery_evidence",
+    },
+    "source_assess": {
+        "literature_discovery.v1": "discovery_evidence",
+        "research_paper.v1": "paper_evidence",
+    },
+    "claim_extract": {
+        "research_paper.v1": "paper_evidence",
+    },
+    "claim_select_one": {
+        "research_paper.v1": "paper_evidence",
+    },
+    "method_extract": {
+        "research_paper.v1": "research_paper",
+    },
+    "dataset_prepare": {
+        "research_claims.v1": "research_claims",
+    },
+    "idea_evaluate": {
+        "idea_candidate.v1": "idea_candidate",
+    },
+    "experiment_design": {
+        "idea_candidate.v1": "idea_candidate",
+        "research_claims.v1": "research_claims",
+        "dataset_manifest.v1": "dataset_manifest",
+    },
+    "experiment_approval_gate": {
+        "experiment_plan.v1": "experiment_plan",
+    },
+    "experiment_run": {
+        "experiment_plan.v1": "experiment_plan",
+        "experiment_approval.v1": "experiment_approval",
+    },
+    "experiment_monitor": {
+        "experiment_plan.v1": "experiment_plan",
+        "experiment_result.v1": "experiment_result",
+    },
+    "claim_verify": {
+        "research_claims.v1": "claims",
+        "research_paper.v1": "research_paper",
+        "experiment_result.v1": "experiment_result",
+        "code_evidence_map.v1": "code_evidence_map",
+    },
+    "report_plan": {
+        "requirement_ir.v1": "requirement_ir",
+        "claim_verdict.v1": "verdicts",
+        "research_method.v1": "research_method",
+        "research_source_assessment.v1": "source_assessment",
+        "experiment_plan.v1": "experiment_plan",
+        "experiment_result.v1": "experiment_result",
+    },
+    "report_draft": {
+        "scientific_report_plan.v1": "report_plan",
+        "claim_verdict.v1": "verdicts",
+        "research_method.v1": "research_method",
+        "research_source_assessment.v1": "source_assessment",
+        "experiment_plan.v1": "experiment_plan",
+        "experiment_result.v1": "experiment_result",
+    },
 }
+
+
+def _registry_node_kind(node: dict[str, Any]) -> str:
+    candidates = [item for item in node.get("physical_candidates") or [] if isinstance(item, dict)]
+    for candidate in candidates:
+        binding = candidate.get("runtime_binding") if isinstance(candidate.get("runtime_binding"), dict) else {}
+        node_id = str(binding.get("node_id") or "")
+        if node_id:
+            return node_id
+    binding = node.get("runtime_binding") if isinstance(node.get("runtime_binding"), dict) else {}
+    return str(binding.get("node_id") or "")
+
+
+def _experiment_run_write_scope(graph: dict[str, Any]) -> list[str]:
+    matches = [
+        [str(value) for value in item.get("write_scope") or [] if str(value).strip()]
+        for item in graph.get("nodes") or []
+        if isinstance(item, dict) and _registry_node_kind(item) == "experiment_run"
+    ]
+    matches = [values for values in matches if values]
+    if len(matches) != 1:
+        return []
+    return matches[0]
 
 
 def _read_object(path: Path, *, label: str) -> dict[str, Any]:
@@ -189,12 +276,21 @@ def _validated_binding(envelope: dict[str, Any]) -> dict[str, str]:
         raise RegistryAdapterError(f"research registry is not allowlisted: {registry_name or '<missing>'}")
     node_id = str(configured.get("node_id") or "")
     implementation_id = str(configured.get("implementation_operator_id") or "")
-    if node_id not in _PAYLOAD_KEYS or not implementation_id:
+    if node_id not in _NODE_INPUT_PAYLOAD_KEYS or not implementation_id:
         raise RegistryAdapterError(f"research registry node is not allowlisted: {node_id or '<missing>'}")
     registry = importlib.import_module(registry_name)
     entries = registry.registration_entries()
     matches = [item for item in entries if str(item.get("node_id") or "") == node_id]
-    if len(matches) != 1 or str(matches[0].get(implementation_key) or "") != implementation_id:
+    implementation_matches = [
+        item
+        for item in matches
+        if str(item.get(implementation_key) or "") == implementation_id
+    ]
+    # The unified scientific-lifecycle registry intentionally exposes both the
+    # legacy synthesis implementation and the typed action implementation for
+    # a few shared node names (for example ``report_draft``).  Node identity is
+    # therefore not unique by itself; the frozen implementation identity is.
+    if len(implementation_matches) != 1:
         raise RegistryAdapterError(
             f"configured implementation_operator_id is not registered for {registry_name}:{node_id}"
         )
@@ -203,8 +299,117 @@ def _validated_binding(envelope: dict[str, Any]) -> dict[str, str]:
         "registry": registry_name,
         "node_id": node_id,
         "implementation_operator_id": implementation_id,
-        "payload_key": _PAYLOAD_KEYS[node_id],
     }
+
+
+def _document_identity(document: dict[str, Any]) -> str:
+    schema = str(document.get("schema") or "").strip()
+    if schema:
+        return schema
+    schema_version = str(document.get("schema_version") or "").strip()
+    if schema_version.startswith("solar.requirement_ir."):
+        return "requirement_ir.v1"
+    return ""
+
+
+def _document_matches_contract(document: dict[str, Any], expected: str) -> bool:
+    return _document_identity(document) == expected
+
+
+def _payload_for_documents(node_id: str, documents: list[dict[str, Any]]) -> dict[str, Any]:
+    mapping = _NODE_INPUT_PAYLOAD_KEYS.get(node_id)
+    if not isinstance(mapping, dict):
+        raise RegistryAdapterError(f"research registry node is not allowlisted: {node_id or '<missing>'}")
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for document in documents:
+        identity = _document_identity(document)
+        payload_key = mapping.get(identity)
+        if not payload_key:
+            raise RegistryAdapterError(
+                f"input artifact {identity or '<missing-schema>'} is not admitted for registry node {node_id}"
+            )
+        grouped.setdefault(payload_key, []).append(document)
+    return {
+        key: values[0] if len(values) == 1 else values
+        for key, values in sorted(grouped.items())
+    }
+
+
+def _explicit_report_title(
+    node: dict[str, Any], documents: list[dict[str, Any]]
+) -> str:
+    """Resolve only an explicitly requested title from frozen RequirementIR.
+
+    A report-planning node's goal describes *how to plan the report*; it is not
+    the report title.  When the final report node quotes a project title, bind
+    that exact quoted value only if the frozen RequirementIR also requires it.
+    This avoids inventing a title or parsing arbitrary prose as routing truth.
+    """
+
+    goal = str(node.get("goal") or "")
+    quoted = {
+        value.strip()
+        for value in re.findall(r'"([^"\n]+)"', goal)
+        if value.strip()
+    }
+    for document in documents:
+        if _document_identity(document) != "requirement_ir.v1":
+            continue
+        for requirement in document.get("requirements") or []:
+            if not isinstance(requirement, dict):
+                continue
+            acceptance = (
+                requirement.get("acceptance")
+                if isinstance(requirement.get("acceptance"), dict)
+                else {}
+            )
+            for value in acceptance.get("required_values") or []:
+                candidate = str(value).strip()
+                if candidate in quoted or (
+                    candidate
+                    and candidate.casefold() in goal.casefold()
+                    and any(token in str(requirement.get("statement") or "").casefold() for token in ("title", "project name", "report name"))
+                ):
+                    return candidate
+    return ""
+
+
+def _report_title_from_frozen_context(
+    graph: dict[str, Any], node: dict[str, Any], documents: list[dict[str, Any]]
+) -> str:
+    title = _explicit_report_title(node, documents)
+    if title:
+        return title
+
+    bindings = (
+        graph.get("runtime_input_bindings")
+        if isinstance(graph.get("runtime_input_bindings"), dict)
+        else {}
+    )
+    binding = bindings.get("requirement_ir.v1")
+    if not isinstance(binding, dict):
+        return ""
+    path = _resolved_path(binding.get("path"), label="requirement_ir runtime input", strict=True)
+    expected_hash = str(binding.get("sha256") or "").lower()
+    actual_hash = hashlib.sha256(path.read_bytes()).hexdigest()
+    if not expected_hash or actual_hash != expected_hash:
+        raise RegistryAdapterError("requirement_ir runtime input hash does not match frozen binding")
+    requirement_ir = _read_object(path, label="requirement_ir runtime input")
+
+    # The planner and drafter may be separate nodes.  The final report node is
+    # authoritative for an explicitly quoted title, while RequirementIR proves
+    # the quoted value came from the accepted user request.
+    candidates = [node]
+    candidates.extend(
+        item
+        for item in graph.get("nodes") or []
+        if isinstance(item, dict) and _registry_node_kind(item) == "report_draft"
+    )
+    for candidate_node in candidates:
+        title = _explicit_report_title(candidate_node, [requirement_ir])
+        if title:
+            return title
+    return ""
 
 
 def _matching_input_documents(
@@ -230,6 +435,7 @@ def _matching_input_documents(
         route = Path(raw_route)
         route = route if route.is_absolute() else work_dir / route
         candidates = [route] if route.is_file() else sorted(route.rglob("*.json")) if route.is_dir() else []
+        matched = False
         for candidate in candidates:
             resolved_candidate = candidate.resolve()
             if not resolved_candidate.is_relative_to(work_dir):
@@ -245,10 +451,15 @@ def _matching_input_documents(
                 document = _read_object(resolved_candidate, label="input artifact")
             except RegistryAdapterError:
                 continue
-            if str(document.get("schema") or "") != expected:
+            if not _document_matches_contract(document, expected):
                 continue
             documents.append(document)
             source_paths.append(str(resolved_candidate))
+            matched = True
+        if not matched:
+            raise RegistryAdapterError(
+                f"no artifact matching frozen consume contract {artifact_type} was found"
+            )
     return documents, source_paths
 
 
@@ -262,26 +473,74 @@ def _run_contract_ref(graph: dict[str, Any], envelope: dict[str, Any]) -> dict[s
 
 def _lease_id(envelope: dict[str, Any]) -> str:
     task_id = str(envelope.get("task_id") or "").strip()
-    if not task_id or Path(task_id).name != task_id or task_id in {".", ".."}:
+    if (
+        not task_id
+        or "/" in task_id
+        or "\\" in task_id
+        or Path(task_id).name != task_id
+        or task_id in {".", ".."}
+    ):
         raise RegistryAdapterError("task_id is not a safe scheduler dispatch identifier")
     status_path = RUN_DIR / task_id / "status.json"
-    if not status_path.is_file():
-        raise RegistryAdapterError("scheduler lease status is missing for registry dispatch")
-    status = _read_object(status_path, label="scheduler task status")
+    if status_path.is_file():
+        status = _read_object(status_path, label="scheduler task status")
+        status_source = "scheduler lease status"
+    else:
+        operator_id = str(envelope.get("operator_id") or "").strip()
+        if (
+            not operator_id
+            or "/" in operator_id
+            or "\\" in operator_id
+            or Path(operator_id).name != operator_id
+            or operator_id in {".", ".."}
+        ):
+            raise RegistryAdapterError("operator_id is not a safe lease identifier")
+        lease_path = OPERATOR_LEASE_DIR / f"{operator_id}.json"
+        if not lease_path.is_file():
+            raise RegistryAdapterError(
+                "neither scheduler task status nor an active operator lease exists for registry dispatch"
+            )
+        status = _read_object(lease_path, label="operator runtime lease")
+        status_source = "operator runtime lease"
+        state = str(status.get("state") or "")
+        if state not in {"leased", "running"}:
+            raise RegistryAdapterError(f"operator runtime lease is not active: {state or 'missing'}")
+        try:
+            expires_at = datetime.datetime.fromisoformat(
+                str(status.get("expires_at") or "").replace("Z", "+00:00")
+            )
+        except ValueError as exc:
+            raise RegistryAdapterError("operator runtime lease expiry is invalid") from exc
+        now = datetime.datetime.now(datetime.timezone.utc)
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=datetime.timezone.utc)
+        if expires_at.astimezone(datetime.timezone.utc) <= now:
+            raise RegistryAdapterError("operator runtime lease has expired")
     exact_fields = {
-        "id": task_id,
         "task_id": task_id,
         "sprint_id": str(envelope.get("sprint_id") or ""),
         "node_id": str(envelope.get("node_id") or ""),
         "operator_id": str(envelope.get("operator_id") or ""),
-        "graph": str(_resolved_path(envelope.get("graph_path"), label="graph_path", strict=True)),
     }
+    if status_source == "scheduler lease status":
+        exact_fields.update(
+            {
+                "id": task_id,
+                "graph": str(
+                    _resolved_path(envelope.get("graph_path"), label="graph_path", strict=True)
+                ),
+            }
+        )
     for field, expected in exact_fields.items():
         if str(status.get(field) or "") != expected:
-            raise RegistryAdapterError(f"scheduler lease status {field} does not match dispatch envelope")
+            raise RegistryAdapterError(f"{status_source} {field} does not match dispatch envelope")
     lease_id = str(status.get("lease_id") or "").strip()
+    if not lease_id and status_source == "operator runtime lease":
+        leased_at = str(status.get("leased_at") or "").strip()
+        if leased_at:
+            lease_id = f"{status['operator_id']}:{task_id}:{leased_at}"
     if not lease_id:
-        raise RegistryAdapterError("scheduler lease status has no lease_id")
+        raise RegistryAdapterError(f"{status_source} has no lease identifier")
     return lease_id
 
 
@@ -297,18 +556,41 @@ def execute(envelope: dict[str, Any], *, receipt_path: Path) -> dict[str, Any]:
         },
     )
     documents, source_paths = _matching_input_documents(graph, node, work_dir)
-    if not documents:
+    if not documents and expected["node_id"] != "literature_discover":
         raise RegistryAdapterError("no artifact matching the frozen consume contract was found")
     payload = {
-        expected["payload_key"]: documents[0],
+        **_payload_for_documents(expected["node_id"], documents),
         "source_artifacts": [
             {"path": path, "sha256": hashlib.sha256(Path(path).read_bytes()).hexdigest()}
             for path in source_paths
         ],
         "task_contract": {"user_intent": str(node.get("goal") or "")},
+        "requirement_ids": [
+            str(item) for item in node.get("requirement_ids") or [] if str(item).strip()
+        ],
     }
+    experiment_write_scope = _experiment_run_write_scope(graph)
+    if expected["node_id"] == "dataset_prepare":
+        if len(experiment_write_scope) != 1:
+            raise RegistryAdapterError("dataset preparation requires one frozen experiment-run output scope")
+        payload["experiment_result_scope"] = str(Path(experiment_write_scope[0]) / "raw_measurement.json")
+    network_mode = str((node.get("resource_requirements") or {}).get("network") or "optional")
     if expected["node_id"] == "discovery_ingest":
         payload["max_sources"] = min(10, len(documents[0].get("outputs", {}).get("candidates") or []))
+    if expected["node_id"] == "literature_discover":
+        payload.update(
+            {
+                "query": str(node.get("goal") or "").strip(),
+                "mode": "topic",
+                "allow_network_fetch": network_mode != "forbidden",
+                "require_online_source_evidence": network_mode == "required",
+            }
+        )
+    if expected["node_id"] in {"report_plan", "report_draft"}:
+        payload["topic"] = (
+            _report_title_from_frozen_context(graph, node, documents)
+            or str(node.get("goal") or "Scientific research report")
+        )
 
     external_inputs = {
         str(_resolved_path(item.get("path"), label=f"runtime input {artifact_type}", strict=True))
@@ -320,13 +602,20 @@ def execute(envelope: dict[str, Any], *, receipt_path: Path) -> dict[str, Any]:
         for path in source_paths
     })
     write_scope = [str(item) for item in node.get("write_scope") or [] if str(item).strip()]
-    network_mode = str((node.get("resource_requirements") or {}).get("network") or "optional")
+    required_authorizations = [
+        str(value)
+        for value in (node.get("resource_requirements") or {}).get("required_authorizations") or []
+        if str(value).strip()
+    ]
+    run_contract_ref = _run_contract_ref(graph, envelope)
     request = {
         "schema": "research_node_request.v1",
         "task_id": str(envelope.get("task_id") or ""),
         "run_id": str(graph.get("sprint_id") or ""),
         "workflow_id": "scheduler_frozen_research_registry_v1",
-        "node_id": expected["node_id"],
+        "node_id": str(node.get("id") or expected["node_id"]),
+        "implementation_node_id": expected["node_id"],
+        "scheduled_node_id": str(node.get("id") or expected["node_id"]),
         "logical_operator": {
             "operator_id": str(node.get("id") or expected["node_id"]),
             "operator_kind": "logical",
@@ -343,16 +632,39 @@ def execute(envelope: dict[str, Any], *, receipt_path: Path) -> dict[str, Any]:
         "input_artifact_refs": [],
         "authorization": {
             "scope_id": f"{graph.get('sprint_id')}:{node.get('id')}",
-            "approved_capabilities": list((node.get("capsule_binding") or {}).get("capsule_ids") or []),
+            "approved_capabilities": list(dict.fromkeys([
+                *list((node.get("capsule_binding") or {}).get("capsule_ids") or []),
+                *required_authorizations,
+            ])),
             "allow_network": network_mode != "forbidden",
             "allow_live_provider": network_mode != "forbidden",
             "secret_refs": [],
+            "approval_ref": (
+                f"run-contract:{run_contract_ref.get('sha256')}"
+                if "execute_experiment" in required_authorizations and run_contract_ref.get("sha256")
+                else ""
+            ),
+            "approved_write_scope": experiment_write_scope if required_authorizations else write_scope,
         },
         "read_scope": read_scope,
         "write_scope": write_scope,
         "timeout_retry_policy": {"timeout_seconds": 900, "max_attempts": 1, "retry_on": []},
     }
-    resolver = default_production_resolver(workspace_root=work_dir)
+    services: dict[str, Any] = {}
+    research_model = str(os.environ.get("SOLAR_RESEARCH_MODEL") or "").strip()
+    if expected["node_id"] == "report_draft" and research_model:
+        services["model_generate"] = CodexResearchModelService(
+            work_dir,
+            model=research_model,
+            role="writer",
+            reasoning_effort=str(
+                os.environ.get("SOLAR_RESEARCH_REASONING_EFFORT") or "high"
+            ),
+            timeout_seconds=int(
+                os.environ.get("SOLAR_RESEARCH_MODEL_TIMEOUT_SEC") or "900"
+            ),
+        )
+    resolver = default_production_resolver(services=services, workspace_root=work_dir)
     resolver_operator_id = f"{expected['node_id']}_worker"
 
     def execute_registered(request: dict[str, Any]) -> dict[str, Any]:
@@ -372,7 +684,7 @@ def execute(envelope: dict[str, Any], *, receipt_path: Path) -> dict[str, Any]:
         envelope_path=receipt_path,
         attempt=1,
         lease_id=_lease_id(envelope),
-        run_contract_ref=_run_contract_ref(graph, envelope),
+        run_contract_ref=run_contract_ref,
     )
     if handoff_path and receipt.get("status") == "completed":
         artifact_paths = [
