@@ -154,6 +154,15 @@ def _gate_argv(command: str) -> list[str] | None:
         # substitution emits native Windows paths, so ``sprints\sid`` became
         # ``sprintssid`` and a valid artifact was evaluated as missing.
         argv = shlex.split(command, posix=os.name != "nt")
+        if os.name == "nt":
+            argv = [
+                token[1:-1]
+                if len(token) >= 2
+                and token[0] == token[-1]
+                and token[0] in {"'", '"'}
+                else token
+                for token in argv
+            ]
     except ValueError:
         return None
     if not argv:
@@ -198,10 +207,16 @@ def execute_gate(
 
     if kind == "none":
         verdict, verdict_kind, exit_code = "PASS", "content", 0
-        generation_mode = "evaluator_gate_none"
+        rapid_smoke = str(gate.get("test_policy_mode") or "") == "rapid_smoke"
+        generation_mode = (
+            "rapid_smoke_bypass" if rapid_smoke else "evaluator_gate_none"
+        )
         command = ""
         summary = (
-            "Contract declares no evaluator gate for this stage "
+            "Rapid smoke policy bypassed semantic LLM evaluation; deterministic "
+            "schema, hash, artifact, and proof gates remain required."
+            if rapid_smoke
+            else "Contract declares no evaluator gate for this stage "
             "(evaluator_gate.kind=none); policy pass recorded. The proof gate "
             "(manifest/proof obligations) still applies at mark time."
         )

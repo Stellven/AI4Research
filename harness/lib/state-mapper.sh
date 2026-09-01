@@ -47,26 +47,64 @@ except Exception:
 _sm_task_graph_valid() {
     local sid="$1"
     local graph="${SPRINTS_DIR}/${sid}.task_graph.json"
-    python3 - "$graph" <<'PY' 2>/dev/null
+    local typed_graph="${SPRINTS_DIR}/${sid}/planning/runtime/${sid}.task_graph.json"
+    python3 - "$graph" "$typed_graph" "$sid" <<'PY' 2>/dev/null
 import json
 import sys
 from pathlib import Path
 
-path = Path(sys.argv[1])
+legacy, typed, sid = Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3]
+for path, kind in ((legacy, "legacy"), (typed, "typed")):
+    try:
+        graph = json.loads(path.read_text())
+    except Exception:
+        continue
+    if kind == "typed" and (
+        graph.get("schema_version") != "solar.scheduler_runtime_projection.v1"
+        or graph.get("sprint_id") != sid
+    ):
+        continue
+    nodes = graph.get("nodes")
+    if not isinstance(nodes, list) or not nodes:
+        continue
+    if all(
+        isinstance(node, dict)
+        and str(node.get("id") or "").strip()
+        and "write_scope" in node
+        for node in nodes
+    ):
+        print("1", end="")
+        raise SystemExit(0)
+print("0", end="")
+PY
+}
+
+_sm_typed_task_graph_valid() {
+    local sid="$1"
+    local graph="${SPRINTS_DIR}/${sid}/planning/runtime/${sid}.task_graph.json"
+    python3 - "$graph" "$sid" <<'PY' 2>/dev/null
+import json, sys
+from pathlib import Path
+
 try:
-    graph = json.loads(path.read_text())
+    graph = json.loads(Path(sys.argv[1]).read_text())
 except Exception:
     print("0", end="")
     raise SystemExit(0)
 nodes = graph.get("nodes")
-if not isinstance(nodes, list) or not nodes:
-    print("0", end="")
-    raise SystemExit(0)
-for node in nodes:
-    if not isinstance(node, dict) or not str(node.get("id") or "").strip() or "write_scope" not in node:
-        print("0", end="")
-        raise SystemExit(0)
-print("1", end="")
+valid = (
+    graph.get("schema_version") == "solar.scheduler_runtime_projection.v1"
+    and graph.get("sprint_id") == sys.argv[2]
+    and isinstance(nodes, list)
+    and bool(nodes)
+    and all(
+        isinstance(node, dict)
+        and str(node.get("id") or "").strip()
+        and "write_scope" in node
+        for node in nodes
+    )
+)
+print("1" if valid else "0", end="")
 PY
 }
 
@@ -120,11 +158,12 @@ print(json.dumps({
         return 0
     fi
 
-    local st phase handoff_to graph_valid
+    local st phase handoff_to graph_valid typed_graph_valid
     st=$(_sm_get_field "$raw_json" "status")
     phase=$(_sm_get_field "$raw_json" "phase")
     handoff_to=$(_sm_get_field "$raw_json" "handoff_to")
     graph_valid=$(_sm_task_graph_valid "$sid")
+    typed_graph_valid=$(_sm_typed_task_graph_valid "$sid")
 
     python3 -c "
 import json, sys
@@ -135,6 +174,7 @@ phase = sys.argv[3]
 handoff_to = sys.argv[4]
 now = sys.argv[5]
 graph_valid = sys.argv[6] == '1'
+typed_graph_valid = sys.argv[7] == '1'
 
 lc = 'unknown'
 role = 'none'
@@ -163,7 +203,10 @@ if st == 'drafting':
         role = 'pm'
 
 elif st == 'active':
-    if phase in ('planning_complete', 'planner_plan', 'plan_reviewed'):
+    if typed_graph_valid and phase in ('planning_complete', 'graph_dispatch_active'):
+        lc = 'building' if phase == 'graph_dispatch_active' else 'planning_complete'
+        role = 'scheduler'
+    elif phase in ('planning_complete', 'planner_plan', 'plan_reviewed'):
         if graph_valid:
             lc = 'planning_complete'
         else:
@@ -201,7 +244,7 @@ elif st == 'planning':
 elif st == 'planning_complete':
     if graph_valid:
         lc = 'planning_complete'
-        role = 'builder_main'
+        role = 'scheduler' if typed_graph_valid else 'builder_main'
     else:
         lc = 'planner_blocked_missing_task_graph'
         role = 'planner'
@@ -232,6 +275,10 @@ elif st in ('passed', 'done', 'eval_pass', 'finalized', 'superseded'):
     role = 'none'
 
 elif st == 'failed':
+    lc = 'failed'
+    role = 'none'
+
+elif st == 'cancelled':
     lc = 'failed'
     role = 'none'
 
@@ -269,7 +316,7 @@ if hint:
     out['error_hint'] = hint
 
 print(json.dumps(out))
-" "$raw_json" "$st" "$phase" "$handoff_to" "$now" "$graph_valid"
+" "$raw_json" "$st" "$phase" "$handoff_to" "$now" "$graph_valid" "$typed_graph_valid"
     return 0
 }
 

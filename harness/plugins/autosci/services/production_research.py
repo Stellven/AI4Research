@@ -52,6 +52,36 @@ _RELEVANCE_GENERIC_TERMS = {
     "result", "results", "review", "source", "sources", "study", "studies", "synthesize", "systematic",
     "using", "work",
 }
+_DISCOVERY_NON_TOPIC_SCOPE_TERMS = {
+    "answer", "auditable", "chain", "comprehensive", "end", "explicit", "extensible",
+    "future", "landscape", "off", "one", "oriented", "provenance", "supported",
+    "technical", "traceability", "type", "workflow",
+}
+_DISCOVERY_TERM_CANONICAL = {
+    "compress": "compression",
+    "compressed": "compression",
+    "evict": "eviction",
+    "evicted": "eviction",
+    "prune": "sparsification",
+    "pruning": "sparsification",
+    "quantize": "quantization",
+    "quantized": "quantization",
+    "select": "selection",
+    "selected": "selection",
+    "sparse": "sparsification",
+    "sparsity": "sparsification",
+}
+_DISCOVERY_PROVIDER_ALIASES = {
+    "compression": "compressed",
+    "eviction": "evict heavy-hitter retention",
+    "quantization": "quantized low-bit",
+    "selection": "token retention",
+    "sparsification": "sparse pruning",
+}
+_DISCOVERY_COVERAGE_RECOVERY_PROVIDERS = (
+    ("arxiv", "_arxiv", "arXiv"),
+    ("openalex", "_openalex", "OpenAlex"),
+)
 _RELEVANCE_STOPWORDS = {
     "a", "an", "and", "are", "as", "at", "be", "between", "by", "can", "could", "do", "does",
     "for", "from", "how", "in", "into", "is", "it", "its", "of", "on", "or", "our", "that",
@@ -497,7 +527,10 @@ def _topic_from_snapshot(seed_snapshot: dict[str, Any], payload: dict[str, Any])
     # instruction words and can return unrelated papers even when the scope is
     # otherwise exact.
     authoritative_clauses = _authoritative_scope_clauses(intent)
-    if authoritative_clauses and not from_page_title:
+    topical_clauses = _topical_scope_clauses(intent)
+    if topical_clauses and not from_page_title:
+        query = " ".join(topical_clauses)
+    elif authoritative_clauses and not from_page_title:
         query = authoritative_clauses[0]
         # A bare semicolon list is a coverage checklist, not a useful search
         # query: it can omit the domain noun that makes every item meaningful
@@ -601,6 +634,9 @@ def _relevance_terms(value: Any, *, remove_generic: bool) -> set[str]:
         terms.add(term)
         if term == "llm":
             terms.update({"large", "language", "model"})
+        canonical = _DISCOVERY_TERM_CANONICAL.get(raw) or _DISCOVERY_TERM_CANONICAL.get(term)
+        if canonical:
+            terms.add(canonical)
     return terms
 
 
@@ -652,14 +688,18 @@ def _coverage_anchor_items(clause: str) -> list[dict[str, Any]]:
         # not part of the chemistry anchor and let unrelated grid papers match.
         if re.search(r"\b(?:lithium|sodium|solid|sulfur)\b", label, re.IGNORECASE):
             label = re.split(r"\b(?:battery|batteries)\b", label, maxsplit=1, flags=re.IGNORECASE)[0]
-        terms = tuple(sorted(_relevance_terms(label, remove_generic=True) - {"battery", "batteries", "storage", "grid", "energy"}))
+        terms = tuple(sorted(
+            _relevance_terms(label, remove_generic=True)
+            - _DISCOVERY_NON_TOPIC_SCOPE_TERMS
+            - {"battery", "batteries", "storage", "grid", "energy"}
+        ))
         if not terms or terms in seen:
             continue
         seen.add(terms)
         items.append({"label": label.strip(), "terms": list(terms)})
     if items:
         return items
-    terms = sorted(_relevance_terms(clause, remove_generic=True))
+    terms = sorted(_relevance_terms(clause, remove_generic=True) - _DISCOVERY_NON_TOPIC_SCOPE_TERMS)
     return [{"label": clause.strip(), "terms": terms}] if terms else []
 
 
@@ -744,7 +784,7 @@ def _coverage_anchor_groups(query: str) -> list[dict[str, Any]]:
     """
 
     groups: list[dict[str, Any]] = []
-    for clause in _authoritative_scope_clauses(query):
+    for clause in _topical_scope_clauses(query):
         anchor_items = _coverage_anchor_items(clause)
         terms = {term for item in anchor_items for term in item.get("terms", [])}
         # These are grammatical glue inside chemistry names, not useful
@@ -817,6 +857,60 @@ def _authoritative_scope_descriptions(query: str) -> list[str]:
     return descriptions
 
 
+def _topical_scope_clauses(query: str) -> list[str]:
+    """Keep discovery subjects while excluding workflow/report obligations."""
+
+    topical: list[str] = []
+    for clause in _authoritative_scope_clauses(query):
+        terms = _relevance_terms(clause, remove_generic=True)
+        if terms - _DISCOVERY_NON_TOPIC_SCOPE_TERMS:
+            topical.append(clause)
+    return topical
+
+
+def _topical_scope_query(query: str) -> str:
+    clauses = _topical_scope_clauses(query)
+    if clauses:
+        return re.sub(r"\s+", " ", " ".join(clauses)).strip()
+    return re.split(
+        r"\s*Authoritative discovery scope\s*:\s*",
+        str(query or ""),
+        maxsplit=1,
+        flags=re.IGNORECASE,
+    )[0].strip()
+
+
+def _coverage_recovery_queries(query: str, audit: dict[str, Any]) -> list[str]:
+    """Build bounded provider queries for aggregate coverage gaps."""
+
+    context_parts = [
+        clause
+        for clause in _topical_scope_clauses(query)
+        if len(_coverage_anchor_items(clause)) == 1
+    ]
+    context = re.sub(r"\s+", " ", " ".join(context_parts)).strip()
+    queries: list[str] = []
+    for group in audit.get("aggregate_coverage_missing") or []:
+        if not isinstance(group, dict):
+            continue
+        for item in group.get("missing_anchor_items") or []:
+            if not isinstance(item, dict):
+                continue
+            label = str(item.get("label") or "").strip()
+            if not label:
+                continue
+            alias_phrases = [
+                _DISCOVERY_PROVIDER_ALIASES[term]
+                for term in sorted(_relevance_terms(label, remove_generic=True))
+                if term in _DISCOVERY_PROVIDER_ALIASES
+            ]
+            aliases = " ".join(dict.fromkeys(alias_phrases))
+            candidate = re.sub(r"\s+", " ", f"{context} {label} {aliases}").strip()[:500]
+            if candidate and candidate not in queries:
+                queries.append(candidate)
+    return queries[:5]
+
+
 def apply_discovery_relevance_gate(
     query: str,
     candidates: list[dict[str, Any]],
@@ -834,7 +928,8 @@ def apply_discovery_relevance_gate(
     partial list as final.
     """
 
-    query_terms = _relevance_terms(query, remove_generic=True)
+    subject_query = _topical_scope_query(query) or str(query or "")
+    query_terms = _relevance_terms(subject_query, remove_generic=True)
     coverage_groups = _coverage_anchor_groups(query)
     requires_battery_domain = bool(coverage_groups) and "battery" in query_terms
     required_overlap = 2 if len(query_terms) >= 4 else 1
@@ -867,6 +962,9 @@ def apply_discovery_relevance_gate(
             if not item["matched_anchor_items"]
         ]
         topic_threshold_met = bool(query_terms) and len(matched) >= required_overlap
+        coverage_signal_met = not coverage_groups or any(
+            item["matched_anchor_items"] for item in coverage_matches
+        )
         battery_domain_met = (
             not requires_battery_domain
             or (
@@ -874,7 +972,10 @@ def apply_discovery_relevance_gate(
                 and not re.search(r"\b(?:not|non)\s+batter(?:y|ies)\b", candidate_text, re.IGNORECASE)
             )
         )
-        is_relevant = topic_threshold_met and not unmatched_coverage_groups and battery_domain_met
+        # The shortlist is collectively comprehensive. Specialist papers need
+        # not each cover every requested method family; aggregate coverage is
+        # enforced below after per-candidate topical admission.
+        is_relevant = topic_threshold_met and coverage_signal_met and battery_domain_met
         decision = {
             "candidate_id": str(candidate.get("source_id") or candidate.get("canonical_id") or ""),
             "canonical_id": str(candidate.get("canonical_id") or candidate.get("url") or ""),
@@ -887,12 +988,10 @@ def apply_discovery_relevance_gate(
             "coverage_group_matches": coverage_matches,
             "unmatched_coverage_groups": unmatched_coverage_groups,
             "reason": (
-                "topic_and_coverage_threshold_met"
-                if is_relevant and coverage_groups
-                else "topic_term_threshold_met"
+                "topic_term_threshold_met"
                 if is_relevant
                 else "required_coverage_anchor_missing"
-                if topic_threshold_met and unmatched_coverage_groups
+                if topic_threshold_met and not coverage_signal_met
                 else "required_battery_domain_missing"
                 if topic_threshold_met and not battery_domain_met
                 else "query_has_no_specific_topic_terms"
@@ -939,6 +1038,7 @@ def apply_discovery_relevance_gate(
         "schema": "autosci_discovery_relevance_audit.v1",
         "status": "passed" if gate_passed else "incomplete",
         "query": str(query),
+        "subject_query": subject_query,
         "query_terms": sorted(query_terms),
         "gate_mode": "required_coverage" if coverage_groups else "topic_overlap",
         "authoritative_coverage_required": bool(coverage_groups),
@@ -1677,8 +1777,12 @@ class LiteratureDiscoveryService:
         self._attempts.clear()
         self._attempt_paths.clear()
         task_contract = payload.get("task_contract") if isinstance(payload.get("task_contract"), dict) else {}
+        retrieval = task_contract.get("retrieval_contract")
+        if retrieval is not None:
+            from .retrieval_contract import validate_contract
+            validate_contract(retrieval)
         full_query = str(task_contract.get("user_intent") or payload.get("topic") or "").strip()
-        query = _topic_from_snapshot(seed_snapshot, payload)
+        query = retrieval["search_queries"][0] if retrieval else _topic_from_snapshot(seed_snapshot, payload)
         if not query:
             raise ResearchOperatorError("Source discovery requires a non-empty query", error_type="invalid_input")
         relevance_query = (
@@ -1686,12 +1790,15 @@ class LiteratureDiscoveryService:
             if re.search(r"Authoritative discovery scope\s*:", full_query, re.IGNORECASE)
             else query
         )
+        if retrieval:
+            relevance_query = retrieval["subject"]
         request_hash = stable_json_sha256(
             {
                 "service_id": self.service_id,
                 "service_version": self.service_version,
                 "query": query,
                 "relevance_query": relevance_query,
+                "retrieval_contract": retrieval,
                 "limit": self.limit,
                 "seed_snapshot_sha256": stable_json_sha256(seed_snapshot),
             }
@@ -1813,80 +1920,119 @@ class LiteratureDiscoveryService:
             minimum_relevant = int(minimum_relevant_raw) if minimum_relevant_raw is not None else None
         except (TypeError, ValueError):
             minimum_relevant = None
-        deduped, relevance_audit = apply_discovery_relevance_gate(
+        if retrieval:
+            from .retrieval_contract import filter_candidates
+
+        def apply_gate(query_text, rows, **kwargs):
+            return filter_candidates(retrieval, rows) if retrieval else apply_discovery_relevance_gate(query_text, rows, **kwargs)
+
+        deduped, relevance_audit = apply_gate(
             relevance_query,
             selected,
             minimum_relevant_candidates=minimum_relevant,
         )
-        # A landscape query can validly return papers from four method
-        # families while missing a rarer fifth family.  Do not fail the whole
-        # node or weaken the coverage gate: issue a small, evidence-retained
-        # supplemental search for the missing family and re-run the same gate.
-        missing_labels = [
-            str(item.get("label") or "").strip()
-            for group in relevance_audit.get("aggregate_coverage_missing") or []
-            if isinstance(group, dict)
-            for item in group.get("missing_anchor_items") or []
-            if isinstance(item, dict) and str(item.get("label") or "").strip()
-        ]
-        if (
-            relevance_audit.get("status") != "passed"
-            and int(relevance_audit.get("accepted_candidate_count") or 0)
-            >= int(relevance_audit.get("minimum_relevant_candidates") or 1)
-            and missing_labels
-        ):
-            supplemental: list[dict[str, Any]] = []
-            for label in list(dict.fromkeys(missing_labels))[:3]:
-                for supplemental_query in _supplemental_coverage_queries(
-                    missing_label=label,
-                    provider_query=query,
-                    relevance_query=relevance_query,
-                ):
-                    for provider, backend, boundary in (
-                        ("arxiv", self._arxiv, "arXiv"),
-                        ("openalex", self._openalex, "OpenAlex"),
-                    ):
-                        try:
-                            found, trace = backend(supplemental_query)
-                        except ResearchOperatorError as exc:
-                            limitations.append(
-                                f"{boundary} supplemental coverage boundary: {exc.error_type}: {exc}"
-                            )
-                            traces.append(
-                                {
+        recovery_queries: list[str] = []
+        recovery_candidates: list[dict[str, Any]] = []
+        if retrieval:
+            recovery_queries = list(retrieval.get("search_queries") or [])[1:]
+            for recovery_query in recovery_queries:
+                for provider, backend_name, boundary in _DISCOVERY_COVERAGE_RECOVERY_PROVIDERS:
+                    backend = getattr(self, backend_name)
+                    try:
+                        found, trace = backend(recovery_query)
+                    except ResearchOperatorError as exc:
+                        limitations.append(
+                            f"{boundary} coverage recovery boundary: {exc.error_type}: {exc}"
+                        )
+                        traces.append({
+                            "provider": provider,
+                            "status": "failed",
+                            "error_type": exc.error_type,
+                            "recovery_query": recovery_query,
+                        })
+                        continue
+                    trace["recovery_query"] = recovery_query
+                    traces.append(trace)
+                    recovery_candidates.extend(found)
+                    if found:
+                        contributed.add(provider)
+                        answered[provider] = "completed"
+        else:
+            # A landscape query can cover most method families while missing
+            # one rare family. Run a bounded supplemental search without
+            # weakening the collection-level coverage gate.
+            missing_labels = [
+                str(item.get("label") or "").strip()
+                for group in relevance_audit.get("aggregate_coverage_missing") or []
+                if isinstance(group, dict)
+                for item in group.get("missing_anchor_items") or []
+                if isinstance(item, dict) and str(item.get("label") or "").strip()
+            ]
+            if (
+                relevance_audit.get("status") != "passed"
+                and int(relevance_audit.get("accepted_candidate_count") or 0)
+                >= int(relevance_audit.get("minimum_relevant_candidates") or 1)
+            ):
+                for label in list(dict.fromkeys(missing_labels))[:3]:
+                    label_queries = list(dict.fromkeys([
+                        *_coverage_recovery_queries(relevance_query, relevance_audit),
+                        *_supplemental_coverage_queries(
+                            missing_label=label,
+                            provider_query=query,
+                            relevance_query=relevance_query,
+                        ),
+                    ]))
+                    for recovery_query in label_queries:
+                        if recovery_query not in recovery_queries:
+                            recovery_queries.append(recovery_query)
+                        for provider, backend, boundary in (
+                            ("arxiv", self._arxiv, "arXiv"),
+                            ("openalex", self._openalex, "OpenAlex"),
+                        ):
+                            try:
+                                found, trace = backend(recovery_query)
+                            except ResearchOperatorError as exc:
+                                limitations.append(
+                                    f"{boundary} supplemental coverage boundary: {exc.error_type}: {exc}"
+                                )
+                                traces.append({
                                     "provider": provider,
                                     "status": "failed",
                                     "error_type": exc.error_type,
                                     "supplemental_for": label,
-                                    "supplemental_query": supplemental_query,
-                                }
-                            )
-                            continue
-                        supplemental.extend(found)
-                        traces.append(
-                            {
+                                    "recovery_query": recovery_query,
+                                })
+                                continue
+                            recovery_candidates.extend(found)
+                            traces.append({
                                 **trace,
                                 "supplemental_for": label,
-                                "supplemental_query": supplemental_query,
-                            }
-                        )
-            expanded = _select_candidates(
+                                "recovery_query": recovery_query,
+                            })
+                            if found:
+                                contributed.add(provider)
+                                answered[provider] = "completed"
+
+        if recovery_candidates:
+            selected = _select_candidates(
                 seeded,
-                candidates + supplemental,
-                limit=max(self.limit + 1, min((self.limit + 1) * 3, len(seeded) + len(candidates) + len(supplemental))),
+                [*recovery_candidates, *candidates],
+                limit=max(
+                    self.limit + 1,
+                    min(
+                        (self.limit + 1) * 3,
+                        len(seeded) + len(candidates) + len(recovery_candidates),
+                    ),
+                ),
             )
-            deduped, relevance_audit = apply_discovery_relevance_gate(
+            deduped, relevance_audit = apply_gate(
                 relevance_query,
-                expanded,
+                selected,
                 minimum_relevant_candidates=minimum_relevant,
             )
-            if relevance_audit.get("status") == "passed":
-                bounded = _coverage_preserving_limit(deduped, limit=self.limit + 1)
-                deduped, relevance_audit = apply_discovery_relevance_gate(
-                    relevance_query,
-                    bounded,
-                    minimum_relevant_candidates=minimum_relevant,
-                )
+        if recovery_queries:
+            relevance_audit["coverage_recovery_queries"] = recovery_queries
+
         provider_order = list(dict.fromkeys(
             str(item.get("provider") or "unknown") for item in deduped
         ))
@@ -1898,11 +2044,12 @@ class LiteratureDiscoveryService:
                 limit=self.limit + 1,
             )
             bounded = _coverage_preserving_limit(diverse, limit=self.limit + 1)
-            deduped, relevance_audit = apply_discovery_relevance_gate(
+            deduped, relevance_audit = apply_gate(
                 relevance_query,
                 bounded,
                 minimum_relevant_candidates=minimum_relevant,
             )
+        limitations.extend(relevance_audit.get("limitations", []))
         relevance_audit_hash = stable_json_sha256(relevance_audit)
         relevance_audit_path = (
             self.workspace_root

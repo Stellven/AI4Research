@@ -2,7 +2,7 @@ capability_capsule_id: cap.scientific-method-aware-report-draft
 capsule_kind: capability
 metadata:
   name: Method- and source-assessment-aware Scientific Report Draft
-  description: Draft a scientific report from its plan, claim verdicts, structured method evidence, and governed source-quality decisions.
+  description: Draft a scientific report from its plan, claim verdicts, structured method evidence, governed source-quality decisions, and the preserved study protocol.
 applicability:
   task_types:
     - scientific-research
@@ -35,13 +35,16 @@ contract:
   postconditions:
     - check: draft_evidence_linked
       description: Findings and method descriptions cite retained evidence IDs.
+    - check: study_protocol_rendered
+      description: The final report renders search strategy, source-selection criteria, time range, inclusion/exclusion criteria, and unresolved protocol fields from its plan.
   invariants:
     - Supplied method evidence is rendered and not silently dropped.
     - Unsupported claims remain explicit.
+    - Study-protocol limitations from the report plan remain explicit and are not silently resolved.
 composition:
   consumes:
     - schema_ref: schemas/evidence/scientific_report_plan.v1.schema.json
-      purpose: Planned report evidence.
+      purpose: Planned report evidence, including the preserved study protocol and unresolved protocol fields.
     - schema_ref: schemas/evidence/claim_verdict.v1.schema.json
       purpose: Verdict-backed claims.
     - schema_ref: schemas/evidence/research_method.v1.schema.json
@@ -89,12 +92,14 @@ verification:
   self_check:
     - Validate emitted evidence against scientific_report.v1.schema.json.
     - Confirm the Methods section retains method evidence IDs and limitations.
+    - Confirm the report contains a study-protocol section copied from the report plan.
   external_verifier:
     required: true
   pass_conditions:
     - Supplied method evidence appears in the report without changing its claims.
     - Excluded or unresolved sources are not silently promoted to accepted support.
     - Requirement bindings from the accepted report plan remain visible for independent evaluation.
+    - Study-protocol values and unresolved fields remain visible in the final report.
 operator_compatibility:
   preferred:
     - autosci-report-worker

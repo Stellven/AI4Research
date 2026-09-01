@@ -6,6 +6,8 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 HARNESS_LIB = (Path(__file__).resolve().parents[3] / 'harness') / "lib"
 sys.path.insert(0, str(HARNESS_LIB))
 GRAPH_SCHEDULER_PATH = HARNESS_LIB / "graph_scheduler.py"
@@ -240,3 +242,63 @@ def test_save_graph_marks_closure_failed_when_only_failed_nodes_remain(tmp_path,
     assert closure["open_nodes"] == ["N2"]
     assert closure["failed_nodes"] == ["N2"]
     assert closure["failed_at"]
+
+
+def test_typed_runtime_rejects_stale_revision_and_never_regresses(tmp_path, monkeypatch):
+    gs = _load_local_graph_scheduler()
+
+    sprints = tmp_path / "sprints"
+    sprints.mkdir()
+    monkeypatch.setattr(gs, "SPRINTS_DIR", sprints)
+
+    sid = "sprint-typed-revision"
+    graph_path = sprints / f"{sid}.task_graph.json"
+    state_path = sprints / f"{sid}.task_graph_state.json"
+    graph_path.write_text(
+        json.dumps({
+            "schema_version": "solar.scheduler_runtime_projection.v1",
+            "sprint_id": sid,
+            "runtime_state_filename": state_path.name,
+            "nodes": [{
+                "id": "N1",
+                "goal": "Run once",
+                "depends_on": [],
+                "write_scope": ["artifacts/N1"],
+            }],
+        }) + "\n",
+        encoding="utf-8",
+    )
+    state_path.write_text(
+        json.dumps({
+            "schema_version": "solar.task_graph_state.v1",
+            "sprint_id": sid,
+            "revision": 0,
+            "run_status": "queued",
+            "nodes": {"N1": {"status": "pending", "attempt": 0, "blocked_by": []}},
+            "node_results": {"N1": {"status": "pending"}},
+        }) + "\n",
+        encoding="utf-8",
+    )
+
+    first = gs.load_graph(graph_path)
+    stale = gs.load_graph(graph_path)
+    gs.set_node_status(first, "N1", "dispatched")
+    gs.save_graph(graph_path, first)
+
+    committed = json.loads(state_path.read_text(encoding="utf-8"))
+    assert committed["revision"] == 1
+    assert committed["nodes"]["N1"]["status"] == "dispatched"
+
+    gs.set_node_status(stale, "N1", "reviewing")
+    with pytest.raises(RuntimeError, match="stale scheduler state revision"):
+        gs.save_graph(graph_path, stale)
+
+    preserved = json.loads(state_path.read_text(encoding="utf-8"))
+    assert preserved["revision"] == 1
+    assert preserved["nodes"]["N1"]["status"] == "dispatched"
+
+    gs.set_node_status(first, "N1", "reviewing")
+    gs.save_graph(graph_path, first)
+    advanced = json.loads(state_path.read_text(encoding="utf-8"))
+    assert advanced["revision"] == 2
+    assert advanced["nodes"]["N1"]["status"] == "reviewing"

@@ -2,7 +2,7 @@
 # Regression test: queued wake routing must not fall through to generic builder.
 
 set -uo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../../harness"
 PASS=0
 FAIL=0
 
@@ -27,6 +27,9 @@ guard = s.index("route_by_workflow_guard()")
 assert "runtime_status.py" in s[guard:queued]
 assert '"auto_held":false' in s[guard:queued]
 assert "未知状态: ${st}，派发给 PM 做状态诊断" in s
+assert "${SPRINTS_DIR}/${sid}.prd.md" in s
+assert "local state_file=\"${SOLAR_STATE_FILE:-$HOME/.solar/STATE.md}\"" in s
+assert "~/.solar/harness/sprints/${sid}" not in s
 PY
 [[ $? -eq 0 ]] && ok "wake routes queued through workflow guard before wildcard" || fail "queued workflow guard missing or ordered incorrectly"
 

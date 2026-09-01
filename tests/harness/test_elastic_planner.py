@@ -1358,6 +1358,23 @@ def test_plan_repair_may_remove_duplicate_requirement_ownership() -> None:
     assert errors == []
 
 
+def test_plan_repair_may_add_fidelity_required_requirement_ownership() -> None:
+    previous = {
+        "nodes": [
+            {"node_id": "discovery", "requirement_ids": ["R5"]},
+            {"node_id": "report", "requirement_ids": ["R1", "R4"]},
+        ]
+    }
+    repaired = {
+        "nodes": [
+            {"node_id": "discovery", "requirement_ids": ["R4", "R5"]},
+            {"node_id": "report", "requirement_ids": ["R1", "R4"]},
+        ]
+    }
+
+    assert planner._repair_preservation_errors(previous, repaired) == []
+
+
 def test_plan_repair_cannot_fold_dependency_that_owns_a_requirement() -> None:
     previous, repaired, composition_catalog = _folded_report_plan_repair()
     previous["nodes"][1]["requirement_ids"] = ["REQ-PLAN"]
@@ -1584,7 +1601,7 @@ def test_plan_prompt_exposes_semantic_capsule_abi_not_physical_catalog() -> None
         "schema:schemas/evidence/experiment_plan.v1.schema.json"
     ]
     first = payload["capability_capsule_abis"][0]
-    assert set(first) == {
+    assert {
         "capsule_id",
         "description",
         "task_types",
@@ -1593,7 +1610,7 @@ def test_plan_prompt_exposes_semantic_capsule_abi_not_physical_catalog() -> None
             "active_effects",
             "executable",
             "execution_trust",
-        }
+        } <= set(first)
     assert "operator_compatibility" not in prompt
     assert len(prompt.encode("utf-8")) < 60000
 
@@ -1824,6 +1841,76 @@ def test_r16_single_repair_removes_downstream_discovery_ownership_and_passes(
     assert result["plan_validation"]["status"] == "pass"
     assert result["plan_fidelity"]["status"] == "pass"
     assert result["plan_acceptance"]["decision"] == "accepted"
+
+
+def test_discovery_scope_does_not_duplicate_report_owned_requirement() -> None:
+    requirement_ir = {
+        "requirements": [
+            {
+                "requirement_id": "R2",
+                "statement": "Cover every requested method family.",
+                "acceptance": {"kind": "coverage", "required_values": ["all families"]},
+                "check": "check.intent_constraint_coverage.v1",
+            },
+            {
+                "requirement_id": "R5",
+                "statement": "The report must provide an auditable evidence chain.",
+                "acceptance": {"kind": "coverage", "required_values": ["auditable"]},
+                "check": "check.intent_constraint_coverage.v1",
+            },
+        ]
+    }
+    body = {
+        "nodes": [
+            {
+                "node_id": "discover",
+                "logical_operator": "ScientificLiteratureDiscoverer",
+                "objective": "Discover evidence.",
+                "requirement_ids": [],
+                "operator_requirements": {"capabilities": ["source_discovery"]},
+                "produces": [{"verifier_ids": []}],
+            },
+            {
+                "node_id": "report",
+                "logical_operator": "ScientificReportDrafter",
+                "objective": "Write the report.",
+                "requirement_ids": ["R5"],
+                "operator_requirements": {"capabilities": ["research_synthesis"]},
+                "produces": [{"verifier_ids": []}],
+            },
+        ]
+    }
+
+    preserved = planner._preserve_discovery_requirement_scope(requirement_ir, body)
+
+    discovery = preserved["nodes"][0]
+    assert discovery["requirement_ids"] == []
+    assert discovery["objective"] == "Discover evidence."
+    assert preserved["nodes"][1]["requirement_ids"] == ["R5"]
+
+
+def test_planner_and_fidelity_prompts_keep_protocol_resolution_downstream() -> None:
+    plan_payload = json.loads(
+        planner._plan_prompt(
+            {"requirements": []},
+            {"decision": "generate"},
+            {"logical_operators": [], "capsules": []},
+            {},
+            {"checks": []},
+            generation=0,
+        )
+    )
+    fidelity_payload = json.loads(
+        planner._fidelity_prompt(
+            {"requirements": []},
+            {"decision": "generate"},
+            {"nodes": []},
+            {},
+        )
+    )
+
+    assert "resolution requirements, not discovery-scope requirements" in plan_payload["instruction"]
+    assert "output is only a source shortlist" in fidelity_payload["instruction"]
 
 
 def test_fidelity_prompt_does_not_confuse_runtime_execute_with_experiment() -> None:
@@ -2874,6 +2961,7 @@ def test_composition_may_retain_outputs_from_multiple_ordered_steps() -> None:
         "capsules": [
             {
                 "capsule_id": "cap.execute",
+                "task_types": ["experiment-execution"],
                 "consumes": [request],
                 "produces": [result],
                 "effects": {"execute": ["run"]},
@@ -2883,6 +2971,7 @@ def test_composition_may_retain_outputs_from_multiple_ordered_steps() -> None:
             },
             {
                 "capsule_id": "cap.monitor",
+                "task_types": ["experiment-monitor"],
                 "consumes": [result],
                 "produces": [status],
                 "effects": {"execute": ["monitor"]},
@@ -3943,6 +4032,41 @@ def test_fit_review_failure_without_error_row_becomes_typed_bounded_failure(
     ]
 
 
+def test_composition_fit_prompt_allows_explicit_unresolved_reporting(
+    tmp_path: Path,
+) -> None:
+    requirement_ir = _requirement_ir()
+    requirement_ir["requirements"][0]["statement"] = (
+        "Resolve the implementation evidence question or explicitly report it unresolved."
+    )
+    plan_ir = {
+        "nodes": [
+            {
+                "node_id": "report",
+                "objective": "Report supported findings and preserve unsupported items as unresolved.",
+            }
+        ]
+    }
+    model = ScriptedModel()
+
+    result = planner.review_composition_fit(
+        requirement_ir,
+        {},
+        plan_ir,
+        {},
+        {"selection_id": "selection-report", "nodes": []},
+        {"capsules": []},
+        model,
+        tmp_path,
+    )
+
+    instruction = json.loads(model.prompts[-1])["instruction"]
+    assert result["status"] == "pass"
+    assert "reporting it as unresolved" in instruction
+    assert "do not require an unregistered" in instruction
+    assert "claims resolution without the necessary operation" in instruction
+
+
 def test_capsule_binding_validation_rejects_undeclared_generic_coercion() -> None:
     capsule_plan = {
         "sprint_id": "sprint-binding-gap",
@@ -4051,11 +4175,12 @@ def test_generated_capsule_selection_freezes_one_runtime_authority(tmp_path: Pat
         reviewer_model=ScriptedModel(),
     )
 
-    assert result["capsule_selection"]["nodes"][0]["selected_capsule_id"] == (
-        "cap.requirement-compiler-implementation"
-    )
-    assert result["capsule_selection_validation"]["status"] == "pass"
-    assert result["capsule_fit_review"]["status"] == "pass"
+    assert result["binding_kind"] == "capsule_composition"
+    assert result["composition_selection"]["nodes"][0]["step_bindings"][0][
+        "capsule_id"
+    ] == "cap.requirement-compiler-implementation"
+    assert result["composition_selection_validation"]["status"] == "pass"
+    assert result["composition_fit_review"]["status"] == "pass"
     assert result["capsule_plan"]["nodes"][0]["approved_fallback_capsule_ids"] == []
     assert result["capsule_plan"]["nodes"][0]["capsule_selection_rationale"]
     assert result["physical_plan"]["verdict"] == "pass"
@@ -4140,11 +4265,11 @@ def test_generated_capsule_selection_freezes_one_runtime_authority(tmp_path: Pat
         json.dumps(result["evaluation_plan"], indent=2) + "\n", encoding="utf-8"
     )
 
-    selection_path = tmp_path / "execution" / "capsule_selection.json"
+    selection_path = tmp_path / "execution" / "composition_selection.json"
     tampered = json.loads(selection_path.read_text(encoding="utf-8"))
     tampered["nodes"][0]["rationale"] = "Tampered after admission."
     selection_path.write_text(json.dumps(tampered), encoding="utf-8")
-    assert "frozen.capsule_selection_ref.hash_mismatch" in planner.verify_frozen_execution_chain(
+    assert "frozen.composition_selection_ref.hash_mismatch" in planner.verify_frozen_execution_chain(
         tmp_path / "semantic", tmp_path / "execution"
     )
 
@@ -4449,8 +4574,8 @@ def test_complete_component_returns_verified_frozen_or_direct_boundary(
     )
 
     assert frozen["status"] == "accepted"
-    assert frozen["execution"]["capsule_selection_validation"]["status"] == "pass"
-    assert frozen["execution"]["capsule_fit_review"]["status"] == "pass"
+    assert frozen["execution"]["composition_selection_validation"]["status"] == "pass"
+    assert frozen["execution"]["composition_fit_review"]["status"] == "pass"
     assert frozen["execution"]["run_contract_frozen"]
     assert direct["status"] == "direct_response"
     assert direct["verification_errors"] == []

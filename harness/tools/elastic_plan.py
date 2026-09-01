@@ -16,9 +16,11 @@ if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
 
 from elastic_planner import run_elastic_planning_request  # noqa: E402
-from intent_compiler import CodexJsonModel, IntentCompilerError, JsonModel  # noqa: E402
+from intent_compiler import IntentCompilerError, JsonModel  # noqa: E402
 from planner_failure import ensure_planner_failure  # noqa: E402
 from planner_replay import ReplayJsonModel, replay_fallback_live, replay_root_from_environment  # noqa: E402
+from structured_model import StructuredModelError, stage_model  # noqa: E402
+from structured_output import OutputContractError  # noqa: E402
 
 
 def _load_object(path: Path) -> dict:
@@ -43,28 +45,19 @@ def _load_context_artifacts(values: list[str]) -> dict[str, dict]:
 
 def _codex_model(role: str, output_root: Path | None = None) -> JsonModel:
     replay_root = replay_root_from_environment()
-    provider = os.environ.get(f"SOLAR_PLANNER_{role.upper()}_PROVIDER", "codex").strip().lower()
+    timeout = int(os.environ.get("SOLAR_PLANNER_MODEL_TIMEOUT_SEC", "240") or "240")
     if replay_root is not None:
         if output_root is None:
             raise ValueError("replay requires the planner output root")
         fallback = None
         if replay_fallback_live():
-            if provider != "codex":
-                raise ValueError(f"unsupported planner {role} provider: {provider!r}")
-            fallback = CodexJsonModel(
-                model=os.environ.get(f"SOLAR_PLANNER_{role.upper()}_MODEL", "").strip(),
-                timeout_seconds=int(os.environ.get("SOLAR_PLANNER_MODEL_TIMEOUT_SEC", "240") or "240"),
-            )
+            fallback = stage_model("planner", role, timeout_seconds=timeout)
         return ReplayJsonModel(
             replay_root=replay_root,
             output_root=output_root,
             fallback=fallback,
         )
-    if provider != "codex":
-        raise ValueError(f"unsupported planner {role} provider: {provider!r}")
-    model = os.environ.get(f"SOLAR_PLANNER_{role.upper()}_MODEL", "").strip()
-    timeout = int(os.environ.get("SOLAR_PLANNER_MODEL_TIMEOUT_SEC", "240") or "240")
-    return CodexJsonModel(model=model, timeout_seconds=timeout)
+    return stage_model("planner", role, timeout_seconds=timeout)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -96,7 +89,7 @@ def main(argv: list[str] | None = None) -> int:
             workspace_root=args.workspace_root,
             upstream_artifacts=_load_context_artifacts(args.context_artifact),
         )
-    except IntentCompilerError as exc:
+    except (IntentCompilerError, StructuredModelError, OutputContractError) as exc:
         failure = ensure_planner_failure(
             output_root,
             fallback_stage="model_call",

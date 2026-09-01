@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-"""PM -> Planner -> task_graph workflow guard.
+"""PM -> Planner handoff -> Graph Compiler -> task_graph workflow guard.
 
 This module is intentionally read-only.  It answers one question for wake and
 coordinator entrypoints: which role is allowed to receive a sprint next?
 
 Default lifecycle:
-  PM writes PRD -> Planner writes design/plan/task_graph -> DAG builders run.
+  PM writes PRD -> Planner normalizes/hands off requirements -> Graph Compiler
+  writes design/plan/task_graph -> DAG builders run.
 Legacy metadata such as bypass_pm or handoff_to=builder is treated as a
 violation unless the sprint already has planner artifacts.
 """
@@ -182,6 +183,8 @@ def route(sid: str) -> dict[str, Any]:
 
     prd = _artifact_path(sid, "prd.md", node_level=False)
     product_brief = _artifact_path(sid, "product-brief.md", node_level=False)
+    planner_requirements = _artifact_path(sid, "planner-requirements.md", node_level=False)
+    planner_handoff = _artifact_path(sid, "planner-handoff.md", node_level=False)
     design = _artifact_path(sid, "design.md")
     plan = _artifact_path(sid, "plan.md")
     graph = SPRINTS_DIR / f"{sid}.task_graph.json"
@@ -200,18 +203,34 @@ def route(sid: str) -> dict[str, Any]:
     artifacts = {
         "prd": _nonempty(prd),
         "product_brief": _nonempty(product_brief),
+        "planner_requirements": _nonempty(planner_requirements),
+        "planner_handoff": _nonempty(planner_handoff),
         "design": _nonempty(design),
         "plan": _nonempty(plan),
         "prd_html": _nonempty(prd_html),
         "design_html": _nonempty(design_html),
         "planning_html": _nonempty(planning_html),
+        "task_graph_candidate": _nonempty(graph),
         "task_graph": graph_ok,
         "task_graph_parent_ready": graph_parent_ready,
         "handoff": _nonempty(handoff),
         "eval": _nonempty(eval_md) or _nonempty(eval_json),
     }
-    legacy_planner_ready = artifacts["prd"] and artifacts["design"] and artifacts["plan"] and artifacts["task_graph"]
-    planner_ready = legacy_planner_ready or (elastic_scheduler and artifacts["task_graph"])
+    strict_planner_boundary = int(status.get("planner_role_boundary_version") or 0) >= 2
+    planner_ready = artifacts["prd"] and artifacts["planner_requirements"] and artifacts["planner_handoff"]
+    legacy_planner_ready = (
+        not strict_planner_boundary and artifacts["prd"] and artifacts["design"] and artifacts["plan"]
+    )
+    graph_candidate_ready = planner_ready and artifacts["design"] and artifacts["plan"] and artifacts["task_graph_candidate"]
+    execution_plan_ready = (
+        (elastic_scheduler and artifacts["task_graph"])
+        or (
+            (planner_ready or legacy_planner_ready)
+            and artifacts["design"]
+            and artifacts["plan"]
+            and artifacts["task_graph"]
+        )
+    )
     requirements_ready = artifacts["prd"]
 
     contract_bypass = _contract_flag(text, "bypass_pm") or _contract_flag(text, "bypass pm")
@@ -230,8 +249,8 @@ def route(sid: str) -> dict[str, Any]:
     )
     if contract_bypass and not operator_bypass:
         violations.append("legacy_bypass_pm_ignored")
-    if builder_claim and not planner_ready and not operator_bypass:
-        violations.append("builder_route_without_prd_design_plan_task_graph")
+    if builder_claim and not execution_plan_ready and not operator_bypass:
+        violations.append("builder_route_without_planner_handoff_and_compiled_task_graph")
     if phase in {"prd_ready", "contract_ready"} and not requirements_ready:
         violations.append("phase_requires_pm_prd")
     if _nonempty(graph) and not graph_ok:
@@ -241,9 +260,9 @@ def route(sid: str) -> dict[str, Any]:
         role, stage, reason = "none", "done", "terminal_status"
     elif st in {"reviewing", "ready_for_review"} or (artifacts["handoff"] and handoff_to == "evaluator"):
         role, stage, reason = "evaluator", "build_complete", "handoff_ready_for_eval"
-    elif planner_ready and blocked_prerequisites and not operator_bypass:
+    elif execution_plan_ready and blocked_prerequisites and not operator_bypass:
         role, stage, reason = "none", "dependency_blocked", "external_prerequisite_blocked"
-    elif planner_ready or operator_bypass:
+    elif execution_plan_ready or operator_bypass:
         role, stage, reason = (
             "builder_main",
             "planning_complete",
@@ -253,6 +272,10 @@ def route(sid: str) -> dict[str, Any]:
                 else "planner_artifacts_and_task_graph_ready"
             ),
         )
+    elif strict_planner_boundary and graph_candidate_ready:
+        role, stage, reason = "graph_compiler", "graph_compile_ready", "graph_candidate_ready_for_compile"
+    elif strict_planner_boundary and planner_ready:
+        role, stage, reason = "graph_compiler", "requirements_ready", "planner_requirements_handoff_ready"
     elif requirements_ready:
         role, stage, reason = "planner", "prd_ready", "pm_prd_ready"
     else:

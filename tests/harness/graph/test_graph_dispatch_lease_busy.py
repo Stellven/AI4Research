@@ -804,7 +804,7 @@ def test_assigned_pane_rejects_pane_outside_harness_session(monkeypatch) -> None
     )
 
 
-def test_reconcile_keeps_acknowledged_dispatch_when_leases_disabled(monkeypatch, tmp_path) -> None:
+def test_reconcile_requeues_submit_ack_without_worker_lease(monkeypatch, tmp_path) -> None:
     harness = tmp_path / "harness"
     sprints = harness / "sprints"
     ack_dir = sprints / "graph-acks"
@@ -839,7 +839,8 @@ def test_reconcile_keeps_acknowledged_dispatch_when_leases_disabled(monkeypatch,
     monkeypatch.setattr(gnd, "HARNESS_DIR", harness)
     monkeypatch.setattr(gnd, "SPRINTS_DIR", sprints)
     monkeypatch.setattr(gnd, "read_lease", lambda pane: None)
-    monkeypatch.setattr(gnd, "release_lease", lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("should not release")))
+    released = []
+    monkeypatch.setattr(gnd, "release_lease", lambda *args, **kwargs: released.append(args) or {"released": False})
     monkeypatch.setattr(gnd, "_pane_title", lambda pane: "Builder | 模型:GLM")
     monkeypatch.setattr(gnd, "_pane_tail", lambda pane, lines=80: "❯\n  ⏵⏵ bypass permissions on")
     monkeypatch.setattr(gnd, "_pane_runtime_unavailable_reason", lambda pane, title="": "")
@@ -847,10 +848,20 @@ def test_reconcile_keeps_acknowledged_dispatch_when_leases_disabled(monkeypatch,
 
     repaired = gnd._reconcile_existing_dispatches(graph, tmp_path / f"{sid}.task_graph.json")
 
-    assert repaired == []
-    assert graph["nodes"][0]["status"] == "dispatched"
-    assert graph["nodes"][0]["dispatch_id"] == dispatch_id
-    assert graph["node_results"][node_id]["status"] == "dispatched"
+    assert repaired == [
+        {
+            "node": node_id,
+            "pane": pane,
+            "dispatch_id": dispatch_id,
+            "status": "pending",
+            "reason": "stale_submit_ack_without_live_lease",
+        }
+    ]
+    assert released
+    assert graph["nodes"][0]["status"] == "pending"
+    assert "dispatch_id" not in graph["nodes"][0]
+    assert "assigned_to" not in graph["nodes"][0]
+    assert node_id not in graph["node_results"]
 
 
 def test_reconcile_keeps_acknowledged_dispatch_on_recoverable_prompt(monkeypatch, tmp_path) -> None:

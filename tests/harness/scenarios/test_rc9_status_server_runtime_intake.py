@@ -84,3 +84,38 @@ def test_intake_reloads_runtime_provider_defaults_after_settings_change(
         captured["env"]["SOLAR_MULTI_TASK_DEFAULT_PROVIDERS"]
         == expected_provider
     )
+
+
+def test_intake_reports_cli_failure_instead_of_missing_sprint_id(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    status_server = _load_status_server()
+    harness_dir = tmp_path / "harness"
+    harness_dir.mkdir()
+    status_server.HARNESS_DIR = harness_dir
+    status_server.SPRINTS_DIR = harness_dir / "sprints"
+    monkeypatch.setattr(status_server, "_intake_command", lambda _task: [sys.executable])
+    monkeypatch.setattr(status_server, "_intake_subprocess_env", lambda: {})
+    monkeypatch.setattr(
+        status_server,
+        "_classify_intake_request",
+        lambda _task, _env, explicit_workflow_id="": {"applied": False},
+    )
+    monkeypatch.setattr(
+        status_server.subprocess,
+        "run",
+        lambda command, **_kwargs: subprocess.CompletedProcess(
+            command,
+            1,
+            stdout="",
+            stderr="ModuleNotFoundError: No module named 'referencing'\n",
+        ),
+    )
+
+    result = status_server._intake_payload({"task": "build a small CLI"})
+
+    assert result["ok"] is False
+    assert result["sprint_id"] == ""
+    assert result["error"] == "intake_cli_failed"
+    assert result["returncode"] == 1

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Solar-owned completion gate for Planner operator artifacts.
+"""Solar-owned completion gate for bounded role-stage artifacts.
 
-Planner files are only a candidate plan while the bounded model invocation is
-still running.  This module binds plan certification to the durable operator
-result so a partially written design/plan/task graph cannot be certified.
+Role-stage files are only candidates while the bounded model invocation is
+still running. This module binds downstream consumption to the durable
+operator result so partially written artifacts cannot be consumed.
 """
 from __future__ import annotations
 
@@ -46,8 +46,15 @@ def _result_succeeded(result: dict[str, Any]) -> bool:
     return result_status in SUCCESS_STATUSES and exit_code == 0
 
 
-def planner_operator_state(harness_dir: Path, sid: str, node_id: str = "N0") -> dict[str, Any]:
-    """Return the durable completion state for the current Planner task.
+def operator_task_state(
+    harness_dir: Path,
+    sid: str,
+    node_id: str = "N0",
+    *,
+    role: str = "planner",
+    closeout_kind: str = "",
+) -> dict[str, Any]:
+    """Return the durable completion state for a bounded role-stage task.
 
     ``unmanaged`` preserves the legacy pane path.  Once a PM/operator-pool
     record exists, only an explicit successful result unlocks certification.
@@ -91,12 +98,14 @@ def planner_operator_state(harness_dir: Path, sid: str, node_id: str = "N0") -> 
     prefix = f"pm-{sid}-"
     inbox_root = harness / "run" / "pm-inbox"
     records: list[tuple[float, str, Path, dict[str, Any]]] = []
+    expected_role = str(role).strip().lower().replace("_", "-")
+    expected_closeout = str(closeout_kind).strip().lower().replace("_", "-")
     for path in inbox_root.glob(f"{prefix}*.json"):
         payload = _read_json(path)
         task_id = str(payload.get("task_id") or path.stem)
         requested_role = str(payload.get("requested_role") or "planner").strip().lower().replace("_", "-")
         record_node_id = str(payload.get("node_id") or "").strip().lower().replace("_", "-")
-        closeout_kind = str(payload.get("closeout_kind") or "").strip().lower().replace("_", "-")
+        record_closeout = str(payload.get("closeout_kind") or "").strip().lower().replace("_", "-")
         normalized_task_id = task_id.lower().replace("_", "-")
         is_legacy_planner = requested_role == "planner" and (
             record_node_id == str(node_id).lower()
@@ -105,9 +114,16 @@ def planner_operator_state(harness_dir: Path, sid: str, node_id: str = "N0") -> 
         is_elastic_planner = (
             requested_role == "elastic-planner"
             or record_node_id == "elastic-planner"
-            or closeout_kind == "elastic-planner"
+            or record_closeout == "elastic-planner"
         )
-        if not (is_legacy_planner or is_elastic_planner):
+        role_matches = (
+            is_legacy_planner or is_elastic_planner
+            if expected_role == "planner"
+            else requested_role == expected_role
+        )
+        if not role_matches:
+            continue
+        if expected_closeout and record_closeout != expected_closeout:
             continue
         try:
             mtime = path.stat().st_mtime
@@ -122,11 +138,11 @@ def planner_operator_state(harness_dir: Path, sid: str, node_id: str = "N0") -> 
             "sid": sid,
             "node_id": node_id,
             "task_id": "",
-            "reason": "no_operator_pool_planner_task",
+            "reason": f"no_operator_pool_{closeout_kind or role}_task",
         }
 
     status = _read_json(sprints_root / f"{sid}.status.json")
-    claim = status.get("planner_dispatch_claim")
+    claim = status.get("planner_dispatch_claim") if role == "planner" else None
     claimed_task = str(claim.get("task_id") or "") if isinstance(claim, dict) else ""
     selected = next((row for row in records if row[1] == claimed_task), None)
     if selected is None:
@@ -177,7 +193,7 @@ def planner_operator_state(harness_dir: Path, sid: str, node_id: str = "N0") -> 
             "sid": sid,
             "node_id": node_id,
             "task_id": task_id,
-            "reason": "planner_submission_failed_before_lease",
+            "reason": f"{closeout_kind or role}_submission_failed_before_lease",
             "inbox_status": inbox_status,
             "inbox_path": str(inbox_path),
             "result_path": "",
@@ -225,11 +241,11 @@ def planner_operator_state(harness_dir: Path, sid: str, node_id: str = "N0") -> 
         "node_id": node_id,
         "task_id": task_id,
         "reason": (
-            "planner_operator_still_running"
+            f"{closeout_kind or role}_operator_still_running"
             if active
-            else "planner_operator_claim_abandoned"
+            else f"{closeout_kind or role}_operator_claim_abandoned"
             if abandoned
-            else "planner_operator_result_pending"
+            else f"{closeout_kind or role}_operator_result_pending"
         ),
         "runtime_state": runtime_state,
         "heartbeat_age_seconds": age_seconds,
@@ -239,16 +255,29 @@ def planner_operator_state(harness_dir: Path, sid: str, node_id: str = "N0") -> 
     }
 
 
+def planner_operator_state(harness_dir: Path, sid: str, node_id: str = "N0") -> dict[str, Any]:
+    """Backward-compatible Planner wrapper used by existing callers/tests."""
+    return operator_task_state(harness_dir, sid, node_id, role="planner")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("state", choices=["state"])
     parser.add_argument("sid")
     parser.add_argument("--harness-dir", required=True)
     parser.add_argument("--node-id", default="N0")
+    parser.add_argument("--role", default="planner")
+    parser.add_argument("--closeout-kind", default="")
     parser.add_argument("--field", default="")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
-    payload = planner_operator_state(Path(args.harness_dir), args.sid, args.node_id)
+    payload = operator_task_state(
+        Path(args.harness_dir),
+        args.sid,
+        args.node_id,
+        role=args.role,
+        closeout_kind=args.closeout_kind,
+    )
     if args.field:
         value: Any = payload
         for part in args.field.split("."):

@@ -209,6 +209,10 @@ _RUNTIME_INTERFACES_TIMEOUT_SECONDS = 1.0
 _STATUS_PAYLOAD_CACHE = {}
 _STATUS_PAYLOAD_CACHE_TTL_SECONDS = 2.0
 _STATUS_WARMUP_ACTIVE = False
+_SPRINT_INDEX_CACHE = {}
+_SPRINT_INDEX_CACHE_TTL_SECONDS = 2.0
+_SPRINT_INDEX_CACHE_BUILDING = set()
+_SPRINT_INDEX_CACHE_CONDITION = threading.Condition()
 _EVENTS_CACHE = {}
 _EVENTS_CACHE_TTL_SECONDS = 3.0
 _ACTIVE_SPRINT_STATUSES = {
@@ -877,7 +881,7 @@ def _orchestration_verdict_payload(kind: str, sprint_id: str, data: dict) -> tup
     return payload, status_code
 
 
-def _sprint_index_payload(limit: int = 80) -> dict:
+def _build_sprint_index_payload(limit: int) -> dict:
     mod = _load_orchestration_routes_module()
     builder = getattr(mod, "build_sprint_index_payload", None)
     if not callable(builder):
@@ -898,6 +902,43 @@ def _sprint_index_payload(limit: int = 80) -> dict:
         "degraded_sources": degraded or [],
         "data": data,
     }
+
+
+def _sprint_index_payload(limit: int = 80) -> dict:
+    """Build the expensive sprint index once for concurrent dashboard polls."""
+    cache_key = max(1, int(limit))
+    with _SPRINT_INDEX_CACHE_CONDITION:
+        cached = _SPRINT_INDEX_CACHE.get(cache_key)
+        now = time.monotonic()
+        if cached and now - cached["ts"] <= _SPRINT_INDEX_CACHE_TTL_SECONDS:
+            return copy.deepcopy(cached["value"])
+        if cache_key in _SPRINT_INDEX_CACHE_BUILDING:
+            # A stale index is preferable to multiplying the same filesystem scan.
+            if cached:
+                return copy.deepcopy(cached["value"])
+            while cache_key in _SPRINT_INDEX_CACHE_BUILDING:
+                _SPRINT_INDEX_CACHE_CONDITION.wait()
+            cached = _SPRINT_INDEX_CACHE.get(cache_key)
+            if cached:
+                return copy.deepcopy(cached["value"])
+        _SPRINT_INDEX_CACHE_BUILDING.add(cache_key)
+
+    try:
+        payload = _build_sprint_index_payload(cache_key)
+    except BaseException:
+        with _SPRINT_INDEX_CACHE_CONDITION:
+            _SPRINT_INDEX_CACHE_BUILDING.discard(cache_key)
+            _SPRINT_INDEX_CACHE_CONDITION.notify_all()
+        raise
+
+    with _SPRINT_INDEX_CACHE_CONDITION:
+        _SPRINT_INDEX_CACHE[cache_key] = {
+            "ts": time.monotonic(),
+            "value": copy.deepcopy(payload),
+        }
+        _SPRINT_INDEX_CACHE_BUILDING.discard(cache_key)
+        _SPRINT_INDEX_CACHE_CONDITION.notify_all()
+    return payload
 
 
 def _extract_intake_id(text: str) -> str:
@@ -1083,15 +1124,17 @@ _MAX_INTAKE_ATTACHMENT_BYTES = 5 * 1024 * 1024
 _MAX_INTAKE_ATTACHMENTS_TOTAL_BYTES = 10 * 1024 * 1024
 _MAX_INTAKE_JSON_BODY_BYTES = 16 * 1024 * 1024
 _MAX_INTENT_MODEL_CALLS = 4  # compile + review, then one bounded compile + review repair
+_MAX_REQUIREMENT_MODEL_CALLS = 4  # separate LLM requirement compile/review + bounded repair
 
 
 def _intake_timeout_seconds(env: dict[str, str]) -> int:
     explicit = str(env.get("SOLAR_INTAKE_TIMEOUT_SEC") or "").strip()
     if explicit:
         return max(1, int(explicit))
-    if str(env.get("SOLAR_INTENT_COMPILER_PROVIDER") or "").strip():
+    if str(env.get("SOLAR_INTAKE_COMPAT_MODE") or "").strip().lower() != "legacy":
         per_call = max(1, int(env.get("SOLAR_INTENT_MODEL_TIMEOUT_SEC") or "180"))
-        return max(180, per_call * _MAX_INTENT_MODEL_CALLS + 60)
+        requirement_call = max(1, int(env.get("SOLAR_REQUIREMENT_TIMEOUT_SEC") or "240"))
+        return max(180, per_call * _MAX_INTENT_MODEL_CALLS + requirement_call * _MAX_REQUIREMENT_MODEL_CALLS + 60)
     return 180
 
 
@@ -1403,7 +1446,15 @@ def _intake_payload(data: dict) -> dict:
         "ambiguous": bool(candidate.get("ambiguous")),
         "candidate_sprint_ids": candidate.get("candidates", []),
         "attachments": attachments,
-        "error": "ambiguous_sprint_attribution" if candidate.get("ambiguous") else ("" if sprint_id else "sprint_id_not_found"),
+        "error": (
+            "ambiguous_sprint_attribution"
+            if candidate.get("ambiguous")
+            else "intake_cli_failed"
+            if proc.returncode != 0 and not sprint_id
+            else ""
+            if sprint_id
+            else "sprint_id_not_found"
+        ),
         "returncode": proc.returncode,
         "command": " ".join(cmd[:3]),
         "stdout_tail": output[-4000:],

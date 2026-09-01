@@ -2060,7 +2060,13 @@ def test_autosci_skill_shim_research_scheduler_records_truthful_legacy_publicati
     assert report_plan_summary["bridge_result"]["status"] == "inconclusive"
     assert report_plan_summary["gate_result"]["status"] == "inconclusive"
     report_plan_evidence = json.loads((tmp_path / report_plan_summary["evidence_path"]).read_text(encoding="utf-8"))
-    compile_handoff = report_plan_evidence["outputs"]["report"]["compile_handoff"]
+    plan_artifact = next(
+        artifact
+        for artifact in report_plan_evidence["artifacts"]
+        if artifact["type"] == "paper_plan_json"
+    )
+    plan_payload = json.loads((tmp_path / plan_artifact["path"]).read_text(encoding="utf-8"))
+    compile_handoff = plan_payload["compile_handoff"]
     assert compile_handoff["status"] == "completed"
     assert compile_handoff["semantic_runtime"]["verified"] is True
     assert compile_handoff["executor_result"]["executed"] is True
@@ -4329,9 +4335,9 @@ def test_autosci_skill_shim_accepts_paper_plan_title_without_topic_fallback(tmp_
     assert payload["inputs"]["topic"] == ""
     action = payload["outputs"]["skill_run"]["actions"][0]
     assert action["action"] == "plan_report"
-    assert action["schema"] == "scientific_report.v1"
+    assert action["schema"] == "scientific_report_plan.v1"
     report_evidence = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
-    report = report_evidence["outputs"]["report"]
+    report = report_evidence["outputs"]["report_plan"]
     assert report_evidence["status"] == "inconclusive"
     assert report["title"] == "Skill Generation for Inference-Time Agents"
     assert any(section["section_id"] == "review-gates" for section in report["sections"])
@@ -4407,9 +4413,9 @@ def test_autosci_skill_shim_paper_plan_blocks_final_acceptance_without_compile(t
     action = payload["outputs"]["skill_run"]["actions"][0]
     evidence = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
     assert evidence["status"] == "inconclusive"
-    report = evidence["outputs"]["report"]
+    report = evidence["outputs"]["report_plan"]
     figure_plan = next(section for section in report["sections"] if section["section_id"] == "figure-citation-plan")
-    assert "SkillGen: Generating Skills for Agents" in figure_plan["body"]
+    assert "SkillGen: Generating Skills for Agents" in figure_plan["purpose"]
     assert any(section["section_id"] == "final-plan-acceptance-boundary" for section in report["sections"])
     artifacts = {artifact["type"]: artifact["path"] for artifact in evidence["artifacts"]}
     citation_map = json.loads((tmp_path / artifacts["citation_map_json"]).read_text(encoding="utf-8"))
@@ -4635,8 +4641,7 @@ def test_autosci_skill_shim_paper_plan_attaches_verified_compile_handoff(tmp_pat
     action = payload["outputs"]["skill_run"]["actions"][0]
     evidence = json.loads(Path(action["evidence_path"]).read_text(encoding="utf-8"))
     assert evidence["status"] == "completed"
-    report = evidence["outputs"]["report"]
-    assert report["compile_handoff"]["status"] == "completed"
+    report = evidence["outputs"]["report_plan"]
     assert any(section["section_id"] == "compile-audit" for section in report["sections"])
     artifacts = {artifact["type"]: artifact["path"] for artifact in evidence["artifacts"]}
     assert {
@@ -4646,6 +4651,7 @@ def test_autosci_skill_shim_paper_plan_attaches_verified_compile_handoff(tmp_pat
         "paper_plan_final_acceptance_boundary_json",
     } <= set(artifacts)
     plan_json = json.loads((tmp_path / artifacts["paper_plan_json"]).read_text(encoding="utf-8"))
+    assert plan_json["compile_handoff"]["status"] == "completed"
     assert plan_json["compile_handoff"]["verified"] is True
     assert plan_json["idea_graph_map"]["idea_graph_ready"] is True
     assert "runtime:paper-plan-compile" in plan_json["compile_handoff"]["evidence_ids"]

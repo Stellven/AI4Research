@@ -111,6 +111,7 @@ _NODE_INPUT_PAYLOAD_KEYS = {
         "experiment_result.v1": "experiment_result",
     },
 }
+_MULTI_DOCUMENT_PAYLOAD_NODES = {"claim_verify"}
 
 
 def _registry_node_kind(node: dict[str, Any]) -> str:
@@ -333,6 +334,24 @@ def _payload_for_documents(node_id: str, documents: list[dict[str, Any]]) -> dic
         key: values[0] if len(values) == 1 else values
         for key, values in sorted(grouped.items())
     }
+
+
+def _inline_operator_payload(
+    expected: dict[str, str], documents: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Compatibility boundary for callers that already resolved a binding."""
+    node_id = str(expected.get("node_id") or "")
+    if not documents:
+        raise RegistryAdapterError("no routed documents are available for registry dispatch")
+    if node_id in _MULTI_DOCUMENT_PAYLOAD_NODES:
+        mapping = _NODE_INPUT_PAYLOAD_KEYS.get(node_id) or {}
+        payload_key = next(iter(mapping.values()), "")
+        if not payload_key:
+            raise RegistryAdapterError(
+                f"research registry node is not allowlisted: {node_id or '<missing>'}"
+            )
+        return {payload_key: documents}
+    return _payload_for_documents(node_id, documents)
 
 
 def _explicit_report_title(

@@ -3,7 +3,7 @@
 # Solar Harness — Coordinator Watchdog
 #
 # 每 30 秒检查 coordinator PID 是否存活
-# 死了自动 wake → 连续 3 次失败则熔断报警
+# 死了只重启 Coordinator；短期持久 admission lease 决定哪些运行可继续
 #
 # 用法:
 #   coordinator-watchdog.sh start    启动守护 (后台)
@@ -88,6 +88,32 @@ is_actionable_state() {
   esac
 }
 
+latest_durable_admitted_sprint() {
+  python3 - "$HARNESS_DIR/run/coordinator-admissions" "$SPRINTS_DIR" <<'PY' 2>/dev/null
+import datetime as dt
+import json
+from pathlib import Path
+import sys
+
+admission_dir, sprints_dir = map(Path, sys.argv[1:3])
+now = dt.datetime.now(dt.timezone.utc)
+candidates = []
+for path in admission_dir.glob("sprint-*.json"):
+    try:
+        record = json.loads(path.read_text(encoding="utf-8"))
+        sid = str(record.get("sprint_id") or "")
+        expires = dt.datetime.fromisoformat(str(record.get("expires_at") or "").replace("Z", "+00:00"))
+        status = json.loads((sprints_dir / f"{sid}.status.json").read_text(encoding="utf-8"))
+    except Exception:
+        continue
+    if expires <= now or str(status.get("status") or "") not in {"drafting", "active", "reviewing", "approved"}:
+        continue
+    candidates.append((expires, sid))
+if candidates:
+    print(max(candidates)[1])
+PY
+}
+
 # --- 读取连续失败计数 ---
 get_failure_count() {
   if [[ -f "$WATCHDOG_STATE" ]]; then
@@ -155,29 +181,10 @@ do_check() {
 
   warn "Coordinator 已死! (失败 ${failures}/${MAX_CONSECUTIVE_FAILURES})，尝试重启..."
 
-  # 找活跃 sprint 并 wake (D3: 只 wake 非终态 sprint)
+  # Recovery scope comes only from a recently refreshed Coordinator admission.
+  # Pane assignments and status mtimes are projections, not permission to revive work.
   local active_sid=""
-  if [[ -f "$HARNESS_DIR/.pane-assignments" ]]; then
-    active_sid=$(sed -n 's/^solar-harness:0\.2=\([^:]*\):.*/\1/p' "$HARNESS_DIR/.pane-assignments" | head -1)
-    if [[ -n "$active_sid" && -f "$SPRINTS_DIR/${active_sid}.status.json" ]]; then
-      local assigned_st
-      assigned_st=$(python3 -c "import json; print(json.load(open('$SPRINTS_DIR/${active_sid}.status.json')).get('status',''))" 2>/dev/null)
-      is_actionable_state "$assigned_st" || active_sid=""
-    else
-      active_sid=""
-    fi
-  fi
-
-  for f in $(ls -t "$SPRINTS_DIR"/*.status.json 2>/dev/null); do
-    [[ -z "$active_sid" ]] || break
-    [[ -f "$f" ]] || continue
-    local st
-    st=$(python3 -c "import json; print(json.load(open('$f')).get('status',''))" 2>/dev/null)
-    if is_actionable_state "$st"; then
-      active_sid=$(python3 -c "import json; print(json.load(open('$f')).get('id',''))" 2>/dev/null)
-      break
-    fi
-  done
+  active_sid="$(latest_durable_admitted_sprint || true)"
 
   # Lane 0 PR-3 (F4 / AC-R7.4, M1 rule): a run-terminal marker from the process
   # registry suppresses respawn — check the resolved sprint's marker when one
@@ -193,12 +200,9 @@ do_check() {
   log "Coordinator 重启已触发 (spawn PID: $!, pidfile 由 coordinator 接管)"
 
   if [[ -n "$active_sid" ]]; then
-    log "Wake Sprint: ${active_sid} (async)"
-    (
-      bash "$HARNESS_DIR/solar-harness.sh" wake "$active_sid" >> "$HARNESS_DIR/.watchdog.log" 2>&1 || true
-    ) &
+    log "Coordinator continuation scope: ${active_sid} (durable admission; no wake dispatch)"
   else
-    log "无非终态 sprint, 跳过 wake"
+    log "无有效 admission lease；仅重启 Coordinator，不恢复历史 sprint"
   fi
 
   # 记录 watchdog 事件

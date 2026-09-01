@@ -35,4 +35,20 @@ if ! printf '%s\n' "$quota_sample" | grep -qiE "You've hit your limit|hit your l
   exit 1
 fi
 
+code_host_sample='
+⚠ Code Mode is unavailable because failed to spawn code-mode host /home/james/.local/bin/codex-code-mode-host:
+host executable was not found.
+'
+
+if ! printf '%s\n' "$code_host_sample" | grep -qiE "Code Mode is unavailable|code-mode host is disabled|failed to spawn code-mode host|codex-code-mode-host.*(not found|No such file|Permission denied)"; then
+  echo "code-mode host blocker regex did not match sample" >&2
+  exit 1
+fi
+
+permission_sample='/home/james/.local/bin/codex-code-mode-host: Permission denied'
+if ! printf '%s\n' "$permission_sample" | grep -qiE "Code Mode is unavailable|code-mode host is disabled|failed to spawn code-mode host|codex-code-mode-host.*(not found|No such file|Permission denied)"; then
+  echo "code-mode host permission blocker regex did not match sample" >&2
+  exit 1
+fi
+
 echo "ok coordinator runtime blocker patterns"

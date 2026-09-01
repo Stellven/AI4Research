@@ -283,6 +283,11 @@ def _task_graph_candidate_paths(sid: str) -> list[Path]:
     candidates = [SPRINTS_DIR / name for name in top_level_names]
     for root in (SPRINTS_DIR / sid, SPRINTS_DIR / sid / ".pm", SPRINTS_DIR / sid / "state"):
         candidates.extend(root / name for name in nested_names)
+    typed_runtime = SPRINTS_DIR / sid / "planning" / "runtime"
+    candidates.extend([
+        typed_runtime / f"{sid}.task_graph.json",
+        typed_runtime / f"{sid}.task_graph_state.json",
+    ])
     for pattern in (
         f"{sid}*task_graph*.json",
         f"{sid}*task_dag*.json",
@@ -327,16 +332,20 @@ def _existing_task_graph_path(sid: str) -> Path:
 
 def _split_runtime_state(sid: str) -> dict:
     """Load the runtime node/gate plane stored beside a specification graph."""
-    for name in (
-        f"{sid}.task_graph_state.json",
-        f"{sid}.task_dag.state.json",
-        f"{sid}.task_graph.state.json",
-    ):
-        data, ok = _read_json(SPRINTS_DIR / name)
+    candidates = [
+        SPRINTS_DIR / f"{sid}.task_graph_state.json",
+        SPRINTS_DIR / f"{sid}.task_dag.state.json",
+        SPRINTS_DIR / f"{sid}.task_graph.state.json",
+        SPRINTS_DIR / sid / "planning" / "runtime" / f"{sid}.task_graph_state.json",
+    ]
+    for path in candidates:
+        data, ok = _read_json(path)
         if not ok or not isinstance(data, dict):
             continue
         runtime = data.get("runtime_state") if isinstance(data.get("runtime_state"), dict) else {}
         nodes = data.get("node_results") if isinstance(data.get("node_results"), dict) else runtime.get("nodes")
+        if not isinstance(nodes, dict) and isinstance(data.get("nodes"), dict):
+            nodes = data.get("nodes")
         gates = data.get("gate_results") if isinstance(data.get("gate_results"), dict) else runtime.get("gates")
         if isinstance(nodes, dict) or isinstance(gates, dict):
             return {
@@ -381,6 +390,7 @@ def _load_task_runtime_state(sid: str) -> dict:
         SPRINTS_DIR / sid / "task_graph.state.json",
         SPRINTS_DIR / sid / "state" / "task_dag.state.json",
         SPRINTS_DIR / sid / "state" / "task_graph.state.json",
+        SPRINTS_DIR / sid / "planning" / "runtime" / f"{sid}.task_graph_state.json",
     ]
     for path in _dedupe_paths(candidates):
         data, ok = _read_json(path)
@@ -390,6 +400,11 @@ def _load_task_runtime_state(sid: str) -> dict:
         runtime_state = normalized.get("runtime_state")
         if isinstance(runtime_state, dict):
             return runtime_state
+        if isinstance(normalized.get("nodes"), dict):
+            return {
+                "nodes": normalized.get("nodes") or {},
+                "gates": normalized.get("gate_results") or {},
+            }
     return {}
 
 
@@ -729,18 +744,30 @@ def _build_node_cards(sid: str, nodes: list[dict], status_state: dict, routing: 
             or ""
         ).strip()
         execution_candidates = physical_plan_ir.get("execution_candidates") or []
+        physical_candidates = node.get("physical_candidates") or []
         compiled_candidate_ids = {
             str(candidate.get("operator_id") or "").strip()
-            for candidate in execution_candidates
+            for candidate in [*execution_candidates, *physical_candidates]
             if isinstance(candidate, dict)
         }
+        if not selected_operator:
+            selected_operator = next(
+                (
+                    str(candidate.get("operator_id") or "").strip()
+                    for candidate in physical_candidates
+                    if isinstance(candidate, dict)
+                    and str(candidate.get("admission_state") or "ELIGIBLE").upper() == "ELIGIBLE"
+                    and str(candidate.get("operator_id") or "").strip()
+                ),
+                "",
+            )
         # Fixed contracted nodes do not use the legacy autopilot pane router.  Their
         # compiler-owned physical plan is the worker-admission evidence, so absence
         # from autopilot-state must not be projected as a missing worker/capability.
         contract_bound_worker = bool(
-            required_operator
-            and selected_operator == required_operator
-            and required_operator in compiled_candidate_ids
+            selected_operator
+            and selected_operator in compiled_candidate_ids
+            and (not required_operator or selected_operator == required_operator)
             and capsule_id
         )
         if contract_bound_worker:
@@ -1001,6 +1028,24 @@ def _build_stall_summary(
             "severity": "ok",
             "title": "Planner is working",
             "detail": "The Elastic Planner is compiling the request; a DAG is not expected until planning finishes.",
+            "reasons": [],
+        }
+    if not tg_ok and (
+        phase in {"spec", "prd_ready", "requirements", "requirements_ready"}
+        or (sprint_status == "drafting" and phase not in {"planning_complete", "graph_dispatch_active"})
+    ):
+        target_role = str(status.get("target_role") or status.get("handoff_to") or "planner").strip().lower()
+        role_label = "PM" if target_role in {"pm", "product_manager"} else "Planner"
+        return {
+            "is_stalled": False,
+            "state": f"awaiting_{target_role or 'planner'}",
+            "severity": "info",
+            "title": f"Waiting for {role_label}",
+            "detail": (
+                "The task graph is not expected yet. PM must finish the specification first."
+                if role_label == "PM"
+                else "The task graph is not expected until Planner finishes planning."
+            ),
             "reasons": [],
         }
     if not tg_ok:
@@ -3126,7 +3171,7 @@ def get_sprint(sid: str):
     if not status_ok:
         return jsonify({"ok": False, "error": f"sprint not found: {sid}"}), 404
 
-    tg, tg_ok = _read_json(SPRINTS_DIR / f"{sid}.task_graph.json")
+    tg, tg_ok = _load_task_graph(sid)
     if not tg_ok:
         degraded.append(f"task_graph:missing:{sid}")
         tg = {}

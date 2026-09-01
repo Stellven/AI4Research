@@ -68,6 +68,7 @@ from adapters.autosci_to_research_paper import convert as convert_research_paper
 from adapters.autosci_to_workflow_evolution import convert as convert_workflow_evolution
 from adapters.autosci_to_publication_bundle import convert as convert_publication_bundle
 from adapters.autosci_to_scientific_report import convert as convert_scientific_report
+from adapters.autosci_to_scientific_report_plan import convert as convert_scientific_report_plan
 from adapters.solar_envelope_to_autosci import load_envelope, normalize_envelope
 from runtime_env import load_local_provider_env
 from claim_scope import compare_claim_evidence_scope
@@ -303,51 +304,96 @@ def _method_steps(text: str) -> list[str]:
     return sentences[:5]
 
 
-def _paper_methods_raw(envelope: dict[str, Any]) -> dict[str, Any]:
-    paper = _read_sample_paper(envelope)
-    sections = [section for section in list(paper.get("sections") or []) if isinstance(section, dict)]
-    method_sections = [
-        section
-        for section in sections
-        if any(
-            keyword in str(section.get("title") or section.get("section_id") or "").lower()
-            for keyword in ("method", "approach", "workflow", "procedure")
+def _routed_research_papers(envelope: dict[str, Any]) -> tuple[list[dict[str, Any]], bool]:
+    """Load upstream ResearchPaper artifacts supplied by the Scheduler route."""
+
+    inputs = dict(envelope.get("inputs") or {})
+    routes = inputs.get("artifact_routes") if isinstance(inputs.get("artifact_routes"), dict) else {}
+    raw_routes: list[str] = []
+    for schema_ref, route in routes.items():
+        if "research_paper.v1" not in str(schema_ref):
+            continue
+        if isinstance(route, list):
+            raw_routes.extend(str(item) for item in route if str(item).strip())
+        elif str(route or "").strip():
+            raw_routes.append(str(route))
+
+    papers: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for raw_route in raw_routes:
+        route_path = _resolve_harness_path(raw_route)
+        candidates = (
+            sorted(route_path.glob("research_paper*.json"))
+            if route_path.is_dir()
+            else [route_path]
         )
-    ]
-    if not method_sections and sections:
-        method_sections = [sections[0]]
-    paper_id = str(paper.get("paper_id") or "paper-autosci-fixture")
+        for candidate in candidates:
+            try:
+                payload = json.loads(candidate.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            if not isinstance(payload, dict) or payload.get("schema") != "research_paper.v1":
+                continue
+            outputs = payload.get("outputs") if isinstance(payload.get("outputs"), dict) else {}
+            paper = outputs.get("paper") if isinstance(outputs.get("paper"), dict) else None
+            if not paper:
+                continue
+            paper_id = str(paper.get("paper_id") or candidate.resolve())
+            if paper_id in seen:
+                continue
+            seen.add(paper_id)
+            papers.append(dict(paper))
+    return papers, bool(raw_routes)
+
+
+def _paper_methods_raw(envelope: dict[str, Any]) -> dict[str, Any]:
+    routed_papers, routed = _routed_research_papers(envelope)
+    papers = routed_papers if routed else [_read_sample_paper(envelope)]
     methods: list[dict[str, Any]] = []
-    for section in method_sections[:2]:
-        text = str(section.get("text") or "")
-        anchor = str(section.get("source_anchor") or paper.get("source_ref") or paper_id)
-        title = str(section.get("title") or "Method")
-        summary = (_sentences(text) or ["No explicit method summary was found in the input paper."])[0]
-        methods.append({
-            "method_id": f"method-{len(methods) + 1:03d}",
-            "name": f"{title} protocol",
-            "summary": summary,
-            "procedure": _method_steps(text),
-            "source_papers": [paper_id],
-            "evidence_ids": [paper_id, anchor],
-            "source_anchor": anchor,
-        })
-    if not methods:
-        anchor = str(paper.get("source_ref") or paper_id)
-        methods.append({
-            "method_id": "method-001",
-            "name": "No explicit method found",
-            "summary": "The input paper did not contain a method section.",
-            "procedure": ["Mark method extraction as incomplete for this paper."],
-            "source_papers": [paper_id],
-            "evidence_ids": [paper_id, anchor],
-            "source_anchor": anchor,
-        })
+    for paper in papers:
+        sections = [section for section in list(paper.get("sections") or []) if isinstance(section, dict)]
+        method_sections = [
+            section
+            for section in sections
+            if any(
+                keyword in str(section.get("title") or section.get("section_id") or "").lower()
+                for keyword in ("method", "approach", "workflow", "procedure", "algorithm", "architecture", "training")
+            )
+        ]
+        if not method_sections and sections:
+            method_sections = [sections[0]]
+        paper_id = str(paper.get("paper_id") or "paper-unknown")
+        for section in method_sections[:2]:
+            text = str(section.get("text") or "")
+            anchor = str(section.get("source_anchor") or paper.get("source_ref") or paper_id)
+            title = str(section.get("title") or "Method")
+            summary = (_sentences(text) or ["No explicit method summary was found in the input paper."])[0]
+            methods.append({
+                "method_id": f"method-{len(methods) + 1:03d}",
+                "name": f"{title} protocol",
+                "summary": summary,
+                "procedure": _method_steps(text),
+                "source_papers": [paper_id],
+                "evidence_ids": [paper_id, anchor],
+                "source_anchor": anchor,
+            })
+        if not method_sections:
+            anchor = str(paper.get("source_ref") or paper_id)
+            methods.append({
+                "method_id": f"method-{len(methods) + 1:03d}",
+                "name": "No explicit method found",
+                "summary": "The input paper did not contain a method section.",
+                "procedure": ["Mark method extraction as incomplete for this paper."],
+                "source_papers": [paper_id],
+                "evidence_ids": [paper_id, anchor],
+                "source_anchor": anchor,
+            })
+    limitations = ["Method extraction is deterministic and section-based; it does not infer hidden procedure steps."]
+    if routed and not routed_papers:
+        limitations.append("The declared ResearchPaper artifact route contained no valid research_paper.v1 payloads; fixture fallback was refused.")
     return {
         "methods": methods,
-        "limitations": [
-            "Method extraction is deterministic and section-based; it does not infer hidden procedure steps.",
-        ],
+        "limitations": limitations,
     }
 
 
@@ -1403,6 +1449,26 @@ def _source_provider_runtime_description(native_skill: str, collection_mode: str
     return f"Completed provider-backed source evidence for AutoSci `{native_skill}` parity."
 
 
+def _resolve_root_tool(tool_name: str) -> tuple[Path | None, Path | None]:
+    """Resolve a helper without escaping an installed runtime."""
+
+    if Path(tool_name).name != tool_name:
+        return None, None
+    runtime_tool = (HARNESS_DIR / "tools" / tool_name).resolve()
+    if runtime_tool.is_file():
+        return runtime_tool, HARNESS_DIR
+    allow_parent_helpers = os.environ.get(
+        "SOLAR_ALLOW_PARENT_NATIVE_HELPERS", ""
+    ).strip().lower() in {"1", "true", "yes", "on"}
+    if not allow_parent_helpers:
+        return None, None
+    source_root = REPO_HARNESS_DIR.parent.resolve()
+    source_tool = source_root / "tools" / tool_name
+    if (source_root / ".git").is_dir() and source_tool.is_file():
+        return source_tool, source_root
+    return None, None
+
+
 def _run_root_tool_json(
     tool_name: str,
     args: list[str],
@@ -1413,31 +1479,40 @@ def _run_root_tool_json(
     timeout_default: int = 60,
 ) -> dict[str, Any]:
     _mkdir_path_long_path(output_dir)
-    command = [sys.executable, str(REPO_HARNESS_DIR.parent / "tools" / tool_name), *args]
+    tool_path, tool_cwd = _resolve_root_tool(tool_name)
+    command = [sys.executable, str(tool_path), *args] if tool_path is not None else []
     timeout = int(os.environ.get(timeout_env, str(timeout_default)))
     env = dict(os.environ)
     env["HARNESS_DIR"] = str(HARNESS_DIR)
     env["SOLAR_AUTOSCI_OUTPUT_HARNESS"] = str(HARNESS_DIR)
-    try:
-        proc = subprocess.run(
-            command,
-            cwd=REPO_HARNESS_DIR.parent,
-            env=env,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            check=False,
-            timeout=timeout,
-        )
-        returncode = proc.returncode
-        stdout = proc.stdout
-        stderr = proc.stderr
-    except (OSError, subprocess.TimeoutExpired) as exc:
+    if tool_path is None or tool_cwd is None:
         returncode = 1
         stdout = ""
-        stderr = str(exc)
+        stderr = (
+            f"Native helper {tool_name!r} is unavailable inside the selected runtime; "
+            "the provider-backed runtime path remains eligible."
+        )
+    else:
+        try:
+            proc = subprocess.run(
+                command,
+                cwd=tool_cwd,
+                env=env,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+                timeout=timeout,
+            )
+            returncode = proc.returncode
+            stdout = proc.stdout
+            stderr = proc.stderr
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            returncode = 1
+            stdout = ""
+            stderr = str(exc)
     stdout_path = _write_text_sidecar(output_dir / f"{artifact_prefix}_stdout.json", stdout)
     stderr_path = _write_text_sidecar(output_dir / f"{artifact_prefix}_stderr.txt", stderr)
     payload: dict[str, Any] = {}
@@ -1664,6 +1739,13 @@ def _discover_requested_coverage_audit(
     raw: dict[str, Any],
     candidates: list[dict[str, Any]],
 ) -> dict[str, Any]:
+    retrieval = (envelope.get("inputs") or {}).get("retrieval_contract")
+    if retrieval:
+        # The structured producer audit owns selection and coverage. Objective
+        # prose is not a second source of search semantics.
+        audit = raw.get("relevance_gate") or {}
+        return {"declared_scope": False, "coverage_ready": audit.get("status") == "passed",
+                "retrieval_contract_id": retrieval["contract_id"], "structured_audit": audit}
     scope = _discover_declared_scope(envelope, raw)
     topic_entries = []
     missing_topics: list[str] = []
@@ -1712,6 +1794,10 @@ def _discover_final_shortlist_boundary(
     ranking_audit = _discover_ranking_audit(candidates)
     coverage_audit = _discover_requested_coverage_audit(envelope, raw, candidates)
     blocking_reasons: list[str] = []
+    if (envelope.get("inputs") or {}).get("retrieval_contract"):
+        audit = raw.get("relevance_gate") or {}
+        if audit.get("status") != "passed":
+            blocking_reasons.extend(audit.get("blocking_reasons") or ["structured retrieval audit missing"])
     if not candidates:
         blocking_reasons.append("discovery shortlist is empty")
     if not provider_channels:
@@ -1768,6 +1854,8 @@ def _attach_discover_final_shortlist_boundary(
             *list(raw.get("limitations") or []),
             *list(final_boundary.get("limitations") or []),
         ]
+        if (envelope.get("inputs") or {}).get("retrieval_contract"):
+            raise ValueError("DISCOVERY_HANDOFF_REJECTED: " + "; ".join(final_boundary["blocking_reasons"]))
     return raw
 
 
@@ -7146,6 +7234,19 @@ def _production_discovery_artifacts(result: dict[str, Any], workspace_root: Path
 def _discover_native_local_pipeline(envelope: dict[str, Any], *, wiki_root: Path, allow_network_fetch: bool) -> dict[str, Any]:
     inputs = dict(envelope.get("inputs") or {})
     output_dir = _output_dir(envelope, "discover_literature")
+    if inputs.get("retrieval_contract"):
+        if not allow_network_fetch:
+            raise ValueError("Structured source discovery requires authorized network access")
+        retrieval = inputs["retrieval_contract"]
+        service_workspace = output_dir / "structured-discovery"
+        service = production_services_from_environment(workspace_root=service_workspace)["discover_sources"]
+        result = service(seed_snapshot={"seeds": []}, payload={"task_contract": {"retrieval_contract": retrieval}})
+        # Never truncate a shortlist after its required coverage was checked.
+        candidates = _production_discovery_candidates(result, limit=max(len(result.get("candidates", [])), retrieval["minimum_candidates"]))
+        return {"status": result["status"], "mode": "structured_retrieval", "query": retrieval["subject"],
+                "limit": service.limit, "candidates": candidates, "relevance_gate": result["relevance_gate"],
+                "artifacts": _production_discovery_artifacts(result, service_workspace),
+                "limitations": result.get("limitations", [])}
     mode, args = _discover_native_command(inputs, wiki_root, allow_network_fetch)
     checkpoint_path = output_dir / "discover_native_checkpoint.json"
     args.extend(["--output-checkpoint", str(checkpoint_path)])
@@ -7453,6 +7554,79 @@ def _action_daily_arxiv_prepare_finalize(envelope: dict[str, Any]) -> dict[str, 
     return evidence
 
 
+def _discovery_study_protocol(
+    inputs: dict[str, Any],
+    raw: dict[str, Any],
+    *,
+    query: str,
+    candidates: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Record the discovery policy actually used without inventing missing scope."""
+
+    retrieval = inputs.get("retrieval_contract")
+    if retrieval:
+        bounds = retrieval["time_range"]
+        resolved = bounds["start_year"] is not None and bounds["end_year"] is not None
+        return {"protocol_status": "resolved" if resolved else "partially_resolved",
+                "search_strategy": "Execute accepted queries: " + "; ".join(retrieval["search_queries"]),
+                "source_selection_criteria": [json.dumps(row, ensure_ascii=False) for row in retrieval["inclusion_criteria"]],
+                "inclusion_criteria": [json.dumps(row, ensure_ascii=False) for row in retrieval["inclusion_criteria"]],
+                "exclusion_criteria": [json.dumps(row, ensure_ascii=False) for row in retrieval["exclusion_criteria"]],
+                "time_range": {"status": "resolved" if resolved else "unresolved", "start": str(bounds["start_year"]) if bounds["start_year"] else None,
+                               "end": str(bounds["end_year"]) if bounds["end_year"] else None,
+                               "rationale": "Use only supplied bounds; unspecified dates remain unresolved."},
+                "unresolved_fields": [] if resolved else ["time_range"]}
+
+    source_channels = sorted({
+        str(channel).strip()
+        for candidate in candidates
+        if isinstance(candidate, dict)
+        for channel in candidate.get("source_channels") or []
+        if str(channel).strip()
+    })
+    year = raw.get("year") if raw.get("year") not in (None, "") else inputs.get("year")
+    time_range = {
+        "status": "resolved" if year not in (None, "") else "unresolved",
+        "start": str(year) if year not in (None, "") else None,
+        "end": str(year) if year not in (None, "") else None,
+        "rationale": (
+            f"Discovery was explicitly limited to publication year {year}."
+            if year not in (None, "")
+            else "No publication-date boundary was supplied; the report must disclose this limitation."
+        ),
+    }
+    unresolved_fields = [] if time_range["status"] == "resolved" else ["time_range"]
+    mode = str(raw.get("mode") or inputs.get("discover_mode") or "topic")
+    return {
+        "protocol_status": "resolved" if not unresolved_fields else "partially_resolved",
+        "search_strategy": (
+            f"Run bounded {mode} discovery for query {query or 'unresolved'}"
+            + (
+                f" across the returned source channels: {', '.join(source_channels)}."
+                if source_channels
+                else "; no provider source channel returned usable candidates."
+            )
+            + " Preserve provider ranking rationale and deduplication status for every candidate."
+        ),
+        "source_selection_criteria": [
+            "Candidate has a non-empty title and at least one declared source channel.",
+            "Candidate remains relevant to the submitted discovery query under the provider ranking.",
+            "Candidate retains ranking rationale and deduplication status for audit.",
+        ],
+        "time_range": time_range,
+        "inclusion_criteria": [
+            "Retain ranked, traceable candidates relevant to the submitted query.",
+            "Retain the source channel, ranking score, rationale, and deduplication state.",
+        ],
+        "exclusion_criteria": [
+            "Exclude records without a usable title.",
+            "Exclude explicitly negative or duplicate identifiers from the selected shortlist.",
+            "Leave candidates without fetchable source references visible as downstream ingestion limitations.",
+        ],
+        "unresolved_fields": unresolved_fields,
+    }
+
+
 def _action_discover_literature(envelope: dict[str, Any]) -> dict[str, Any]:
     inputs = dict(envelope.get("inputs") or {})
     wiki_root = _resolve_harness_path(str(inputs.get("wiki_root") or "artifacts/autosci/workspace/wiki"))
@@ -7502,6 +7676,16 @@ def _action_discover_literature(envelope: dict[str, Any]) -> dict[str, Any]:
             "artifacts": [contract_artifact, *runtime_artifacts],
             "limitations": limitations,
         }
+        raw["study_protocol"] = _discovery_study_protocol(
+            inputs,
+            raw,
+            query=query,
+            candidates=candidates,
+        )
+        raw["limitations"].extend(
+            f"Study protocol field remains unresolved: {field}."
+            for field in raw["study_protocol"]["unresolved_fields"]
+        )
         raw = _attach_discover_final_shortlist_boundary(
             envelope,
             raw,
@@ -7579,6 +7763,16 @@ def _action_discover_literature(envelope: dict[str, Any]) -> dict[str, Any]:
         [],
         raw.get("candidates") if isinstance(raw.get("candidates"), list) else [],
         action="discover_literature",
+    )
+    raw["study_protocol"] = _discovery_study_protocol(
+        inputs,
+        raw,
+        query=str(raw.get("query") or inputs.get("query") or inputs.get("topic") or "unresolved"),
+        candidates=raw.get("candidates") if isinstance(raw.get("candidates"), list) else [],
+    )
+    raw.setdefault("limitations", []).extend(
+        f"Study protocol field remains unresolved: {field}."
+        for field in raw["study_protocol"]["unresolved_fields"]
     )
     raw = _attach_discover_final_shortlist_boundary(
         envelope,
@@ -8453,7 +8647,13 @@ def _novelty_final_acceptance_boundary(evaluation: dict[str, Any]) -> dict[str, 
     review_status = _review_llm_status(evaluation)
     score = _novelty_score_from_evaluation(evaluation)
     external = evaluation.get("external_novelty") if isinstance(evaluation.get("external_novelty"), dict) else {}
-    external_source_count = int(evaluation.get("external_source_count") or external.get("source_count") or 0)
+    raw_external_source_count = (
+        evaluation.get("external_source_count") or external.get("source_count") or 0
+    )
+    try:
+        external_source_count = int(raw_external_source_count)
+    except (TypeError, ValueError):
+        external_source_count = 0
     provenance = external.get("provenance") if isinstance(external.get("provenance"), dict) else {}
     completed_provider_count = int(provenance.get("completed_provider_count") or 0)
     blocking_reasons: list[str] = []
@@ -12466,6 +12666,33 @@ def _phase14_source_payloads(envelope: dict[str, Any]) -> list[dict[str, Any]]:
     payloads: list[dict[str, Any]] = []
     for key in PHASE14_SOURCE_INPUT_KEYS:
         payloads.extend(_load_optional_evidence_many(inputs.get(key)))
+    routes = inputs.get("artifact_routes") if isinstance(inputs.get("artifact_routes"), dict) else {}
+    seen_paths: set[str] = set()
+    for raw_route in routes.values():
+        route_values = raw_route if isinstance(raw_route, list) else [raw_route]
+        for value in route_values:
+            if not str(value or "").strip():
+                continue
+            route_path = _resolve_harness_path(str(value))
+            if route_path.is_dir():
+                candidates = sorted(route_path.glob("*.evidence.json"))
+                if not candidates:
+                    candidates = sorted(path for path in route_path.glob("*.json") if path.name != "result.json")
+            else:
+                candidates = [route_path]
+            for candidate in candidates:
+                key = str(candidate.resolve())
+                if key in seen_paths:
+                    continue
+                seen_paths.add(key)
+                try:
+                    payload = json.loads(candidate.read_text(encoding="utf-8"))
+                except (OSError, ValueError):
+                    continue
+                if isinstance(payload, dict) and isinstance(payload.get("evidence"), dict):
+                    payload = payload["evidence"]
+                if isinstance(payload, dict) and str(payload.get("schema") or "").endswith(".v1"):
+                    payloads.append(payload)
     return payloads
 
 
@@ -12498,6 +12725,11 @@ def _phase14_payload_evidence_ids(payload: dict[str, Any]) -> list[str]:
             if claim.get("claim_id"):
                 ids.append(str(claim["claim_id"]))
             ids.extend(str(item) for item in claim.get("evidence_ids") or [] if str(item).strip())
+    for method in outputs.get("methods") or []:
+        if isinstance(method, dict):
+            if method.get("method_id"):
+                ids.append(str(method["method_id"]))
+            ids.extend(str(item) for item in method.get("evidence_ids") or [] if str(item).strip())
     for mapping in outputs.get("mappings") or []:
         if isinstance(mapping, dict):
             if mapping.get("mapping_id"):
@@ -12513,6 +12745,13 @@ def _phase14_payload_evidence_ids(payload: dict[str, Any]) -> list[str]:
         if report.get("report_id"):
             ids.append(str(report["report_id"]))
         ids.extend(str(item) for item in report.get("evidence_ids") or [] if str(item).strip())
+    report_plan = outputs.get("report_plan")
+    if isinstance(report_plan, dict):
+        if report_plan.get("report_id"):
+            ids.append(str(report_plan["report_id"]))
+        ids.extend(str(item) for item in report_plan.get("supported_claim_ids") or [] if str(item).strip())
+        ids.extend(str(item) for item in report_plan.get("excluded_claim_ids") or [] if str(item).strip())
+        ids.extend(str(item) for item in report_plan.get("evidence_ids") or [] if str(item).strip())
     for item in outputs.get("evaluations") or []:
         if isinstance(item, dict):
             if item.get("idea_id"):
@@ -12529,6 +12768,280 @@ def _phase14_verdicts(payloads: list[dict[str, Any]]) -> list[dict[str, Any]]:
             if isinstance(verdict, dict):
                 verdicts.append(verdict)
     return verdicts
+
+
+def _phase14_methods(payloads: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    methods: list[dict[str, Any]] = []
+    for payload in payloads:
+        outputs = payload.get("outputs") if isinstance(payload.get("outputs"), dict) else {}
+        methods.extend(item for item in outputs.get("methods") or [] if isinstance(item, dict))
+    return methods
+
+
+def _phase14_study_protocol(
+    payloads: list[dict[str, Any]],
+) -> tuple[dict[str, Any], list[str], list[str]]:
+    """Load the first structured discovery protocol routed through Evidence ABI."""
+
+    for payload in payloads:
+        outputs = payload.get("outputs") if isinstance(payload.get("outputs"), dict) else {}
+        report = outputs.get("report") if isinstance(outputs.get("report"), dict) else {}
+        report_plan = outputs.get("report_plan") if isinstance(outputs.get("report_plan"), dict) else {}
+        protocol = outputs.get("study_protocol")
+        if not isinstance(protocol, dict):
+            protocol = report.get("study_protocol")
+        if not isinstance(protocol, dict):
+            protocol = report_plan.get("study_protocol")
+        if not isinstance(protocol, dict):
+            continue
+        evidence_ids = _phase14_payload_evidence_ids(payload)
+        if not evidence_ids:
+            evidence_ids = ["unresolved:study-protocol"]
+        unresolved = [
+            str(item).strip()
+            for item in protocol.get("unresolved_fields") or []
+            if str(item).strip()
+        ]
+        return (
+            dict(protocol),
+            _unique_strings(evidence_ids),
+            [f"Study protocol field remains unresolved: {field}." for field in unresolved],
+        )
+    fallback = {
+        "protocol_status": "unresolved",
+        "search_strategy": "Unresolved: no routed literature-discovery study protocol was available.",
+        "source_selection_criteria": [],
+        "time_range": {
+            "status": "unresolved",
+            "start": None,
+            "end": None,
+            "rationale": "No routed literature-discovery study protocol was available.",
+        },
+        "inclusion_criteria": [],
+        "exclusion_criteria": [],
+        "unresolved_fields": [
+            "search_strategy",
+            "source_selection_criteria",
+            "time_range",
+            "inclusion_criteria",
+            "exclusion_criteria",
+        ],
+    }
+    return (
+        fallback,
+        ["unresolved:study-protocol"],
+        ["No routed literature-discovery study protocol was available; protocol fields remain unresolved."],
+    )
+
+
+def _native_study_protocol_body(protocol: dict[str, Any]) -> str:
+    time_range = protocol.get("time_range") if isinstance(protocol.get("time_range"), dict) else {}
+    start = time_range.get("start") or "unresolved"
+    end = time_range.get("end") or "unresolved"
+    status = time_range.get("status") or "unresolved"
+
+    def _items(key: str) -> str:
+        values = [str(item).strip() for item in protocol.get(key) or [] if str(item).strip()]
+        return "; ".join(values) if values else "unresolved"
+
+    unresolved = [
+        str(item).strip()
+        for item in protocol.get("unresolved_fields") or []
+        if str(item).strip()
+    ]
+    return "\n".join([
+        f"Search strategy: {protocol.get('search_strategy') or 'unresolved'}",
+        f"Source-selection criteria: {_items('source_selection_criteria')}",
+        f"Time range: {start} to {end} ({status}). {time_range.get('rationale') or ''}".strip(),
+        f"Inclusion criteria: {_items('inclusion_criteria')}",
+        f"Exclusion criteria: {_items('exclusion_criteria')}",
+        f"Unresolved protocol fields: {', '.join(unresolved) if unresolved else 'none'}",
+    ])
+
+
+def _report_title_from_request(envelope: dict[str, Any], fallback: str) -> str:
+    inputs = dict(envelope.get("inputs") or {})
+    explicit = inputs.get("report_title") or inputs.get("title")
+    if explicit:
+        return str(explicit)
+    request = str(inputs.get("request") or envelope.get("objective") or "").strip()
+    for pattern in (
+        r"(?:report\s+(?:named|titled)(?:\s+for\s+the\s+project)?(?:\s+or\s+(?:organized|presented)\s+as)?|project\s+name\s*:?)\s*[\u201c\u201d\"']([^\u201c\u201d\"']+)[\u201c\u201d\"']",
+        r"\breport\s*[\u201c\u201d\"']([^\u201c\u201d\"']+)[\u201c\u201d\"']",
+    ):
+        match = re.search(pattern, request, flags=re.IGNORECASE)
+        if match and match.group(1).strip():
+            candidate = match.group(1).strip()
+            # In prose, American-style punctuation is commonly placed inside
+            # the closing quote even when it is not part of the supplied title.
+            return candidate[:-1].rstrip() if candidate.endswith(".") else candidate
+    for pattern in (
+        r"(?:report\s+named|report\s+titled|project\s+name\s*:?)\s*([^.;\n]{4,160})",
+    ):
+        match = re.search(pattern, request, flags=re.IGNORECASE)
+        if not match or not match.group(1).strip():
+            continue
+        candidate = match.group(1).strip()
+        if re.search(r"[\u201c\u201d\"]", candidate) or re.match(r"^(?:or|and)\b", candidate, flags=re.IGNORECASE):
+            continue
+        return candidate
+    contextual = inputs.get("topic") or inputs.get("target")
+    if contextual:
+        return str(contextual).strip()
+    return fallback
+
+
+def _phase14_evidence_report_raw(
+    envelope: dict[str, Any],
+    payloads: list[dict[str, Any]],
+    *,
+    paths: dict[str, Path],
+    compile_handoff: dict[str, Any],
+    compile_artifacts: list[dict[str, Any]],
+    compile_limitations: list[str],
+) -> dict[str, Any]:
+    inputs = dict(envelope.get("inputs") or {})
+    title = _report_title_from_request(envelope, "Scientific Evidence Landscape Report")
+    report_id = str(inputs.get("report_id") or f"report-{_slug(title)}")
+    study_protocol, protocol_evidence_ids, protocol_limitations = _phase14_study_protocol(payloads)
+    evidence_ids = _unique_strings([
+        *[str(item) for payload in payloads for item in _phase14_payload_evidence_ids(payload)],
+        *[str(item) for item in compile_handoff.get("evidence_ids", [])],
+        *protocol_evidence_ids,
+    ])
+    verdicts = _phase14_verdicts(payloads)
+    methods = _phase14_methods(payloads)
+    supported = [item for item in verdicts if str(item.get("verdict") or "").lower() in {"supported", "pass", "verified"}]
+    unresolved = [item for item in verdicts if item not in supported]
+    method_lines = []
+    for method in methods[:24]:
+        method_id = str(method.get("method_id") or "method-unidentified")
+        name = str(method.get("name") or "Unnamed method")
+        procedure = [str(item) for item in method.get("procedure") or [] if str(item).strip()]
+        source_ids = _unique_strings([
+            *[str(item) for item in method.get("source_papers") or []],
+            *[str(item) for item in method.get("evidence_ids") or []],
+            str(method.get("source_anchor") or ""),
+        ])
+        summary = procedure[0] if procedure else "No explicit procedure summary was present."
+        method_lines.append(f"- **{method_id} — {name}:** {summary} Sources: {', '.join(source_ids) or 'unresolved'}.")
+    verdict_lines = []
+    for verdict in verdicts[:30]:
+        claim_id = str(verdict.get("claim_id") or "claim-unidentified")
+        claim_text = str(verdict.get("claim_text") or verdict.get("text") or "Claim text unavailable.")
+        label = str(verdict.get("verdict") or verdict.get("support_classification") or "inconclusive")
+        confidence = verdict.get("confidence")
+        basis = str(verdict.get("basis") or "No verifier basis was recorded.")
+        refs = _unique_strings([str(item) for item in verdict.get("evidence_ids") or []])
+        confidence_text = f", confidence {confidence}" if confidence is not None else ""
+        verdict_lines.append(
+            f"- **{claim_id} — {label}{confidence_text}:** {claim_text} Basis: {basis} Evidence: {', '.join(refs) or 'unresolved'}."
+        )
+    route_schemas = list((inputs.get("artifact_routes") or {}).keys()) if isinstance(inputs.get("artifact_routes"), dict) else []
+    payload_schemas = _unique_strings([str(payload.get("schema") or "") for payload in payloads])
+    request = str(inputs.get("request") or envelope.get("objective") or "").strip()
+    sections = [
+        {
+            "section_id": "executive-summary",
+            "title": "Executive Summary",
+            "evidence_ids": evidence_ids,
+            "body": (
+                f"This evidence-linked landscape addresses: {request or title}. "
+                f"The routed corpus yielded {len(methods)} method records and {len(verdicts)} explicit claim verdicts. "
+                f"{len(supported)} claims are supported by the supplied verifier record; {len(unresolved)} remain insufficient, inconclusive, or otherwise unresolved."
+            ),
+        },
+        {
+            "section_id": "scope-and-method",
+            "title": "Study Scope and Method",
+            "evidence_ids": evidence_ids,
+            "body": (
+                "The report synthesizes only the frozen Scheduler artifact routes. "
+                f"Consumed contracts: {', '.join(route_schemas) or 'none declared'}. "
+                f"Observed Evidence ABI payloads: {', '.join(payload_schemas) or 'none'}. "
+                "Search-period, inclusion-criteria, and comparison-framework details not present in those artifacts remain explicitly unresolved."
+            ),
+        },
+        {
+            "section_id": "study-protocol",
+            "title": "Study Protocol",
+            "evidence_ids": protocol_evidence_ids,
+            "body": _native_study_protocol_body(study_protocol),
+        },
+        {
+            "section_id": "technical-method-landscape",
+            "title": "Technical Method Landscape",
+            "evidence_ids": _unique_strings([str(item) for method in methods for item in [method.get("method_id"), *(method.get("evidence_ids") or [])]]),
+            "body": "\n".join(method_lines) if method_lines else "No valid routed method records were available.",
+            "figures": [{
+                "figure_id": "fig.optional-poster",
+                "title": "Optional poster artifact",
+                "artifact_path": _rel(paths["poster_html"]),
+                "evidence_ids": evidence_ids,
+            }],
+        },
+        {
+            "section_id": "claim-assessment",
+            "title": "Claim Assessment: Tested, Supported, and Unresolved",
+            "evidence_ids": _unique_strings([str(item) for verdict in verdicts for item in [verdict.get("claim_id"), *(verdict.get("evidence_ids") or [])]]),
+            "body": "\n".join(verdict_lines) if verdict_lines else "No valid routed claim-verdict records were available.",
+        },
+        {
+            "section_id": "auditable-evidence-chain",
+            "title": "Auditable Evidence Chain",
+            "evidence_ids": evidence_ids,
+            "body": (
+                "Every method and claim entry retains its upstream Evidence ABI identifier and source anchor. "
+                "The report evidence index and publication bundle preserve these identifiers for extension. "
+                "The chain is: frozen Scheduler route -> schema-validated evidence payload -> method/claim record -> report section evidence ids."
+            ),
+            "tables": [{
+                "table_id": "table.evidence-map",
+                "title": "Evidence ids",
+                "artifact_path": _rel(paths["evidence_index"]),
+                "evidence_ids": evidence_ids,
+            }],
+        },
+        {
+            "section_id": "limitations",
+            "title": "Limitations",
+            "evidence_ids": evidence_ids,
+            "body": (
+                "Rapid mode bypasses semantic evaluator calls but not schema, hash, artifact, or proof gates. "
+                "This run did not execute new benchmarks, so empirical comparisons absent from routed evidence are not claimed. "
+                "Any missing category mapping, quantitative normalization, or independent replication remains future work."
+            ),
+        },
+    ]
+    limitations = _unique_strings([
+        "The report is bounded to routed local evidence and does not substitute for external peer review.",
+        "No new benchmark was executed during report drafting.",
+        *[str(item) for payload in payloads for item in payload.get("limitations") or []],
+        *protocol_limitations,
+        *compile_limitations,
+    ])
+    return {
+        "report_id": report_id,
+        "title": title,
+        "sections": sections,
+        "evidence_ids": evidence_ids,
+        "study_protocol": study_protocol,
+        "unsupported_claims": _unique_strings([str(item.get("claim_id") or "") for item in unresolved]),
+        "figures": sections[3]["figures"],
+        "tables": sections[5]["tables"],
+        "publication_bundle_path": _rel(paths["publication_bundle"]),
+        "compile_handoff": compile_handoff,
+        "artifacts": [
+            _artifact("report_plan_json", paths["report_plan"]),
+            _artifact("markdown_report", paths["report_md"]),
+            _artifact("report_evidence_index_json", paths["evidence_index"]),
+            _artifact("optional_poster_html", paths["poster_html"]),
+            _artifact("optional_rebuttal_markdown", paths["rebuttal_md"]),
+            *compile_artifacts,
+        ],
+        "status": "completed" if evidence_ids else "inconclusive",
+        "limitations": limitations,
+    }
 
 
 def _compile_pdf_paths_from_contract(contract: dict[str, Any]) -> list[Path]:
@@ -12931,6 +13444,15 @@ def _phase14_report_raw(envelope: dict[str, Any]) -> dict[str, Any]:
     paths = _phase14_report_paths(envelope)
     payloads = _phase14_source_payloads(envelope)
     compile_handoff, compile_artifacts, compile_limitations = _phase14_compile_handoff(envelope)
+    if payloads:
+        return _phase14_evidence_report_raw(
+            envelope,
+            payloads,
+            paths=paths,
+            compile_handoff=compile_handoff,
+            compile_artifacts=compile_artifacts,
+            compile_limitations=compile_limitations,
+        )
     evidence_ids = _unique_strings([
         *[str(item) for payload in payloads for item in _phase14_payload_evidence_ids(payload)],
         *[str(item) for item in compile_handoff.get("evidence_ids", [])],
@@ -14586,14 +15108,7 @@ def _action_write_report(envelope: dict[str, Any]) -> dict[str, Any]:
 
 
 def _native_publication_title(envelope: dict[str, Any], fallback: str) -> str:
-    inputs = dict(envelope.get("inputs") or {})
-    return str(
-        inputs.get("report_title")
-        or inputs.get("title")
-        or inputs.get("topic")
-        or inputs.get("target")
-        or fallback
-    )
+    return _report_title_from_request(envelope, fallback)
 
 
 def _native_publication_target(envelope: dict[str, Any]) -> str:
@@ -15342,6 +15857,9 @@ def _action_plan_report(envelope: dict[str, Any]) -> dict[str, Any]:
     title = _native_publication_title(envelope, "AutoSci Paper Plan")
     target = _native_publication_target(envelope)
     evidence_ids = _native_publication_evidence_ids(envelope, "paper-plan:request")
+    source_payloads = _phase14_source_payloads(envelope)
+    study_protocol, protocol_evidence_ids, protocol_limitations = _phase14_study_protocol(source_payloads)
+    evidence_ids = _unique_strings([*evidence_ids, *protocol_evidence_ids])
     has_source_evidence = _native_publication_has_source_evidence(envelope)
     citation_map = _native_publication_citation_map(envelope)
     has_citations = bool(citation_map.get("citations"))
@@ -15382,6 +15900,7 @@ def _action_plan_report(envelope: dict[str, Any]) -> dict[str, Any]:
         evidence_ids = _unique_strings([*evidence_ids, *[str(item) for item in compile_handoff.get("evidence_ids") or []]])
     limitations = [
         "Paper plan is generated from local Solar evidence, request metadata, and supplied source/review evidence.",
+        *protocol_limitations,
     ]
     if not has_source_evidence:
         limitations.append("No source evidence was supplied; plan remains a scaffold until linked evidence is provided.")
@@ -15404,6 +15923,12 @@ def _action_plan_report(envelope: dict[str, Any]) -> dict[str, Any]:
             "title": "Outline Plan",
             "evidence_ids": evidence_ids,
             "body": f"Plan a paper around target `{target}` with title `{title}`.",
+        },
+        {
+            "section_id": "study-protocol",
+            "title": "Study Protocol",
+            "evidence_ids": protocol_evidence_ids,
+            "body": _native_study_protocol_body(study_protocol),
         },
         {
             "section_id": "idea-evidence-map",
@@ -15478,6 +16003,7 @@ def _action_plan_report(envelope: dict[str, Any]) -> dict[str, Any]:
         "title": title,
         "target": target,
         "evidence_ids": evidence_ids,
+        "study_protocol": study_protocol,
         "sections": [
             {
                 "section_id": section["section_id"],
@@ -15539,13 +16065,28 @@ def _action_plan_report(envelope: dict[str, Any]) -> dict[str, Any]:
         artifacts.append(review_runtime_proof_artifact)
     if source_runtime_proof_artifact is not None:
         artifacts.append(source_runtime_proof_artifact)
-    return convert_scientific_report({
+    verdicts = _phase14_verdicts(source_payloads)
+    reportable_claim_ids = _unique_strings([
+        str(item.get("claim_id") or "")
+        for item in verdicts
+        if str(item.get("claim_id") or "").strip()
+        and any(str(evidence_id).strip() for evidence_id in item.get("evidence_ids") or [])
+    ])
+    excluded_claim_ids = _unique_strings([
+        str(item.get("claim_id") or "")
+        for item in verdicts
+        if str(item.get("claim_id") or "").strip()
+        and str(item.get("claim_id")) not in reportable_claim_ids
+    ])
+    return convert_scientific_report_plan({
         "report_id": f"paper-plan-{_slug(title)}",
         "title": title,
+        "audience": str(inputs.get("audience") or "researcher"),
         "sections": sections,
+        "supported_claim_ids": reportable_claim_ids,
+        "excluded_claim_ids": excluded_claim_ids,
         "evidence_ids": evidence_ids,
-        "unsupported_claims": [],
-        "compile_handoff": compile_handoff,
+        "study_protocol": study_protocol,
         "status": "completed" if final_acceptance_boundary.get("final_plan_accepted") else "inconclusive",
         "artifacts": artifacts,
         "limitations": limitations,

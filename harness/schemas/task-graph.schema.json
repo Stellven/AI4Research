@@ -12,7 +12,7 @@
     },
     "dag_variant": {
       "type": "string",
-      "enum": ["short", "standard", "parallel_spec", "research"]
+      "enum": ["short", "standard", "parallel_spec", "research", "elastic_generated", "elastic_generated_composed"]
     },
     "research_mode": {
       "type": "boolean"

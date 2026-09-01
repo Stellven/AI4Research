@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from research.evidence.review_proof import bind_reviewer_execution, normalize_review_proof
+from structured_output import project_schema
 
 
 def _read_text(path: Path, *, limit: int = 40000) -> str:
@@ -428,7 +429,7 @@ def _review_llm_response_format() -> dict[str, Any]:
             "name": "artifact_review",
             "description": "A source-grounded AutoSci artifact review with a stable acceptance envelope.",
             "strict": True,
-            "schema": _review_llm_response_json_schema(),
+            "schema": project_schema(_review_llm_response_json_schema(), "openai"),
         },
     }
 

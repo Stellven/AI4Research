@@ -425,6 +425,51 @@ def test_phase10_claims_and_methods_use_input_paper_anchors(tmp_path: Path) -> N
     assert methods["outputs"]["methods"][0]["source_anchor"] == "skillgen_sample_paper.md#method"
 
 
+def test_phase10_methods_consume_scheduler_routed_research_papers(tmp_path: Path) -> None:
+    route = tmp_path / "upstream-papers"
+    route.mkdir()
+    for index, paper_id in enumerate(("paper-kivi", "paper-h2o"), start=1):
+        (route / f"research_paper.{index:03d}.v1.json").write_text(
+            json.dumps({
+                "schema": "research_paper.v1",
+                "outputs": {"paper": {
+                    "paper_id": paper_id,
+                    "title": f"Real routed paper {index}",
+                    "source_ref": f"real-{index}.tex",
+                    "sections": [{
+                        "section_id": "method",
+                        "title": "Method",
+                        "text": f"The {paper_id} procedure quantizes cached keys and measures accuracy.",
+                        "source_anchor": f"real-{index}.tex#method",
+                    }],
+                }},
+            }),
+            encoding="utf-8",
+        )
+    envelope = tmp_path / "routed-methods.json"
+    envelope.write_text(
+        json.dumps({
+            "task_id": "routed-methods",
+            "sprint_id": "phase10-test",
+            "node_id": "node-extract-methods",
+            "mode": "solar_native",
+            "output_dir": "artifacts/scientific/routed",
+            "inputs": {"artifact_routes": {"schema:schemas/evidence/research_paper.v1.schema.json": str(route)}},
+            "outputs": {"evidence_payload_path": "artifacts/scientific/routed/research_method.json"},
+        }),
+        encoding="utf-8",
+    )
+
+    proc = run_bridge(["run", "--action", "extract_methods", "--envelope", str(envelope)], tmp_path)
+    assert proc.returncode == 0, proc.stderr
+    out = json.loads(proc.stdout)
+    payload = json.loads((tmp_path / out["evidence_path"]).read_text(encoding="utf-8"))
+    methods = payload["outputs"]["methods"]
+    assert {paper for method in methods for paper in method["source_papers"]} == {"paper-kivi", "paper-h2o"}
+    assert "paper-autosci-fixture" not in json.dumps(payload)
+    assert all(method["source_anchor"].startswith("real-") for method in methods)
+
+
 def test_phase10_code_mapping_marks_missing_repo_unknown(tmp_path: Path) -> None:
     envelope = tmp_path / "missing-repo-envelope.json"
     envelope.write_text(
@@ -706,6 +751,110 @@ def test_phase14_write_report_outputs_report_and_publication_bundle(tmp_path: Pa
         "artifacts/scientific/smoke/optional_rebuttal.md",
     ]:
         assert (tmp_path / rel_path).exists()
+
+
+def test_phase14_report_actions_consume_scheduler_artifact_routes_without_fixture_fallback(tmp_path: Path) -> None:
+    upstream = tmp_path / "upstream"
+    method_route = upstream / "methods"
+    plan_route = upstream / "plan"
+    method_route.mkdir(parents=True)
+    plan_route.mkdir(parents=True)
+    verdict_route = upstream / "claim_verdict.v1.json"
+    verdict_route.write_text(
+        json.dumps({
+            "schema": "claim_verdict.v1",
+            "task_id": "verify-real-kv",
+            "outputs": {"verdicts": [{
+                "claim_id": "claim-real-kv",
+                "claim_text": "Selective retention can reduce KV-cache memory under the evaluated setup.",
+                "verdict": "insufficient",
+                "confidence": 0.4,
+                "basis": "The routed paper anchor does not establish every comparison condition.",
+                "evidence_ids": ["paper-real-kv#results"],
+            }]},
+            "limitations": ["Independent benchmark replication was not routed."],
+        }),
+        encoding="utf-8",
+    )
+    (method_route / "extract_methods.evidence.json").write_text(
+        json.dumps({
+            "schema": "research_method.v1",
+            "task_id": "methods-real-kv",
+            "outputs": {"methods": [{
+                "method_id": "method-real-quantization",
+                "name": "Routed KV quantization",
+                "procedure": ["Quantize cached keys and values, then measure accuracy and memory."],
+                "source_papers": ["paper-real-kv"],
+                "source_anchor": "paper-real-kv#method",
+                "evidence_ids": ["paper-real-kv", "paper-real-kv#method"],
+            }]},
+            "limitations": [],
+        }),
+        encoding="utf-8",
+    )
+    (plan_route / "plan_report.evidence.json").write_text(
+        json.dumps({
+            "schema": "scientific_report_plan.v1",
+            "task_id": "plan-real-kv",
+            "outputs": {"report_plan": {
+                "report_id": "plan-real-kv",
+                "title": "Routed plan",
+                "audience": "researcher",
+                "evidence_ids": ["method-real-quantization", "claim-real-kv"],
+                "supported_claim_ids": ["claim-real-kv"],
+                "excluded_claim_ids": [],
+                "sections": [],
+            }},
+            "limitations": [],
+        }),
+        encoding="utf-8",
+    )
+    routes = {
+        "schema:schemas/evidence/scientific_report_plan.v1.schema.json": str(plan_route),
+        "schema:schemas/evidence/claim_verdict.v1.schema.json": str(verdict_route),
+        "schema:schemas/evidence/research_method.v1.schema.json": str(method_route),
+    }
+    request = (
+        "Produce a comprehensive technical landscape report titled or organized as "
+        "\u201cKV Cache Routed Evidence Landscape.\u201d Treat it as an auditable research workflow."
+    )
+    for action in ("plan_report", "write_report"):
+        envelope = tmp_path / f"{action}.json"
+        envelope.write_text(
+            json.dumps({
+                "task_id": f"{action}-routed",
+                "sprint_id": "phase14-routed",
+                "node_id": f"node-{action}",
+                "mode": "solar_native",
+                "output_dir": f"artifacts/scientific/{action}",
+                "inputs": {
+                    "request": request,
+                    "target": "for the project \u201cKV Cache Routed Evidence Landscape\u201d",
+                    "artifact_routes": routes,
+                },
+                "outputs": {"evidence_payload_path": f"artifacts/scientific/{action}/{action}.evidence.json"},
+            }),
+            encoding="utf-8",
+        )
+        proc = run_bridge(["run", "--action", action, "--envelope", str(envelope)], tmp_path)
+        assert proc.returncode == 0, proc.stderr
+        result = json.loads(proc.stdout)
+        evidence = json.loads((tmp_path / result["evidence_path"]).read_text(encoding="utf-8"))
+        if action == "plan_report":
+            assert evidence["schema"] == "scientific_report_plan.v1"
+            report = evidence["outputs"]["report_plan"]
+        else:
+            assert evidence["schema"] == "scientific_report.v1"
+            report = evidence["outputs"]["report"]
+        assert report["title"] == "KV Cache Routed Evidence Landscape"
+        assert "method-real-quantization" in report["evidence_ids"]
+        assert "claim-real-kv" in report["evidence_ids"]
+        assert "fixture" not in json.dumps(evidence).lower()
+
+    report_md = (tmp_path / "artifacts/scientific/write_report/report.md").read_text(encoding="utf-8")
+    assert "Routed KV quantization" in report_md
+    assert "Selective retention can reduce KV-cache memory" in report_md
+    assert "paper-real-kv#method" in report_md
 
 
 def test_phase16_evolve_workflow_outputs_reviewable_proposal(tmp_path: Path) -> None:

@@ -1102,6 +1102,7 @@ EVALUATOR_VERIFICATION_TASK_TYPES = {
 PM_CLOSEOUT_KINDS = {
     "elastic_planner",
     "planner",
+    "task_graph_compiler",
     "builder",
     "evaluator",
     "graph_node_execution",
@@ -2375,6 +2376,11 @@ def _pm_expected_artifacts(record: dict[str, Any]) -> list[Path]:
         ]
     elif kind == "planner":
         canonical = [
+            SPRINTS_DIR / f"{sprint_id}.planner-requirements.md",
+            SPRINTS_DIR / f"{sprint_id}.planner-handoff.md",
+        ]
+    elif kind == "task_graph_compiler":
+        canonical = [
             SPRINTS_DIR / f"{sprint_id}.design.md",
             SPRINTS_DIR / f"{sprint_id}.plan.md",
             SPRINTS_DIR / f"{sprint_id}.task_graph.json",
@@ -2603,6 +2609,7 @@ def ensure_compiled_sprint_status(
         # Runtime-owned birth provenance: a planner may replace the graph,
         # but it cannot thereby turn a governed intake into legacy work.
         status["plan_compile_required"] = True
+        status["planner_role_boundary_version"] = 2
     else:
         status.pop("plan_compile_required", None)
         status.pop("planner_dispatch_claim", None)
@@ -2642,29 +2649,16 @@ def _planner_objective_for_compiled_sprint(sprint_id: str) -> str:
         - {base}.product-brief.md
         - {base}.prd.md
         - {base}.contract.md
-        - {base}.task_graph.json
         - {base}.requirement_ir.json
         - {base}.handoff.md
 
         你的任务：
-        1. 基于 compiled requirement package 产出 design.md 和 plan.md。
-        2. 如有必要，细化或修正 task_graph.json，但不得绕过 compiled contracts。
-        3. 不要直接跳 Builder；保持 PM -> Planner -> task_graph -> Builder 主链。
-        4. 如果 compiled package 缺失关键字段，先写明 blocker 和修正建议。
+        1. 整理需求、验收条件、约束、非目标和 blocker，写入 {base}.planner-requirements.md。
+        2. 写入 {base}.planner-handoff.md，供后续独立 Graph Compiler 使用。
+        3. 不得创建或修改 task_graph、design、plan、HTML；不得执行研究或评估。
+        4. 不要修改 lifecycle status，也不要直接派发 Builder/Evaluator。
         """
     ).strip()
-    # P5 G2: teach the planner the compile rules it will be checked against
-    # (env-gated inside the helper; "" when SOLAR_PLAN_VALIDATOR is off, so
-    # legacy prompts stay byte-identical). Prompt enrichment must never break
-    # dispatch — enforcement lives at the compile/dispatch seams.
-    try:
-        import plan_validator  # type: ignore
-
-        policy_block = plan_validator.planner_compile_policy_block(SPRINTS_DIR, sprint_id)
-    except Exception:
-        policy_block = ""
-    if policy_block:
-        objective = f"{objective}\n\n{policy_block}"
     return objective
 
 
@@ -2828,23 +2822,26 @@ def cmd_compile_request(args: argparse.Namespace) -> int:
 # ── 核心 submit 逻辑 ──────────────────────────────────────────────────────────
 
 def _with_planner_compile_policy(objective: str, sprint_id: str) -> str:
-    """P5 G2b: the submit choke point every role-pool planner dispatch flows
-    through. The G2b battery proved objective-builder-level injection misses
-    live paths (the autopilot role-handoff objective reached the planner with
-    no policy block); enriching HERE covers every caller. Env-gated inside
-    the helper ("" when SOLAR_PLAN_VALIDATOR is off); idempotent so an
-    already-enriched objective (intent_consumer) is not double-appended."""
-    if "## Plan compile policy" in objective:
-        return objective
-    try:
-        import plan_validator  # type: ignore
+    """Enforce the Planner role boundary at the shared submit choke point.
 
-        policy_block = plan_validator.planner_compile_policy_block(SPRINTS_DIR, sprint_id)
-    except Exception:
-        policy_block = ""
-    if policy_block:
-        return f"{objective}\n\n{policy_block}"
-    return objective
+    DAG compile policy used to be appended here, which instructed every
+    Planner operator to create or repair the graph.  Planner now owns only
+    requirement normalization and handoff; graph compilation is a distinct
+    downstream closeout contract.
+    """
+    del sprint_id
+    marker = "## Planner role boundary"
+    if marker in objective:
+        return objective
+    return f"""{objective}
+
+{marker}
+
+- Produce only `<sid>.planner-requirements.md` and `<sid>.planner-handoff.md`.
+- Do not create or modify task_graph.json, design/plan artifacts, or HTML.
+- Do not execute research, implementation, tests, evaluation, or lifecycle transitions.
+- Finish the two Planner artifacts and return; Solar dispatches the downstream Graph Compiler.
+""".rstrip()
 
 
 def cmd_submit(args: argparse.Namespace) -> int:
@@ -2883,6 +2880,17 @@ def cmd_submit(args: argparse.Namespace) -> int:
     context = str(args.context or "")
     if normalize_role(role) == "planner":
         objective = _with_planner_compile_policy(objective, sprint_id)
+        if not dry_run:
+            status_path = SPRINTS_DIR / f"{sprint_id}.status.json"
+            if status_path.exists():
+                try:
+                    status_payload = json.loads(status_path.read_text(encoding="utf-8"))
+                    if int(status_payload.get("planner_role_boundary_version") or 0) < 2:
+                        status_payload["planner_role_boundary_version"] = 2
+                        status_payload["updated_at"] = _now()
+                        _write_json_atomic(status_path, status_payload)
+                except (OSError, ValueError, TypeError):
+                    pass
     task_graph_node = load_task_graph_node(sprint_id, node_id)
     capsule_submit = _capsule_submit_metadata(task_graph_node)
     logical_operator = str(capsule_submit.get("logical_operator") or (task_graph_node or {}).get("logical_operator") or "")

@@ -77,6 +77,66 @@ def _normalized_candidates(values: Any) -> list[dict[str, Any]]:
     return candidates
 
 
+def _study_protocol(
+    payload: dict[str, Any],
+    raw: dict[str, Any],
+    *,
+    query: str,
+    mode: str,
+    candidates: list[dict[str, Any]],
+) -> dict[str, Any]:
+    """Describe the bounded discovery policy without inventing missing scope."""
+
+    source_channels = sorted(
+        {
+            str(channel).strip()
+            for candidate in candidates
+            for channel in candidate.get("source_channels") or []
+            if str(channel).strip()
+        }
+    )
+    year = raw.get("year") if raw.get("year") not in (None, "") else payload.get("year")
+    time_range = {
+        "status": "resolved" if year not in (None, "") else "unresolved",
+        "start": str(year) if year not in (None, "") else None,
+        "end": str(year) if year not in (None, "") else None,
+        "rationale": (
+            f"Discovery was explicitly limited to publication year {year}."
+            if year not in (None, "")
+            else "No publication-date boundary was supplied; the report must disclose this limitation."
+        ),
+    }
+    unresolved_fields = [] if time_range["status"] == "resolved" else ["time_range"]
+    return {
+        "protocol_status": "resolved" if not unresolved_fields else "partially_resolved",
+        "search_strategy": (
+            f"Run bounded {mode or 'topic'} discovery for query {query or 'unresolved'}"
+            + (
+                f" across the returned source channels: {', '.join(source_channels)}."
+                if source_channels
+                else "; no provider source channel returned usable candidates."
+            )
+            + " Preserve provider ranking rationale and deduplication status for every candidate."
+        ),
+        "source_selection_criteria": [
+            "Candidate has a non-empty title and at least one declared source channel.",
+            "Candidate remains relevant to the submitted discovery query under the provider ranking.",
+            "Candidate retains ranking rationale and deduplication status for audit.",
+        ],
+        "time_range": time_range,
+        "inclusion_criteria": [
+            "Retain ranked, traceable candidates relevant to the submitted query.",
+            "Retain the source channel, ranking score, rationale, and deduplication state.",
+        ],
+        "exclusion_criteria": [
+            "Exclude records without a usable title.",
+            "Exclude explicitly negative or duplicate identifiers from the selected shortlist.",
+            "Leave candidates without fetchable source references visible as downstream ingestion limitations.",
+        ],
+        "unresolved_fields": unresolved_fields,
+    }
+
+
 def literature_discovery(context: OperatorContext, spec: OperatorSpec) -> dict[str, Any]:
     payload = context.payload
     query = str(payload.get("query") or payload.get("topic") or "").strip()
@@ -128,12 +188,30 @@ def literature_discovery(context: OperatorContext, spec: OperatorSpec) -> dict[s
                 max_retry_wait_seconds=payload.get("max_retry_wait_seconds"),
             )
     except Exception as exc:
+        protocol = _study_protocol(
+            payload,
+            {},
+            query=query or "unresolved",
+            mode=mode,
+            candidates=[],
+        )
         evidence = evidence_document(
             context,
             spec,
-            {"query": query or "unresolved", "candidates": [], "mode": mode},
+            {
+                "query": query or "unresolved",
+                "candidates": [],
+                "mode": mode,
+                "study_protocol": protocol,
+            },
             status="inconclusive",
-            limitations=[f"Discovery provider failed: {type(exc).__name__}: {exc}"],
+            limitations=[
+                f"Discovery provider failed: {type(exc).__name__}: {exc}",
+                *[
+                    f"Study protocol field remains unresolved: {field}."
+                    for field in protocol["unresolved_fields"]
+                ],
+            ],
         )
         return {
             "evidence": evidence,
@@ -150,12 +228,24 @@ def literature_discovery(context: OperatorContext, spec: OperatorSpec) -> dict[s
     }
     outputs["query"] = str(outputs.get("query") or query or "unresolved")
     outputs["candidates"] = candidates
+    outputs["study_protocol"] = _study_protocol(
+        payload,
+        raw,
+        query=outputs["query"],
+        mode=str(outputs.get("mode") or mode),
+        candidates=candidates,
+    )
+    limitations = list(raw.get("limitations") or [])
+    limitations.extend(
+        f"Study protocol field remains unresolved: {field}."
+        for field in outputs["study_protocol"]["unresolved_fields"]
+    )
     evidence = evidence_document(
         context,
         spec,
         outputs,
         status=status if status in {"completed", "failed", "inconclusive"} else "inconclusive",
-        limitations=list(raw.get("limitations") or []),
+        limitations=limitations,
         artifacts=list(raw.get("artifacts") or []),
     )
     if status == "completed" and candidates:

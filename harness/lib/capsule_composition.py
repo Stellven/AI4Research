@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from jsonschema import Draft202012Validator
+from capability_admission import rejection_reasons
 
 
 HARNESS_DIR = Path(__file__).resolve().parents[1]
@@ -175,7 +176,7 @@ def _approved_conversion_edges(
             reasons.append("CONVERSION_CAPSULE_UNKNOWN")
         elif source not in (capsule.get("consumes") or []) or target not in (capsule.get("produces") or []):
             reasons.append("CONVERSION_CAPSULE_CONTRACT_MISMATCH")
-        elif not _verification_present(capsule) or not _selectable_implementation(capsule):
+        elif rejection_reasons(capsule):
             reasons.append("CONVERSION_CAPSULE_NOT_EXECUTABLE")
         if reasons:
             defects.append(
@@ -329,13 +330,7 @@ def _composition_edges(
     for capsule in catalog.get("capsules") or []:
         if not isinstance(capsule, dict):
             continue
-        reasons: list[str] = []
-        if not _verification_present(capsule):
-            reasons.append("VERIFICATION_CONTRACT_MISSING")
-        if not (capsule.get("implementation") or {}).get("declared"):
-            reasons.append("IMPLEMENTATION_UNDECLARED")
-        if not (capsule.get("operator_compatibility") or {}).get("selectable_preferred"):
-            reasons.append("NO_SELECTABLE_PHYSICAL_OPERATOR")
+        reasons = rejection_reasons(capsule)
         capsule_id = str(capsule.get("capsule_id") or "")
         if reasons:
             excluded.append({"capsule_id": capsule_id, "reason_codes": reasons})

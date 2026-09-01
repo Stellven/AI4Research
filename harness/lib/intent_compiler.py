@@ -18,8 +18,16 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
+from structured_model import StructuredJsonModel, StructuredModelError, stage_model
+from structured_output import OutputContractError, project_schema
+
 from jsonschema import Draft202012Validator
-from referencing import Registry, Resource
+
+try:
+    from referencing import Registry, Resource
+except ModuleNotFoundError:  # Ubuntu's jsonschema 4.10.x predates referencing.
+    Registry = None
+    Resource = None
 
 
 HARNESS_DIR = Path(__file__).resolve().parents[1]
@@ -44,60 +52,7 @@ class JsonModel(Protocol):
 
 
 def codex_compatible_schema(schema: dict[str, Any]) -> dict[str, Any]:
-    """Project Solar's strict schema into the JSON-Schema subset Codex accepts.
-
-    This copy constrains generation only. Solar validates the returned artifact
-    against the original strict schema after the model call.
-    """
-    projected = deepcopy(schema)
-
-    def visit(value: Any) -> None:
-        if isinstance(value, list):
-            for child in value:
-                visit(child)
-            return
-        if not isinstance(value, dict):
-            return
-        value.pop("$schema", None)
-        value.pop("$id", None)
-        value.pop("uniqueItems", None)
-        if "const" in value and "type" not in value:
-            constant = value["const"]
-            if isinstance(constant, bool):
-                value["type"] = "boolean"
-            elif constant is None:
-                value["type"] = "null"
-            elif isinstance(constant, str):
-                value["type"] = "string"
-            elif isinstance(constant, int):
-                value["type"] = "integer"
-            elif isinstance(constant, float):
-                value["type"] = "number"
-            elif isinstance(constant, list):
-                value["type"] = "array"
-            elif isinstance(constant, dict):
-                value["type"] = "object"
-        if "oneOf" in value:
-            value["anyOf"] = value.pop("oneOf")
-        declared_type = value.get("type")
-        if isinstance(declared_type, list) and "number" in declared_type and "integer" in declared_type:
-            value["type"] = [item for item in declared_type if item != "integer"]
-        prefix_items = value.pop("prefixItems", None)
-        if prefix_items is not None and value.get("items") is False:
-            integer_minimums = [
-                item.get("minimum", 0)
-                for item in prefix_items
-                if isinstance(item, dict) and item.get("type") == "integer"
-            ]
-            value["items"] = {
-                "type": "integer",
-                "minimum": min(integer_minimums) if integer_minimums else 0,
-            }
-        for child in value.values():
-            visit(child)
-
-    visit(projected)
-    return projected
+    return project_schema(schema, "openai")
 
 
 def canonical_bytes(payload: Any) -> bytes:
@@ -380,14 +335,8 @@ class CodexJsonModel:
 
 
 def model_from_environment(role: str) -> JsonModel:
-    provider = os.environ.get(f"SOLAR_INTENT_{role.upper()}_PROVIDER", "codex").strip().lower()
-    if provider != "codex":
-        raise IntentCompilerError(
-            f"unsupported {role} provider {provider!r}; this increment currently supports codex"
-        )
-    model = os.environ.get(f"SOLAR_INTENT_{role.upper()}_MODEL", "").strip()
     timeout = int(os.environ.get("SOLAR_INTENT_MODEL_TIMEOUT_SEC", "180") or "180")
-    return CodexJsonModel(model=model, timeout_seconds=timeout)
+    return stage_model("intent", role, timeout_seconds=timeout)
 
 
 def normalize_input(raw: dict[str, Any]) -> dict[str, Any]:
@@ -440,13 +389,27 @@ def normalize_input(raw: dict[str, Any]) -> dict[str, Any]:
 
 def _schema_errors(payload: dict[str, Any], schema_path: Path) -> list[dict[str, Any]]:
     schema = _load_json(schema_path)
-    registry = Registry()
+    resources: dict[str, dict[str, Any]] = {}
     for candidate in SCHEMA_DIR.glob("*.schema.json"):
         content = _load_json(candidate)
         identifier = content.get("$id")
         if identifier:
-            registry = registry.with_resource(str(identifier), Resource.from_contents(content))
-    validator = Draft202012Validator(schema, registry=registry)
+            resources[str(identifier)] = content
+    if Registry is not None and Resource is not None:
+        registry = Registry()
+        for identifier, content in resources.items():
+            registry = registry.with_resource(identifier, Resource.from_contents(content))
+        validator = Draft202012Validator(schema, registry=registry)
+    else:
+        # jsonschema 4.10.x (the supported Ubuntu system package) resolves the
+        # same local schema store through RefResolver and has no referencing
+        # package. Keep both APIs valid so the runtime is deployment-portable.
+        from jsonschema import RefResolver
+
+        validator = Draft202012Validator(
+            schema,
+            resolver=RefResolver.from_schema(schema, store=resources),
+        )
     errors: list[dict[str, Any]] = []
     for error in sorted(validator.iter_errors(payload), key=lambda item: list(item.absolute_path)):
         path = ".".join(str(part) for part in error.absolute_path) or "$"
@@ -1213,7 +1176,7 @@ def run_pipeline(
             fidelity,
             repair_attempted=repair_attempted,
         )
-    except IntentCompilerError as exc:
+    except (IntentCompilerError, StructuredModelError, OutputContractError) as exc:
         acceptance = decide_acceptance(
             raw_input,
             intent_ir,

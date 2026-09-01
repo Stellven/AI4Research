@@ -33,6 +33,7 @@ import time
 import uuid
 from pathlib import Path
 from typing import Any
+from structured_output import OutputContractError, parse_json, project_schema, validate_output
 
 from .codex_research import (  # noqa: F401  (schema/helpers shared deliberately)
     CodexResearchModelService,
@@ -109,8 +110,8 @@ class ClaudeResearchModelService(CodexResearchModelService):
         # schema by URL and rejects the whole argument, so the constraint would
         # be silently lost -- which is the difference between a schema the model
         # must satisfy and a suggestion in the prompt.
-        _write_json(schema_path, schema)
-        cli_schema = {key: value for key, value in schema.items() if key != "$schema"}
+        cli_schema = project_schema(schema, "anthropic")
+        _write_json(schema_path, cli_schema)
         prompt_payload = {
             "schema": "solar.claude_research_prompt.v1",
             "node_id": node_id,
@@ -118,6 +119,7 @@ class ClaudeResearchModelService(CodexResearchModelService):
             "model": self.model,
             "system": system,
             "input": user,
+            "source_output_contract": schema,
             "instructions": [
                 "Return exactly the JSON object required by the output schema.",
                 "Do not call tools; every authoritative input is included in this prompt.",
@@ -189,10 +191,13 @@ class ClaudeResearchModelService(CodexResearchModelService):
             )
 
         try:
-            envelope = json.loads(proc.stdout or "{}")
-            body = envelope.get("result")
-            payload = json.loads(body) if isinstance(body, str) else body
-        except (json.JSONDecodeError, AttributeError) as exc:
+            envelope = parse_json(proc.stdout or "{}")
+            if proc.returncode or envelope.get("is_error"):
+                raise OutputContractError("Claude returned an error envelope")
+            body = envelope.get("structured_output", envelope.get("result"))
+            payload = parse_json(body) if isinstance(body, str) else body
+            payload = validate_output(payload, schema)
+        except (ValueError, AttributeError) as exc:
             self._record_invocation(
                 invocation_id=invocation_id, node_id=node_id, started=started,
                 request_sha256=request_sha256, prompt_payload=prompt_payload,

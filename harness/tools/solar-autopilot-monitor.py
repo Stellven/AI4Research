@@ -111,7 +111,9 @@ PANE_BOTTOM_BUSY_RE = re.compile(
 PANE_UNAVAILABLE_RE = re.compile(
     r"You(?:'|’)ve hit your limit|rate[- ]limit|rate limit|"
     r"resets\s+\d|/rate-limit-options|Upgrade your plan|"
-    r"API Error:\s*400|Invalid API parameter|error\"\s*:\s*\{",
+    r"API Error:\s*400|Invalid API parameter|error\"\s*:\s*\{|"
+    r"Code Mode is unavailable|code-mode host is disabled|failed to spawn code-mode host|"
+    r"codex-code-mode-host.*(?:not found|No such file|Permission denied)",
     re.I,
 )
 RATE_LIMIT_OPTIONS_MODAL_RE = re.compile(
@@ -1110,20 +1112,45 @@ def clear_pane_lease(target: str, reason: str = "") -> bool:
         return False
 
 
+def lease_has_live_dispatch_ack(lease: dict) -> bool:
+    """Keep non-graph PM/Planner work occupied while its bounded ACK is live."""
+    sid = str(lease.get("sid") or "").strip()
+    dispatch_id = str(lease.get("dispatch_id") or "").strip()
+    if not sid or not dispatch_id:
+        return False
+    status = load_json(SPRINTS / f"{sid}.status.json")
+    if str(status.get("status") or "").strip().lower() in TERMINAL_STATUSES:
+        return False
+    current_dispatch = SPRINTS / f"{sid}.current-dispatch-id"
+    try:
+        if current_dispatch.read_text(encoding="utf-8").strip() != dispatch_id:
+            return False
+    except OSError:
+        return False
+    ack = load_json(SPRINTS / f"{sid}.ack-{dispatch_id}.json")
+    return str(ack.get("status") or "").strip().lower() in {
+        "accepted",
+        "in_progress",
+        "running",
+    }
+
+
 def reconcile_pane_runtime_claims(target: str) -> dict:
     lease = pane_lease(target)
     assignment = pane_assignment(target)
     graph_node = assigned_graph_node_for_pane(target)
+    role_dispatch_live = lease_has_live_dispatch_ack(lease) if lease else False
     busy = pane_is_busy(target)
     reconciled: dict[str, bool] = {}
 
     # A live graph node is the strongest proof of occupancy; keep both lease and
     # assignment intact in that case, even if the pane is currently at a prompt.
-    if graph_node:
+    if graph_node or role_dispatch_live:
         return {
             "lease": lease,
             "assignment": assignment,
             "graph_node": graph_node,
+            "role_dispatch_live": role_dispatch_live,
             "busy": busy,
             "reconciled": reconciled,
         }
@@ -1142,6 +1169,7 @@ def reconcile_pane_runtime_claims(target: str) -> dict:
         "lease": lease,
         "assignment": assignment,
         "graph_node": graph_node,
+        "role_dispatch_live": role_dispatch_live,
         "busy": busy,
         "reconciled": reconciled,
     }
@@ -1307,7 +1335,7 @@ def retry_queue(state: dict, dispatch: bool, cooldown: int, epic_filter: str = "
                     actions.append({"sid": sid, "action": item.get("type"), "dropped": "elastic_planner_owned", "target": target})
                     continue
                 files = sprint_files(sid)
-                if not planner_outputs_missing(files):
+                if not planner_outputs_missing(files, status):
                     append_event(
                         sid,
                         "autopilot_queue_drop_stale_planner_handoff",
@@ -1480,7 +1508,14 @@ def wake_sid(sid: str) -> bool:
         return False
 
 
-ROLE_POOL_HANDOFF_FINDINGS = {"ready_for_planner", "ready_for_builder", "active_without_handoff", "pane_idle_with_pending_artifact", "ready_for_evaluator"}
+ROLE_POOL_HANDOFF_FINDINGS = {
+    "ready_for_planner",
+    "ready_for_graph_compiler",
+    "ready_for_builder",
+    "active_without_handoff",
+    "pane_idle_with_pending_artifact",
+    "ready_for_evaluator",
+}
 TRUE_ENV_VALUES = {"1", "true", "yes", "on"}
 ROLE_POOL_UNAVAILABLE_CACHE_TTL_SEC = int(os.environ.get("SOLAR_ROLE_POOL_UNAVAILABLE_CACHE_TTL_SEC", "120"))
 ROLE_POOL_UNAVAILABLE_CACHE: dict[str, dict] = {}
@@ -1601,6 +1636,15 @@ def _latest_pm_record_for_sprint_role(sid: str, role: str) -> dict | None:
     return records[0] if records else None
 
 
+def _graph_compiler_operator_complete(sid: str) -> bool:
+    """Do not certify artifacts while the Graph Compiler is still writing."""
+    for record in _pm_inbox_records_for_sprint_role(sid, "builder"):
+        if str(record.get("closeout_kind") or "") != "task_graph_compiler":
+            continue
+        return str(record.get("status") or "").strip().lower() == "completed"
+    return False
+
+
 def _role_handoff_action_cooldown(finding: dict, default_cooldown: int) -> int:
     role = role_for_handoff_finding(str(finding.get("type") or ""))
     sid = str(finding.get("sid") or "")
@@ -1637,7 +1681,7 @@ def codex_pane_runtime_suppresses_pm_operator_dispatch() -> bool:
 def role_for_handoff_finding(ftype: str) -> str:
     if ftype == "ready_for_planner":
         return "planner"
-    if ftype in {"ready_for_builder", "active_without_handoff", "pane_idle_with_pending_artifact"}:
+    if ftype in {"ready_for_graph_compiler", "ready_for_builder", "active_without_handoff", "pane_idle_with_pending_artifact"}:
         return "builder"
     if ftype == "ready_for_evaluator":
         return "evaluator"
@@ -1702,11 +1746,11 @@ def objective_for_role_handoff(sid: str, role: str) -> str:
     if role == "planner":
         return (
             f"请接手 {sid}：读取 {base}.prd.md、{base}.contract.md、"
-            f"{base}.product-brief.md、{base}.requirement_ir.json、{base}.task_graph.json（存在即读）。"
-            f"产出 {base}.design.md 和 {base}.plan.md；如 task_graph 还只是粗粒度需求图，"
-            "请细化为可执行 DAG。不得跳过 PM->Planner->task_graph 主链直接交 Builder。"
-            "完成所有 artifact 写入后结束本次受约束调用；不要运行 plan compiler，不要修改 status.json。"
-            "Solar 会在 durable operator result 成功后独立验收、签证并推进生命周期；"
+            f"{base}.product-brief.md、{base}.requirement_ir.json。"
+            f"只产出 {base}.planner-requirements.md 和 {base}.planner-handoff.md。"
+            "不得创建或修改 task_graph、design、plan、HTML；不得执行研究、实现、测试或评估。"
+            "完成两个 artifact 后结束本次受约束调用；不要修改 status.json。"
+            "Solar 会在 durable operator result 成功后交给独立 Graph Compiler；"
             "如果证据不足或需求不完整，写明 blocker 和下一步。"
         )
     if role == "evaluator":
@@ -1726,6 +1770,25 @@ def objective_for_role_handoff(sid: str, role: str) -> str:
     return f"请接手 {sid} 的 {role} handoff，并按 Solar Harness 标准产出对应 artifact。"
 
 
+def graph_compiler_objective(sid: str) -> str:
+    base = str(SPRINTS / sid)
+    objective = (
+        f"作为独立 Graph Compiler 接手 {sid}。读取 {base}.planner-requirements.md、"
+        f"{base}.planner-handoff.md、{base}.requirement_ir.json、{base}.contract.md，"
+        f"以及 {base}.task_graph.json（如果 Requirement Compiler 已生成 proposal）。"
+        f"只产出或修正 {base}.design.md、{base}.plan.md、{base}.task_graph.json，"
+        "并运行 graph-scheduler validate。不得执行任何 DAG node，不得做研究、生成 HTML/最终报告或评估。"
+        "不得修改 status.json；Solar 会在 artifact closeout 后独立签证并推进。"
+    )
+    try:
+        import plan_validator  # type: ignore
+
+        policy_block = plan_validator.planner_compile_policy_block(SPRINTS, str(sid))
+    except Exception:
+        policy_block = ""
+    return f"{objective}\n\n{policy_block}" if policy_block else objective
+
+
 def dispatch_role_handoff(sid: str, ftype: str) -> tuple[bool, dict]:
     role = role_for_handoff_finding(ftype)
     if not sid or not role:
@@ -1733,8 +1796,10 @@ def dispatch_role_handoff(sid: str, ftype: str) -> tuple[bool, dict]:
     cached = _role_pool_cache_get(role)
     if cached is not None:
         return False, {**cached, "cached": True}
-    node = "N0" if role == "planner" else ("B0" if role == "builder" else "E0")
-    task_type = "planning" if role == "planner" else ("implementation" if role == "builder" else "evaluation")
+    is_graph_compiler = ftype == "ready_for_graph_compiler"
+    node = "GC0" if is_graph_compiler else ("N0" if role == "planner" else ("B0" if role == "builder" else "E0"))
+    task_type = "task_graph_compilation" if is_graph_compiler else ("requirements_handoff" if role == "planner" else ("implementation" if role == "builder" else "evaluation"))
+    objective = graph_compiler_objective(sid) if is_graph_compiler else objective_for_role_handoff(sid, role)
     env = os.environ.copy()
     env["HARNESS_DIR"] = str(HARNESS)
     env["SOLAR_PM_DISPATCH_ALLOW_DIRECT"] = "1"
@@ -1751,10 +1816,12 @@ def dispatch_role_handoff(sid: str, ftype: str) -> tuple[bool, dict]:
         "--task-type",
         task_type,
         "--objective",
-        objective_for_role_handoff(sid, role),
+        objective,
         "--context",
         "source=solar-autopilot role_pool_handoff=1",
     ]
+    if is_graph_compiler:
+        cmd.extend(["--closeout-kind", "task_graph_compiler"])
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=60, env=env)
     except Exception as exc:
@@ -1856,6 +1923,8 @@ def sprint_files(sid: str) -> dict[str, bool]:
         "status": (SPRINTS / f"{sid}.status.json").exists(),
         "prd": artifact_exists("prd.md", node_level=False),
         "contract": artifact_exists("contract.md", node_level=False),
+        "planner_requirements": artifact_exists("planner-requirements.md", node_level=False),
+        "planner_handoff": artifact_exists("planner-handoff.md", node_level=False),
         "design": artifact_exists("design.md"),
         "plan": artifact_exists("plan.md"),
         "task_graph": (SPRINTS / f"{sid}.task_graph.json").exists(),
@@ -1865,7 +1934,7 @@ def sprint_files(sid: str) -> dict[str, bool]:
 
 
 def artifact_signature(sid: str) -> dict:
-    names = ["status.json", "prd.md", "contract.md", "design.md", "plan.md", "handoff.md", "eval.md", "eval.json", "events.jsonl"]
+    names = ["status.json", "prd.md", "contract.md", "planner-requirements.md", "planner-handoff.md", "design.md", "plan.md", "handoff.md", "eval.md", "eval.json", "events.jsonl"]
     items = {}
     max_mtime = 0.0
     for suffix in names:
@@ -1905,6 +1974,8 @@ def candidate_sid_for_role(role: str) -> str:
         sid = st.get("_sid", "")
         if role == "planner" and (handoff == "planner" or phase == "prd_ready"):
             return sid
+        if role == "builder" and handoff == "graph_compiler":
+            return sid
         if role == "builder" and handoff in ("builder", "builder_main", "builder_parallel", "builder-lab"):
             return sid
         if role == "evaluator" and handoff in ("evaluator", "reviewer"):
@@ -1932,7 +2003,7 @@ def _pooled_target_for_role(role: str, primary: str) -> str:
 def pane_target_for_handoff(handoff: str) -> str:
     if handoff in ("planner", "architect"):
         return _pooled_target_for_role("planner", f"{SESSION}:0.1")
-    if handoff in ("builder", "builder_main", "builder_parallel", "builder-lab"):
+    if handoff in ("graph_compiler", "builder", "builder_main", "builder_parallel", "builder-lab"):
         primary = f"{SESSION}:0.2"
         candidates = [pane for pane in discover_worker_panes() if pane_title_matches_role(pane, "builder")]
         ordered = [primary] + [pane for pane in candidates if pane != primary]
@@ -2799,23 +2870,12 @@ def instruction_for(status: dict, files: dict[str, bool]) -> str:
             f"输出 {sid}.prd.md，必须包含用户目标、范围边界、验收标准、风险、拆分建议。"
             "完成后把 status 更新为 phase=prd_ready handoff_to=planner target_role=planner。"
         )
-    if handoff == "planner" and files["prd"] and planner_outputs_missing(files):
-        instruction = (
-            f"请接手 {sid}：读取 .prd.md 和 .contract.md，产出 {sid}.design.md、{sid}.plan.md 和 {sid}.task_graph.json。"
-            "task_graph 必须通过 solar-harness graph-scheduler validate。不要问用户拍板；这是 P0 reliability 默认推进。"
+    if handoff == "planner" and files["prd"] and planner_outputs_missing(files, status):
+        return (
+            f"请接手 {sid}：读取 .prd.md、.contract.md 和 requirement_ir.json，"
+            f"只产出 {sid}.planner-requirements.md 与 {sid}.planner-handoff.md。"
+            "禁止创建 DAG、运行研究、生成 HTML 或执行评估；完成后由 Solar 交给 Graph Compiler。"
         )
-        # P5 G2b: the legacy pane-wake path does not flow through pm_dispatch
-        # submit, so it appends the compile-policy block itself (env-gated
-        # inside the helper; "" when SOLAR_PLAN_VALIDATOR is off).
-        try:
-            import plan_validator  # type: ignore
-
-            policy_block = plan_validator.planner_compile_policy_block(SPRINTS, str(sid))
-        except Exception:
-            policy_block = ""
-        if policy_block:
-            instruction = f"{instruction}\n\n{policy_block}"
-        return instruction
     if (
         handoff in ("builder", "builder_main", "builder_parallel", "builder-lab")
         and files["plan"]
@@ -2831,15 +2891,14 @@ def instruction_for(status: dict, files: dict[str, bool]) -> str:
     return ""
 
 
-def planner_outputs_missing(files: dict[str, bool]) -> bool:
-    """Planner handoff remains active until architecture outputs are complete.
-
-    Multi-task operator routing now owns planner execution capacity.  The old
-    fixed-pane mental model only retriggered planner when `plan.md` was absent,
-    which silently stalled architecture slices that were still missing
-    `design.md` or `task_graph.json`.
-    """
-    return not files["design"] or not files["plan"] or not files["task_graph"]
+def planner_outputs_missing(files: dict[str, bool], status: dict | None = None) -> bool:
+    """Planner owns only normalized requirements plus a downstream handoff."""
+    strict = int((status or {}).get("planner_role_boundary_version") or 0) >= 2
+    if strict:
+        return not files.get("planner_requirements", False) or not files.get("planner_handoff", False)
+    new_complete = files.get("planner_requirements", False) and files.get("planner_handoff", False)
+    legacy_complete = files.get("design", False) and files.get("plan", False) and files.get("task_graph", False)
+    return not (new_complete or legacy_complete)
 
 
 def workflow_guard_route(sid: str) -> dict:
@@ -2859,6 +2918,34 @@ def normalize_status_to_workflow_route(sid: str, status: dict, route: dict) -> b
         return False
     role = str(route.get("route_role") or "")
     stage = str(route.get("stage") or "")
+    if role == "graph_compiler" and str(route.get("reason") or "") == "graph_candidate_ready_for_compile":
+        if not _graph_compiler_operator_complete(sid):
+            return False
+        try:
+            import plan_validator  # type: ignore
+
+            compile_verdict = plan_validator.compile_planner_graph(
+                SPRINTS,
+                sid,
+                config_dir=HARNESS / "config",
+                workflows_dir=HARNESS / "config" / "workflows",
+            )
+        except Exception as exc:
+            detail = " ".join(str(exc).split())[:300]
+            compile_verdict = {
+                "ok": False,
+                "errors": [f"PLAN_VALIDATOR_UNCHECKABLE:{type(exc).__name__}:{detail}"],
+            }
+        if not compile_verdict.get("ok"):
+            append_event(
+                sid,
+                "plan_compile_failed",
+                "warn",
+                {"route_role": role, "stage": stage, "verdict": compile_verdict},
+            )
+            return False
+        role = "builder_main"
+        stage = "planning_complete"
     if role == "none" and stage == "done":
         fields = ("passed", "completed", "done", "done")
     elif not role or role == "pm":
@@ -2869,6 +2956,7 @@ def normalize_status_to_workflow_route(sid: str, status: dict, route: dict) -> b
             planner_status = "active"
         fields = {
             "planner": (planner_status, "prd_ready", "planner", "planner"),
+            "graph_compiler": (planner_status, "requirements_ready", "graph_compiler", "graph_compiler"),
             "builder_main": ("active", "planning_complete", "builder_main", "builder_main"),
             "builder": ("active", "planning_complete", "builder", "builder"),
             "evaluator": ("reviewing", "handoff_ready", "evaluator", "evaluator"),
@@ -3044,7 +3132,7 @@ def inspect_sprints(epic_filter: str = "") -> list[dict]:
                     "message": "P0 has contract/evidence but no PRD.",
                 }
             )
-        if files["prd"] and handoff == "planner" and planner_outputs_missing(files):
+        if files["prd"] and handoff == "planner" and planner_outputs_missing(files, status):
             raw_findings.append(
                 {
                     "sid": sid,
@@ -3052,6 +3140,21 @@ def inspect_sprints(epic_filter: str = "") -> list[dict]:
                     "severity": "info",
                     "target": pane_target_for_handoff(handoff),
                     "message": instruction_for(status, files),
+                }
+            )
+        if (
+            files["planner_requirements"]
+            and files["planner_handoff"]
+            and handoff == "graph_compiler"
+            and (not files["design"] or not files["plan"] or not files["task_graph"])
+        ):
+            raw_findings.append(
+                {
+                    "sid": sid,
+                    "type": "ready_for_graph_compiler",
+                    "severity": "info",
+                    "target": pane_target_for_handoff("graph_compiler"),
+                    "message": graph_compiler_objective(str(sid)),
                 }
             )
         if files["plan"] and not files["task_graph"] and handoff in GRAPH_READY_HANDOFFS:
@@ -3515,6 +3618,7 @@ def apply_findings(findings: list[dict], dispatch: bool, state: dict, cooldown: 
         "invalid_task_graph",
         "ready_for_pm",
         "ready_for_planner",
+        "ready_for_graph_compiler",
         "ready_for_builder",
         "ready_for_evaluator",
         "active_without_handoff",
@@ -3848,7 +3952,7 @@ def apply_findings(findings: list[dict], dispatch: bool, state: dict, cooldown: 
                 used_targets.add(target)
             mark_action(state, f, result)
             actions.append(result)
-        elif ftype in ("ready_for_pm", "ready_for_planner", "ready_for_builder", "ready_for_evaluator", "active_without_handoff", "pane_compacting_stall", "pane_idle_with_pending_artifact"):
+        elif ftype in ("ready_for_pm", "ready_for_planner", "ready_for_graph_compiler", "ready_for_builder", "ready_for_evaluator", "active_without_handoff", "pane_compacting_stall", "pane_idle_with_pending_artifact"):
             if ftype == "ready_for_planner" and elastic_planner_owns_sprint(sid):
                 result = {
                     "sid": sid,

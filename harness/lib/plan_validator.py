@@ -23,6 +23,8 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from jsonschema import Draft202012Validator
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import workflow_contract as wc  # noqa: E402
@@ -34,7 +36,7 @@ from executable_node import (  # noqa: E402
     physical_role_is_compatible,
 )
 from physical_operator_catalog import is_operator_statically_selectable  # noqa: E402
-from planner_operator_gate import planner_operator_state  # noqa: E402
+from planner_operator_gate import operator_task_state  # noqa: E402
 
 GENERIC_CONTRACT_ID = "pm.generic.v1"
 AUTOSCI_CONTRACT_ID = "research.autosci.v1"
@@ -48,6 +50,7 @@ FALLBACK_ARTIFACT_ROOTS: Dict[str, Any] = {
 }
 
 ERRORS_ARTIFACT_SUFFIX = ".plan-compile-errors.json"
+TASK_GRAPH_SCHEMA_PATH = Path(__file__).resolve().parents[1] / "schemas" / "task-graph.schema.json"
 
 # --- P5 G1: planner-graph policy (P5-RUNBOOK owner defaults) ----------------
 
@@ -207,6 +210,8 @@ ERROR_PLAN_CERTIFICATE_NOT_PASS = "PLAN_CERTIFICATE_NOT_PASS"
 ERROR_PLAN_CERTIFICATE_HASH_MISMATCH = "PLAN_CERTIFICATE_HASH_MISMATCH"
 ERROR_PLAN_GENERIC_CONTRACT_MISSING = "PLAN_GENERIC_CONTRACT_MISSING"
 ERROR_PLAN_GRAPH_MISSING = "PLAN_GRAPH_MISSING"
+ERROR_PLAN_SCHEMA_INVALID = "PLAN_SCHEMA_INVALID"
+ERROR_PLAN_TYPED_AUTHORITY_REQUIRED = "PLAN_TYPED_AUTHORITY_REQUIRED"
 
 PLAN_CERTIFICATE_SCHEMA = "solar.plan_certificate.v1"
 REQUEST_GOVERNANCE_FIELDS = (
@@ -313,6 +318,43 @@ def _elastic_private_scope_paths(
     return admitted
 
 
+def validate_task_graph_schema(task_graph: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Validate the declared TaskGraph shape before semantic certification."""
+    try:
+        schema = json.loads(TASK_GRAPH_SCHEMA_PATH.read_text(encoding="utf-8"))
+        validation_errors = sorted(
+            Draft202012Validator(schema).iter_errors(task_graph),
+            key=lambda item: list(item.absolute_path),
+        )
+    except Exception as exc:
+        return [
+            wc.compile_error(
+                ERROR_PLAN_SCHEMA_INVALID,
+                "?",
+                f"TaskGraph schema could not be checked: {type(exc).__name__}: {exc}",
+            )
+        ]
+    errors: List[Dict[str, Any]] = []
+    for error in validation_errors:
+        path = ".".join(str(item) for item in error.absolute_path) or "$"
+        node_id = "?"
+        if len(error.absolute_path) >= 2 and list(error.absolute_path)[0] == "nodes":
+            try:
+                node = task_graph.get("nodes", [])[int(list(error.absolute_path)[1])]
+                node_id = str(node.get("id") or "?") if isinstance(node, dict) else "?"
+            except (IndexError, TypeError, ValueError):
+                pass
+        errors.append(
+            wc.compile_error(
+                ERROR_PLAN_SCHEMA_INVALID,
+                node_id,
+                f"TaskGraph schema violation at {path}: {error.message}",
+                declared=error.instance,
+            )
+        )
+    return errors
+
+
 def validate_plan(
     task_graph: Dict[str, Any],
     capsule_registry: Optional[Dict[str, Dict[str, Any]]],
@@ -337,7 +379,7 @@ def validate_plan(
     if policy is None:
         policy = (contract or {}).get("provider_policy")
 
-    errors: List[Dict[str, Any]] = []
+    errors: List[Dict[str, Any]] = validate_task_graph_schema(task_graph)
     elastic_private_paths = {
         path
         for candidate in task_graph.get("nodes") or []
@@ -699,7 +741,7 @@ def plan_certificate_hash(task_graph: Dict[str, Any]) -> str:
         "workflow_contract_version": str(task_graph.get("workflow_contract_version") or ""),
         "plan_compile_required": task_graph.get("plan_compile_required") is True,
         "planner_stage": copy.deepcopy(task_graph.get("planner_stage") or {}),
-        "planner_artifacts": copy.deepcopy(task_graph.get("planner_artifacts") or {}),
+        "graph_compiler_artifacts": copy.deepcopy(task_graph.get("graph_compiler_artifacts") or {}),
         "dag_variant": str(task_graph.get("dag_variant") or ""),
         "artifact_roots": copy.deepcopy(task_graph.get("artifact_roots") or {}),
         "required_gates": [str(item) for item in (task_graph.get("required_gates") or [])],
@@ -793,18 +835,18 @@ def check_plan_certificate(task_graph: Dict[str, Any]) -> List[Dict[str, Any]]:
     return []
 
 
-def _planner_artifact_errors(
+def _graph_compiler_artifact_errors(
     task_graph: Dict[str, Any],
     *,
     sprints_dir: os.PathLike,
     sid: str,
 ) -> List[Dict[str, Any]]:
-    """Verify the Planner evidence files bound into an AutoSci certificate."""
+    """Verify Graph Compiler evidence files bound into an AutoSci certificate."""
     import hashlib
 
-    declared = task_graph.get("planner_artifacts")
+    declared = task_graph.get("graph_compiler_artifacts")
     if not isinstance(declared, dict):
-        return [_error("AUTOSCI_PLANNER_ARTIFACTS_MISSING", "N0", "planner_artifacts hash manifest is missing")]
+        return [_error("AUTOSCI_GRAPH_COMPILER_ARTIFACTS_MISSING", "GC0", "graph_compiler_artifacts hash manifest is missing")]
     errors: List[Dict[str, Any]] = []
     for suffix in ("design.md", "plan.md"):
         path = Path(sprints_dir) / f"{sid}.{suffix}"
@@ -817,9 +859,9 @@ def _planner_artifact_errors(
         if not payload or actual != expected:
             errors.append(
                 _error(
-                    "AUTOSCI_PLANNER_ARTIFACT_HASH_MISMATCH",
-                    "N0",
-                    f"Planner artifact {path.name} is missing, empty, or differs from its certificate manifest",
+                    "AUTOSCI_GRAPH_COMPILER_ARTIFACT_HASH_MISMATCH",
+                    "GC0",
+                    f"Graph Compiler artifact {path.name} is missing, empty, or differs from its certificate manifest",
                     declared=expected,
                     admitted=actual,
                 )
@@ -1252,17 +1294,23 @@ def compile_planner_graph(
         return verdict
 
     # Certification is a Solar lifecycle decision, not an action the bounded
-    # Planner model may take while it is still writing artifacts.  An
-    # operator-pool task therefore has to publish a durable successful result
-    # before any candidate graph can be stamped.  Legacy pane planning has no
+    # Graph Compiler may take while it is still writing artifacts. Its
+    # operator-pool task must publish a durable successful result before any
+    # candidate graph can be stamped. Legacy pane compilation has no matching
     # PM task record and remains supported as ``unmanaged``.
-    operator_gate = planner_operator_state(sprints.parent, sid)
+    operator_gate = operator_task_state(
+        sprints.parent,
+        sid,
+        "GC0",
+        role="builder",
+        closeout_kind="task_graph_compiler",
+    )
     if not operator_gate["ready_for_compile"]:
         return {
             **verdict,
             "ok": False,
             "deferred": True,
-            "skipped_reason": "planner_operator_not_complete",
+            "skipped_reason": "graph_compiler_operator_not_complete",
             "operator_gate": operator_gate,
         }
 
@@ -1328,7 +1376,7 @@ def compile_planner_graph(
         from autosci_intake_contract import validate_autosci_planner_graph  # noqa: WPS433
 
         errors: List[Dict[str, Any]] = []
-        planner_artifacts: Dict[str, Any] = {}
+        graph_compiler_artifacts: Dict[str, Any] = {}
         for suffix in ("design.md", "plan.md"):
             artifact_path = sprints / f"{sid}.{suffix}"
             try:
@@ -1338,20 +1386,26 @@ def compile_planner_graph(
             if not artifact_bytes.strip():
                 errors.append(
                     _error(
-                        "AUTOSCI_PLANNER_ARTIFACT_MISSING",
-                        "N0",
-                        f"Planner artifact is missing or empty: {artifact_path}",
+                        "AUTOSCI_GRAPH_COMPILER_ARTIFACT_MISSING",
+                        "GC0",
+                        f"Graph Compiler artifact is missing or empty: {artifact_path}",
                     )
                 )
             else:
-                planner_artifacts[suffix] = {
+                graph_compiler_artifacts[suffix] = {
                     "path": artifact_path.name,
                     "sha256": hashlib.sha256(artifact_bytes).hexdigest(),
                 }
         planner_stage = dict(candidate.get("planner_stage") or {})
-        planner_stage.update({"status": "reviewed", "completed_by": "compiled_sprint_planner"})
+        planner_stage.update({"status": "requirements_handoff_complete", "completed_by": "planner_operator"})
         candidate["planner_stage"] = planner_stage
-        candidate["planner_artifacts"] = planner_artifacts
+        candidate["graph_compiler_stage"] = {
+            "role": "graph_compiler",
+            "node_id": "GC0",
+            "status": "compiled",
+            "completed_by": "task_graph_compiler",
+        }
+        candidate["graph_compiler_artifacts"] = graph_compiler_artifacts
         requirement_ir_path = sprints / f"{sid}.requirement_ir.json"
         expected_request_text = ""
         try:
@@ -1447,6 +1501,14 @@ def check_planner_graph_dispatchable(
     effective_graph = _with_status_plan_provenance(
         task_graph or {}, sprints_dir=sprints_dir, sid=sid
     )
+    if not _is_epic_graph(effective_graph):
+        schema_errors = validate_task_graph_schema(effective_graph)
+        if schema_errors:
+            return {
+                "ok": False,
+                "reason": "plan_validator_dispatch_refused",
+                "errors": schema_errors,
+            }
     graph_kind = _generic_graph_kind(effective_graph)
     if graph_kind == "unregistered_planner_contract":
         contract_id = str(effective_graph.get("workflow_contract_id") or "")
@@ -1458,6 +1520,18 @@ def check_planner_graph_dispatchable(
                     ERROR_PLAN_GENERIC_CONTRACT_MISSING,
                     "?",
                     f"{contract_id} workflow contract is missing or not planner-generated",
+                )
+            ],
+        }
+    if graph_kind == "legacy_uncontracted":
+        return {
+            "ok": False,
+            "reason": "plan_validator_dispatch_refused",
+            "errors": [
+                _error(
+                    ERROR_PLAN_TYPED_AUTHORITY_REQUIRED,
+                    "?",
+                    "Uncontracted task_graph.json is a compatibility artifact, not runtime authority; dispatch requires a verified frozen SchedulerInput.",
                 )
             ],
         }
@@ -1504,7 +1578,7 @@ def check_planner_graph_dispatchable(
                 )
             ]
         else:
-            errors = _planner_artifact_errors(
+            errors = _graph_compiler_artifact_errors(
                 effective_graph,
                 sprints_dir=sprints_dir,
                 sid=str(sid or effective_graph.get("sprint_id") or ""),
@@ -1559,11 +1633,11 @@ def planner_compile_policy_block(
                     f"## Plan compile policy ({AUTOSCI_CONTRACT_ID})",
                     "",
                     "This is an AutoSci graph PROPOSAL, not a Builder-ready graph.",
-                    "You are the distinct Planner stage (N0). Do not execute any Scientific* Builder node.",
-                    "Review the PRD, contract, requirement IR, and proposed task graph; preserve the locked",
+                    "You are the distinct Graph Compiler stage (GC0), downstream of Planner. Do not execute any Scientific* Builder node.",
+                    "Read the Planner requirements/handoff plus PRD, contract, requirement IR, and proposed task graph; preserve the locked",
                     "Scientific* node set, dependencies, logical operators, capability capsules, scopes, and gates.",
-                    "Produce design.md and plan.md, finish every artifact write, then return from this bounded",
-                    "Planner invocation. Do not invoke the plan compiler and do not edit lifecycle status.",
+                    "Produce design.md, plan.md, and a valid task_graph.json, finish every artifact write, then return from this bounded",
+                    "Graph Compiler invocation. Do not execute graph nodes and do not edit lifecycle status.",
                     "After your durable operator result succeeds, Solar alone runs plan_validator, stamps any",
                     "PASS certificate, and transitions the sprint to planning_complete. Never self-declare it.",
                 ]

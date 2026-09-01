@@ -2,7 +2,7 @@ capability_capsule_id: cap.research-report-plan
 capsule_kind: capability
 metadata:
   name: Scientific Report Plan
-  description: Plan scientific reports or papers from typed evidence, verdicts, and unsupported-claim gaps.
+  description: Plan scientific reports or papers from typed evidence while carrying the literature-discovery study protocol and unresolved protocol fields into the report plan.
 applicability:
   task_types:
     - scientific-research
@@ -22,6 +22,9 @@ contract:
         description: Accepted user requirements that the report plan must preserve for downstream evaluation.
       - name: evidence_refs
         description: Paper, claim, verdict, experiment, or idea evidence references.
+      - name: literature_discovery
+        schema_ref: schemas/evidence/literature_discovery.v1.schema.json
+        description: Ranked sources and the study protocol that must remain auditable in the final report.
     optional:
       - name: audience
         description: Report audience or publication venue constraints.
@@ -38,15 +41,20 @@ contract:
   postconditions:
     - check: report_plan_evidenced
       description: Sections cite evidence ids and unsupported claims are explicit.
+    - check: study_protocol_planned
+      description: The plan contains a study-protocol section and preserves every unresolved protocol field.
   invariants:
     - Does not draft unsupported claims as findings.
     - Does not compile publication artifacts.
+    - Does not discard or silently resolve study-protocol limitations.
 composition:
   consumes:
     - type: requirement_ir.v1
       purpose: Accepted report requirements and tested-versus-not-tested constraints.
     - schema_ref: schemas/evidence/claim_verdict.v1.schema.json
       purpose: Verdict-backed findings.
+    - schema_ref: schemas/evidence/literature_discovery.v1.schema.json
+      purpose: Search strategy, source-selection criteria, time range, inclusion/exclusion criteria, and unresolved protocol fields.
   produces:
     - schema_ref: schemas/evidence/scientific_report_plan.v1.schema.json
       purpose: Planned report evidence.
@@ -84,12 +92,14 @@ verification:
   self_check:
     - Validate emitted evidence against scientific_report_plan.v1.schema.json.
     - Confirm unsupported_claims is present and section evidence ids are populated.
+    - Confirm report_plan.study_protocol is copied from literature discovery and has a dedicated report section.
   external_verifier:
     required: false
   pass_conditions:
     - The real AutoSci report planner emits valid scientific_report_plan.v1 evidence.
     - Accepted report requirements remain explicit in the report plan for independent evaluation.
     - Evidence gaps remain visible in unsupported_claims or limitations.
+    - Study-protocol values and unresolved fields remain visible in the report plan.
 operator_compatibility:
   preferred:
     - autosci-report-plan-worker

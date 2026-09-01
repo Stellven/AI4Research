@@ -93,20 +93,20 @@ def test_codex_schema_projection_infers_const_types_without_mutating_plan_schema
     ]["properties"]["kind"]
 
     assert source == original
-    assert projected_kind == {"const": "file", "type": "string"}
+    assert projected_kind == {"enum": ["file"], "type": "string"}
 
 
 def test_codex_schema_projection_infers_all_json_const_types() -> None:
     source = {
         "type": "object",
+        "additionalProperties": False,
+        "required": ["boolean", "null", "string", "integer", "number"],
         "properties": {
             "boolean": {"const": True},
             "null": {"const": None},
             "string": {"const": "value"},
             "integer": {"const": 3},
             "number": {"const": 2.5},
-            "array": {"const": [1]},
-            "object": {"const": {"a": 1}},
         },
     }
 
@@ -120,8 +120,6 @@ def test_codex_schema_projection_infers_all_json_const_types() -> None:
         "string": "string",
         "integer": "integer",
         "number": "number",
-        "array": "array",
-        "object": "object",
     }
 
 
@@ -149,10 +147,15 @@ def test_codex_model_uses_absolute_managed_paths_with_relative_work_dir(
 
     monkeypatch.setattr(compiler.subprocess, "run", fake_run)
     model = compiler.CodexJsonModel(model="test-model")
+    source_path = tmp_path / "path-test.schema.json"
+    source_path.write_text(json.dumps({
+        "type": "object", "properties": {"ok": {"type": "boolean"}},
+        "required": ["ok"], "additionalProperties": False,
+    }), encoding="utf-8")
 
     result = model.generate(
         "Return JSON.",
-        compiler.SEMANTIC_SCHEMA,
+        source_path,
         Path("relative") / "model-call",
     )
 

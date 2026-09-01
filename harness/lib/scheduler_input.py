@@ -88,6 +88,7 @@ RUNTIME_PROJECTION_ROOT_FIELDS = {
     "sprint_id",
     "graph_id",
     "planning_authority",
+    "test_policy",
     "scheduler_input_ref",
     "run_contract_ref",
     "runtime_input_bindings",
@@ -224,6 +225,18 @@ def semantic_errors(value: dict[str, Any]) -> list[str]:
         ranks = [candidate.get("rank") for candidate in raw.get("physical_candidates") or [] if isinstance(candidate, dict)]
         if len(ranks) != len(set(ranks)):
             errors.append(f"DUPLICATE_CANDIDATE_RANK:{node_id}")
+        if "execution_authority" in raw:
+            from execution_authority import validate
+            try:
+                authority = raw["execution_authority"]
+                validate(authority)
+                expected_operators = {row["operator_id"] for row in raw.get("physical_candidates") or []}
+                if set(authority["operators"]) != expected_operators:
+                    errors.append(f"EXECUTION_AUTHORITY_CANDIDATES_MISMATCH:{node_id}")
+                if not set((raw.get("capsule_binding") or {}).get("capsule_ids") or []).issubset(authority["capsules"]):
+                    errors.append(f"EXECUTION_AUTHORITY_CAPSULES_MISMATCH:{node_id}")
+            except (ValueError, TypeError, KeyError) as exc:
+                errors.append(f"EXECUTION_AUTHORITY_INVALID:{node_id}:{exc}")
         resources = raw.get("resource_requirements") if isinstance(raw.get("resource_requirements"), dict) else {}
         effects = set(raw.get("effects") or [])
         network = str(resources.get("network") or "")
@@ -382,6 +395,7 @@ def _runtime_node(
     return {
         "id": node["id"],
         "goal": node["goal"],
+        **({"retrieval_contract": deepcopy(node["retrieval_contract"])} if node.get("retrieval_contract") else {}),
         "logical_operator": node["logical_operator"],
         "dispatch_task_type": node["dispatch_task_type"],
         "task_type": node["dispatch_task_type"],
@@ -408,6 +422,7 @@ def _runtime_node(
             "evidence_requirements": ["handoff_md", "session_log", "artifact_contract"],
         },
         "resource_requirements": deepcopy(node["resource_requirements"]),
+        **({"execution_authority": deepcopy(node["execution_authority"])} if "execution_authority" in node else {}),
         "effects": deepcopy(node["effects"]),
         "priority": node["priority"],
         "failure_policy": failure,
@@ -758,6 +773,7 @@ def prepare_runtime_graph(
         "sprint_id": sprint_id,
         "graph_id": value["graph"]["graph_id"],
         "planning_authority": value["planning_authority"],
+        "test_policy": deepcopy(value.get("test_policy") or {}),
         "scheduler_input_ref": source_ref,
         "run_contract_ref": run_contract_ref,
         "runtime_input_bindings": input_bindings,
@@ -848,6 +864,7 @@ def verify_runtime_projection(
         graph.get("sprint_id") != value["sprint_id"]
         or graph.get("graph_id") != value["graph"]["graph_id"]
         or graph.get("planning_authority") != value["planning_authority"]
+        or graph.get("test_policy") != (value.get("test_policy") or {})
         or graph.get("runtime_state_filename")
         != f"{value['sprint_id']}.task_graph_state.json"
     ):

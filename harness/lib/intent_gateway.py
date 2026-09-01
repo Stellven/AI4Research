@@ -22,10 +22,21 @@ from pathlib import Path
 from typing import Any
 
 
-HARNESS_DIR = Path(os.environ.get("SOLAR_HARNESS_DIR", Path(__file__).resolve().parents[1]))
-SPRINTS_DIR = Path(os.environ.get("SOLAR_HARNESS_SPRINTS_DIR", Path.home() / ".solar" / "harness" / "sprints"))
-INTENTS_DIR = Path(os.environ.get("SOLAR_INTENT_GATEWAY_DIR", Path.home() / ".solar" / "harness" / "intents"))
-_DEFAULT_LLM_INTENT_CHANNELS = {"dashboard", "gui", "webapp", "web"}
+HARNESS_DIR = Path(
+    os.environ.get("HARNESS_DIR")
+    or os.environ.get("SOLAR_HARNESS_DIR")
+    or Path(__file__).resolve().parents[1]
+)
+SPRINTS_DIR = Path(os.environ.get("SOLAR_HARNESS_SPRINTS_DIR") or (HARNESS_DIR / "sprints"))
+INTENTS_DIR = Path(os.environ.get("SOLAR_INTENT_GATEWAY_DIR") or (HARNESS_DIR / "intents"))
+_DEFAULT_LLM_INTENT_CHANNELS = {
+    "cli_intake",
+    "dashboard",
+    "gui",
+    "webapp",
+    "web",
+    "codex_pm_router",
+}
 
 
 def _llm_intent_compiler_required(source_channel: str) -> bool:
@@ -938,20 +949,20 @@ def build_requirement_ir(intent_id: str, raw_intent: dict[str, Any], rewritten: 
 
 
 def compile_and_evaluate_requirement_bundle(
-    intent_ir: dict[str, Any], intent_acceptance: dict[str, Any]
+    intent_ir: dict[str, Any], intent_acceptance: dict[str, Any],
+    *, work_dir: Path, model: Any = None, reviewer: Any = None,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Compile an admitted IntentIR and run the independent deterministic gate."""
     from intent_compiler import requirement_handoff
-    from requirement_compiler import (
-        compile_requirement_ir,
-        evaluate_requirement_ir_format,
-    )
+    from requirement_compiler import evaluate_requirement_ir_format
+    from requirement_compiler.semantic import compile_semantic_requirement_ir
 
     handoff = requirement_handoff(intent_ir, intent_acceptance)
     intent_digest = handoff["intent_ir_sha256"]
-    requirement_ir = compile_requirement_ir(
+    requirement_ir = compile_semantic_requirement_ir(
         intent_ir,
         intent_ir_sha256=intent_digest,
+        work_dir=work_dir, model=model, reviewer=reviewer,
     )
     evaluation = evaluate_requirement_ir_format(
         requirement_ir,
@@ -964,6 +975,7 @@ def compile_and_evaluate_requirement_bundle(
 
 def capture(args: argparse.Namespace) -> dict[str, Any]:
     raw_text = read_text_arg(args)
+    formal_intent_required = _llm_intent_compiler_required(args.source_channel)
     created = now_iso()
     digest = hashlib.sha1(f"{created}\n{raw_text}".encode("utf-8")).hexdigest()[:10]
     intent_id = args.intent_id or f"intent-{dt.datetime.now(dt.timezone.utc).strftime('%Y%m%d-%H%M%S')}-{digest}"
@@ -993,13 +1005,16 @@ def capture(args: argparse.Namespace) -> dict[str, Any]:
             # Dashboard/CLI harness callers provide the user workspace
             # explicitly. Keep Path.cwd() only as a compatibility value for
             # older direct callers; it is never publication authority.
-            "cwd": args.cwd or str(Path.cwd()),
+            "cwd": getattr(args, "cwd", "") or str(Path.cwd()),
             "related_sprints": [],
             "knowledge_query": args.knowledge_query or "",
         },
         "routing_hints": {
             "urgency": args.urgency,
-            "mode": args.mode or infer_mode(raw_text),
+            # A production IntentIR is semantic authority.  Keep an explicit
+            # caller override, and retain the heuristic only for the named
+            # offline/CLI compatibility path.
+            "mode": args.mode or ("" if formal_intent_required else infer_mode(raw_text)),
             "allow_autodispatch": not args.no_autodispatch,
             "requires_human_confirm": args.requires_human_confirm,
             "require_research_artifact": bool(args.require_research_artifact or research),
@@ -1016,23 +1031,24 @@ def capture(args: argparse.Namespace) -> dict[str, Any]:
         raw_intent["research"] = research
     base = INTENTS_DIR / intent_id
     artifact_compiler_provider = os.environ.get("SOLAR_INTENT_COMPILER_PROVIDER", "").strip()
-    if not artifact_compiler_provider and _llm_intent_compiler_required(args.source_channel):
-        # The formal compiler currently supports Codex and model_from_environment
-        # already defaults both compiler and independent reviewer to that
-        # provider.  Setting the sentinel here makes the production contract
-        # explicit and prevents the legacy deterministic implementation label.
-        artifact_compiler_provider = "codex"
+    if not artifact_compiler_provider and formal_intent_required:
+        # Select the formal path. The registry factory below determines the
+        # actual provider; this sentinel is not provenance.
+        artifact_compiler_provider = "registry"
     if artifact_compiler_provider:
         from intent_compiler import (
             model_from_environment,
             run_pipeline,
         )
 
+        compiler_model = model_from_environment("compiler")
+        reviewer_model = model_from_environment("reviewer")
+        artifact_compiler_provider = getattr(compiler_model, "provider", artifact_compiler_provider)
         compiler_result = run_pipeline(
             raw_intent,
             base / "intent",
-            model_from_environment("compiler"),
-            model_from_environment("reviewer"),
+            compiler_model,
+            reviewer_model,
         )
         acceptance = compiler_result["intent_acceptance"]
         accepted_intent = compiler_result.get("intent_ir")
@@ -1117,6 +1133,7 @@ def capture(args: argparse.Namespace) -> dict[str, Any]:
         requirement_ir, requirement_evaluation = compile_and_evaluate_requirement_bundle(
             accepted_intent,
             acceptance,
+            work_dir=base / "requirement",
         )
         requirement_ir_path = base / "requirement_ir.json"
         requirement_evaluation_path = base / "requirement_format_evaluation.json"
@@ -1170,12 +1187,13 @@ def capture(args: argparse.Namespace) -> dict[str, Any]:
             if goals and isinstance(goals[0], dict)
             else None
         )
-        lane = deterministic_rewrite(raw_text)["suggested_lane"]
         return {
             "ok": True,
             "intent_id": intent_id,
             "title": title,
-            "lane": lane,
+            # Intent compilation must not choose a workflow lane.  The typed
+            # Elastic Planner owns direct_response/exact_reuse/generate.
+            "lane": None,
             "ready": True,
             "readiness_status": acceptance["decision"],
             "clarification_questions": acceptance["clarification_questions"],

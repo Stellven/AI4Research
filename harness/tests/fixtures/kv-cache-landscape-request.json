@@ -1,0 +1,3 @@
+{
+  "task": "## Prompt 1:\n\nPlease treat this task as a research-type, end-to-end research workflow rather than generating a one-off answer.\n\nProject Name:\nKV Cache Efficiency Landscape for Long-Context LLM Inference\n\nResearch Objective:\nConduct a systematic study of KV cache compression, quantization, selection, eviction, and sparsification methods for long-context large language model inference, and produce a comprehensive technical landscape report with an explicit evidence chain that is auditable and extensible for future research."
+}

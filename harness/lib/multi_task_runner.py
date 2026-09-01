@@ -21,6 +21,7 @@ from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
+from codex_cli_runtime import resolve_codex_cli
 from executable_node import (
     dispatch_role as executable_dispatch_role,
     logical_operator as executable_logical_operator,
@@ -503,11 +504,21 @@ def capability_for_profile(profile: dict[str, Any], include_probe: bool = True) 
             evidence = f"gemini doctor failed:{type(exc).__name__}"
     elif backend == "command":
         command = str(profile.get("command") or "").strip()
-        if provider == "openai":
-            codex = shutil.which("codex")
+        operator_id = str(profile.get("operator_id") or "").strip()
+        if command and operator_id and operator_id != "N/A":
+            # A leased physical operator owns its command environment.  Do not
+            # reject that remote/daemon-backed command because the Scheduler
+            # process itself cannot see an unrelated provider CLI on PATH.
+            evidence = f"operator={operator_id} command=configured"
+        elif provider == "openai":
+            codex, codex_resolution = resolve_codex_cli(
+                HARNESS_DIR,
+                env=os.environ,
+                configured_path=str(os.environ.get("SOLAR_CODEX_CLI") or ""),
+            )
             driver = HARNESS_DIR / "tools" / "codex_operator.py"
             if codex and driver.exists():
-                evidence = f"cli={codex} driver={driver}"
+                evidence = f"cli={codex} resolution={codex_resolution} driver={driver}"
             else:
                 status = "error"
                 missing = []
@@ -1239,6 +1250,16 @@ def select_operator(node: dict[str, Any], base_profile: dict[str, Any]) -> tuple
             operator_id = str(candidate.get("operator_id") or "").strip()
             operator = resolve_operator(operator_id)
             ok, reason = operator_dispatchable(operator)
+            if ok and node.get("execution_authority"):
+                from execution_authority import check_operator
+                from execution_resources import check as check_resources
+                try:
+                    check_operator(node["execution_authority"], operator_id, operator)
+                    resource_errors = check_resources(node.get("resource_requirements") or {}, operator)
+                    if resource_errors:
+                        ok, reason = False, ";".join(resource_errors)
+                except ValueError as exc:
+                    ok, reason = False, str(exc)
             if ok and not _operator_backend_runnable(operator):
                 ok, reason = False, "backend_cli_unavailable"
             if ok and operator_in_failure_cooldown(operator_id):
@@ -2649,7 +2670,8 @@ def _finalize_terminal_attribution(row: dict[str, Any]) -> None:
             return
         import node_runstate
 
-        snap = node_runstate.read_snapshot(SPRINTS_DIR, sid, node_id)
+        runstate_root = Path(str(row.get("node_runstate_root") or SPRINTS_DIR))
+        snap = node_runstate.read_snapshot(runstate_root, sid, node_id)
         attr = snap.get("build_attribution") if isinstance(snap.get("build_attribution"), dict) else {}
         if not attr:
             attr = snap.get("attribution") if isinstance(snap.get("attribution"), dict) else {}
@@ -2664,7 +2686,7 @@ def _finalize_terminal_attribution(row: dict[str, Any]) -> None:
             return
         if attr.get("phase") == "completed" and attr.get("status") == status and attr.get("exit_code") == row.get("exit_code"):
             return
-        node_runstate.record(SPRINTS_DIR, sid, node_id, "attribution", {
+        node_runstate.record(runstate_root, sid, node_id, "attribution", {
             "phase": "completed",
             "status": status,
             "exit_code": row.get("exit_code"),
@@ -4344,6 +4366,7 @@ def _build_operator_envelope(
         "operator_id": str(profile.get("operator_id") or "").strip(),
         "task_type": str(node.get("dispatch_task_type") or profile.get("role") or "builder"),
         "objective": str(node.get("goal") or node.get("title") or node_id),
+        **({"retrieval_contract": deepcopy(node["retrieval_contract"])} if node.get("retrieval_contract") else {}),
         "command": profile.get("command"),
         "backend": profile.get("backend"),
         "model": profile.get("model"),
@@ -4361,6 +4384,7 @@ def _build_operator_envelope(
         "artifact_routes": deepcopy(node.get("artifact_routes") or {}),
         "evaluation_binding": deepcopy(node.get("evaluation_binding") or {}),
         "resource_requirements": deepcopy(node.get("resource_requirements") or {}),
+        **({"execution_authority": deepcopy(node["execution_authority"])} if "execution_authority" in node else {}),
         "effects": deepcopy(node.get("effects") or []),
         "physical_candidate_rank": profile.get("scheduler_candidate_rank"),
         "runtime_binding": deepcopy(profile.get("runtime_binding") or {}),

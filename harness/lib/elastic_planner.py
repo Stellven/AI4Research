@@ -18,12 +18,21 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from jsonschema import Draft202012Validator
-from referencing import Registry, Resource
+
+try:
+    from referencing import Registry, Resource
+except ModuleNotFoundError:  # Ubuntu's jsonschema 4.10.x predates referencing.
+    Registry = None
+    Resource = None
 
 from intent_compiler import JsonModel, sha256_payload, write_json
+from structured_model import StructuredModelError
+from structured_output import OutputContractError
 import workflow_contract as workflow_contract
 import apo_plan_compiler
 import capsule_composition
+import capability_admission
+from physical_operator_catalog import is_operator_statically_selectable
 import evaluation_budget
 import evaluation_plan as evaluation_planning
 import plan_validator
@@ -103,18 +112,33 @@ def _load_json(path: Path) -> dict[str, Any]:
     return payload
 
 
-def _schema_registry() -> Registry:
-    registry = Registry()
+def _schema_resources() -> dict[str, dict[str, Any]]:
+    resources: dict[str, dict[str, Any]] = {}
     for path in SCHEMA_DIR.glob("*.schema.json"):
         content = _load_json(path)
         identifier = content.get("$id")
         if identifier:
-            registry = registry.with_resource(str(identifier), Resource.from_contents(content))
-    return registry
+            resources[str(identifier)] = content
+    return resources
 
 
 def _schema_errors(payload: dict[str, Any], schema_path: Path) -> list[dict[str, Any]]:
-    validator = Draft202012Validator(_load_json(schema_path), registry=_schema_registry())
+    schema = _load_json(schema_path)
+    resources = _schema_resources()
+    if Registry is not None and Resource is not None:
+        registry = Registry()
+        for identifier, content in resources.items():
+            registry = registry.with_resource(identifier, Resource.from_contents(content))
+        validator = Draft202012Validator(schema, registry=registry)
+    else:
+        # Keep the Planner runnable on supported distro packages that predate
+        # the referencing API; this resolves the same local planning schemas.
+        from jsonschema import RefResolver
+
+        validator = Draft202012Validator(
+            schema,
+            resolver=RefResolver.from_schema(schema, store=resources),
+        )
     errors: list[dict[str, Any]] = []
     for error in sorted(validator.iter_errors(payload), key=lambda item: list(item.absolute_path)):
         errors.append(
@@ -368,8 +392,7 @@ def _capsule_summaries(
         str(operator_id)
         for operator_id, spec in physical_rows.items()
         if isinstance(spec, dict)
-        and bool(spec.get("enabled", True))
-        and not bool(spec.get("deprecated", False))
+        and is_operator_statically_selectable(spec)
     }
     summaries: list[dict[str, Any]] = []
     for entry in iter_registry_entries(path=capsule_registry_path):
@@ -435,10 +458,16 @@ def _capsule_summaries(
                     if value
                 ),
                 "contract": {
-                    "required_inputs": _manifest_contract_shapes(inputs.get("required")),
-                    "optional_inputs": _manifest_contract_shapes(inputs.get("optional")),
-                    "required_outputs": _manifest_contract_shapes(outputs.get("required")),
-                    "optional_outputs": _manifest_contract_shapes(outputs.get("optional")),
+                    **copy.deepcopy(contract),
+                    "required_inputs": copy.deepcopy(inputs.get("required") or []),
+                    "optional_inputs": copy.deepcopy(inputs.get("optional") or []),
+                    "required_outputs": copy.deepcopy(outputs.get("required") or []),
+                    "optional_outputs": copy.deepcopy(outputs.get("optional") or []),
+                },
+                "bindings": copy.deepcopy(bindings),
+                "composition_constraints": {
+                    key: copy.deepcopy(composition.get(key) or [])
+                    for key in ("compatible_with", "incompatible_with", "requires_after")
                 },
                 "effects": {
                     key: sorted(str(value) for value in effects.get(key) or [] if str(value))
@@ -522,9 +551,9 @@ def build_planning_catalog_snapshot(
         str(operator_id)
         for operator_id, spec in physical_rows.items()
         if isinstance(spec, dict)
-        and bool(spec.get("enabled", True))
-        and not bool(spec.get("deprecated", False))
+        and is_operator_statically_selectable(spec)
     )
+    from execution_authority import capture_definitions
     snapshot = {
         "schema_version": "solar.planning_catalog_snapshot.v1",
         "artifact_role": "runtime_artifact",
@@ -538,6 +567,9 @@ def build_planning_catalog_snapshot(
             "physical_operators_sha256": _file_sha256(physical_operators_path),
         },
         "enabled_physical_operator_ids": enabled_physical,
+        "execution_definitions": capture_definitions(
+            capsule_registry_path, physical_operators_path
+        ),
     }
     snapshot["catalog_sha256"] = sha256_payload(snapshot)
     _assert_schema(snapshot, CATALOG_SCHEMA, "planning_catalog_snapshot")
@@ -1192,8 +1224,17 @@ a discovery node only requirements that can be decided from its candidate-acquis
 requirement to determine whether a source reliably supports a claim, compare methods, resolve scientific
 disagreements, or recommend an evaluation belongs to a downstream ingestion, verification, synthesis, or
 delivery node whose artifact can actually prove that conclusion; discovery may only preserve it as query
-context. Assign
+context. When RequirementIR has semantic_contract, its requirement_roles are authoritative (not substrings
+in check names). Set retrieval_contract_ref to discovery.contract_id on a discovery node or a logical node
+requiring discovery in its implementation; otherwise use null. Do NOT restate process/delivery constraints
+as research subjects or source filters. The physical operator receives the exact structured retrieval
+contract, never a reinterpreted objective. Assign
 a requirement only to a node whose produced artifact can actually be judged by that requirement's check.
+Requirements whose acceptance contract calls for a finding, supporting evidence, and unresolved status
+are resolution requirements, not discovery-scope requirements. A discovery node may retain those study
+protocol questions as context only, not as search scope, and it must not own them when its output ABI promises
+only a source shortlist. Assign their ownership to a downstream synthesis or report node whose artifact
+can explicitly resolve the question or preserve it as unresolved with evidence.
 Keep implementation-only support steps out of PlanIR. A single logical node may be implemented by a
 multi-capsule chain, so declare that node's external input/output boundary and let capsule composition
 insert internal artifacts such as a report plan. Add a separate logical node only when it represents a
@@ -1246,6 +1287,9 @@ when the node must produce scientific results from a real dataset/code execution
 lineage, schema, or exit-code-only evidence never satisfies measured_execution. Use evidence_transform
 only when the catalog explicitly offers that trust class; otherwise use any when execution authenticity
 is irrelevant.
+Resource minima are hard requirements, not quality scores or token-use estimates. Use
+minimum_context_tokens=0 unless the work has an actual hard lower bound; preserve any explicit
+user minimum. Unknown operator capacities cannot satisfy positive hard resource minima.
 Use at most one logical Critic, Verifier, or Evaluator node in the entire PlanIR, including high-risk
 plans. It must be the final independent semantic review. Do not create separate Critic and Verifier
 nodes or model-review quorums. Schema validation, hash binding, RequirementIR coverage aggregation,
@@ -1268,30 +1312,20 @@ preparation inside execution.
         "controller_input_artifact_types": sorted(
             _CONTROLLER_INPUT_TYPES | _planning_input_artifact_types(planning_inputs)
         ),
-        # PlanIR needs semantic ABI information, not physical bindings, full
-        # verification prose, manifest paths, or operator availability detail.
-        # The complete snapshot remains frozen for deterministic validation and
-        # later binding.
+        # Program-owned read-only facts, identical to the binding reviewers'
+        # catalog. Output schema accepts only PlanIR values, never catalog edits.
         "capability_capsule_abis": [
             {
                 "capsule_id": str(row.get("capsule_id") or ""),
-                "description": str(row.get("description") or ""),
+                "description": str(row.get("description") or "")[:80],
                 "task_types": list(row.get("task_types") or []),
                 "consumes": list(row.get("consumes") or []),
                 "produces": list(row.get("produces") or []),
-                "active_effects": [
-                    effect
-                    for effect in ("read", "write", "execute", "network")
-                    if _effect_is_active((row.get("effects") or {}).get(effect))
-                ],
-                "executable": bool((row.get("implementation") or {}).get("declared"))
-                and bool(
-                    (row.get("operator_compatibility") or {}).get(
-                        "selectable_preferred"
-                    )
-                ),
+                "active_effects": capsule_composition._active_effects(row),
+                "executable": not capability_admission.rejection_reasons(row),
                 "execution_trust": str(
-                    (row.get("implementation") or {}).get("trust_class") or "unspecified"
+                    (row.get("implementation") or {}).get("trust_class")
+                    or "unspecified"
                 ),
             }
             for row in catalog.get("capsules", [])
@@ -1582,7 +1616,7 @@ def compile_plan_candidate(
             previous=previous,
             defects=defects,
         ),
-        PLAN_BODY_SCHEMA,
+        (SCHEMA_DIR / "plan-ir.semantic.structured.v2.schema.json") if requirement_ir.get("semantic_contract") else PLAN_BODY_SCHEMA,
         work_dir / "plan_call",
     )
     body = _preserve_discovery_requirement_scope(requirement_ir, body)
@@ -2360,12 +2394,17 @@ def _repair_preservation_errors(
         unauthorized_added_requirements = (
             added_requirements
             - authorized_requirement_additions.get(node_id, set())
+            if repair_defects is not None
+            else set()
         )
         removed_requirements = before_requirements - after_requirements
         safely_reassigned = all(
             repaired_requirement_owners.get(requirement_id, set()) - {node_id}
             for requirement_id in removed_requirements
         )
+        # Additive ownership corrections remain subject to the downstream
+        # ownership, capsule, artifact, and fidelity gates. This preservation
+        # seam blocks semantic loss rather than valid additive repair.
         if unauthorized_added_requirements or (
             removed_requirements and not safely_reassigned
         ):
@@ -2376,8 +2415,8 @@ def _repair_preservation_errors(
                     (
                         f"Repair changed requirement ownership for node {node_id!r}: "
                         f"{sorted(before_requirements)} -> {sorted(after_requirements)}. "
-                        "Only requirement additions explicitly named at this node's "
-                        "requirement_ids path by a repairable defect are permitted."
+                        "Additions must be named for this node by a repairable "
+                        "ownership defect; removals require safe reassignment."
                     ),
                     repairable=False,
                 )
@@ -2452,6 +2491,18 @@ def validate_plan_ir(
     if (plan_ir.get("planning_decision_ref") or {}).get("sha256") != sha256_payload(decision):
         checks["artifact_references"].append(_error("PLANNING_DECISION_REF_MISMATCH", "planning_decision_ref", "PlanIR does not reference exact planning decision."))
     node_rows = [dict(row) for row in plan_ir.get("nodes") or [] if isinstance(row, dict)]
+    semantic_contract = requirement_ir.get("semantic_contract") or {}
+    discovery = semantic_contract.get("discovery")
+    roles = semantic_contract.get("requirement_roles") or {}
+    for row in node_rows:
+        ref = row.get("retrieval_contract_ref")
+        if ref and (not discovery or ref != discovery.get("contract_id")):
+            checks["artifact_references"].append(_error("RETRIEVAL_CONTRACT_REF_MISMATCH", "nodes", "Use the exact accepted discovery contract_id."))
+        if semantic_contract and _is_discovery_node(row):
+            if not ref:
+                checks["artifact_references"].append(_error("RETRIEVAL_CONTRACT_REF_REQUIRED", "nodes", "Discovery must bind the accepted structured retrieval contract."))
+            if any(roles.get(rid) in {"process", "delivery", "outcome", "resolution"} for rid in row.get("requirement_ids", [])):
+                checks["requirement_ownership"].append(_error("DISCOVERY_NON_SCOPE_OWNERSHIP", "nodes", "Assign workflow/delivery/resolution requirements to their actual artifact owner, not the shortlist."))
     node_ids = [str(row.get("node_id") or "") for row in node_rows]
     if len(node_ids) != len(set(node_ids)):
         checks["node_identity"].append(_error("DUPLICATE_NODE_ID", "nodes", "PlanIR node identifiers must be unique."))
@@ -2970,10 +3021,20 @@ validation owns those. An efficient plan may use one node for several requiremen
 and verifier contract truthfully covers them. Fail execution-trust weakening: a request for experiments
 on real datasets, reproduced measurements, or scientific effect validation requires measured_execution;
 fixture, adapter, lineage-only, schema-only, and exit-code-only paths are not equivalent evidence.
-For source or literature discovery, fail a genericized objective that drops named subjects, comparison
+When semantic_contract exists, use its requirement_roles and discovery contract as the semantic
+authority. A node's retrieval_contract_ref binds that exact scope, search queries, inclusion/exclusion
+criteria and time range. Never require process/delivery wording in retrieval scope or duplicate it in
+the objective. Judge semantic coverage through the explicit contract reference, not objective wording.
+For historical plans without semantic_contract, fail a genericized objective that drops named subjects, comparison
 dimensions, constraints, or required coverage values from the RequirementIR. The discovery node must
 retain the applicable scope/evidence-coverage requirement IDs and checks, but must not claim ownership
 of a final-answer, publication, or delivery requirement merely because it supplies upstream evidence.
+If a requirement is already owned
+and verifiable on a downstream non-discovery artifact, do not fail discovery merely for omitting its ID.
+Also fail a discovery node that owns a resolution requirement requiring a finding, supporting evidence,
+and unresolved status when its declared output is only a source shortlist. The protocol question may
+remain in the discovery objective as a constraint, but ownership must be assigned to a downstream
+synthesis or report artifact that can truthfully emit the required resolution trace.
 Judge unrequested effects by the semantic action added to the plan, such as a domain experiment,
 deployment, external mutation, or publication. The generic `execute` effect means registered operator
 code must run; it does not itself mean scientific experiment execution and is not an unrequested effect.
@@ -3006,6 +3067,42 @@ do not demand a redundant raw-claims input when the report node consumes that ve
     )
 
 
+def _filter_redundant_discovery_ownership_errors(
+    plan_ir: dict[str, Any],
+    errors: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """Reject reviewer requests for duplicate downstream-owned requirements."""
+
+    downstream_owned = {
+        str(requirement_id)
+        for node in plan_ir.get("nodes") or []
+        if isinstance(node, dict) and not _is_discovery_node(node)
+        for requirement_id in node.get("requirement_ids") or []
+        if str(requirement_id)
+    }
+    kept: list[dict[str, Any]] = []
+    ignored: list[dict[str, Any]] = []
+    for error in errors:
+        code_and_message = f"{error.get('code') or ''} {error.get('message') or ''}".lower()
+        requirement_ids = {
+            str(value) for value in error.get("requirement_ids") or [] if str(value)
+        }
+        requests_missing_discovery_ownership = (
+            "discover" in code_and_message
+            and "requirement" in code_and_message
+            and any(token in code_and_message for token in ("missing", "omit", "retain", "bind"))
+        )
+        if (
+            requests_missing_discovery_ownership
+            and requirement_ids
+            and requirement_ids <= downstream_owned
+        ):
+            ignored.append(error)
+            continue
+        kept.append(error)
+    return kept, ignored
+
+
 def review_plan_fidelity(
     requirement_ir: dict[str, Any],
     decision: dict[str, Any],
@@ -3028,10 +3125,35 @@ def review_plan_fidelity(
     actual = [str(row.get("kind") or "") for row in body.get("checks") or []]
     if len(actual) != len(required_kinds) or set(actual) != required_kinds:
         raise ElasticPlannerError("plan reviewer did not return every required check exactly once")
-    errors = list(body.get("errors") or [])
+    if requirement_ir.get("semantic_contract"):
+        errors, ignored_ownership_errors = list(body.get("errors") or []), []
+    else:
+        errors, ignored_ownership_errors = _filter_redundant_discovery_ownership_errors(
+            plan_ir, list(body.get("errors") or []),
+        )
     warnings = list(body.get("warnings") or [])
+    checks = copy.deepcopy(body.get("checks") or [])
+    if ignored_ownership_errors:
+        warnings.append(
+            {
+                "code": "REDUNDANT_DISCOVERY_OWNERSHIP_REQUEST_IGNORED",
+                "path": "plan_ir.nodes[*].requirement_ids",
+                "message": (
+                    "The independent reviewer requested duplicate discovery ownership for "
+                    "requirements already owned by downstream non-discovery artifacts."
+                ),
+            }
+        )
+        if not errors:
+            for check in checks:
+                if check.get("kind") == "requirement_preservation" and check.get("status") == "fail":
+                    check["status"] = "warning"
+                    check["reason"] = (
+                        "Scope text is preserved, while requirement ownership remains on "
+                        "the downstream artifact that can verify it."
+                    )
     failed_checks = [
-        row for row in body.get("checks") or [] if row.get("status") == "fail"
+        row for row in checks if row.get("status") == "fail"
     ]
     if failed_checks and not errors:
         errors.extend(
@@ -3064,7 +3186,7 @@ def review_plan_fidelity(
             "provider": reviewer.provider,
             "model": reviewer.model or "configured_default",
         },
-        "checks": body.get("checks") or [],
+        "checks": checks,
         "errors": errors,
         "warnings": warnings,
     }
@@ -3204,6 +3326,8 @@ def run_semantic_planning_pipeline(
     artifact_type_registry: dict[str, Any] | None = None
     conversion_registry: dict[str, Any] | None = None
     evaluation_check_registry: dict[str, Any] | None = None
+    implementation_binding: dict[str, Any] | None = None
+    implementation_feedback: list[dict[str, Any]] = []
     repair_attempted = False
     failure: str | None = None
     try:
@@ -3369,7 +3493,10 @@ def run_semantic_planning_pipeline(
                 conversion_registry,
             )
             for generation in range(MAX_REPAIRS + 1):
-                defects = _repairable_errors(validation, fidelity)
+                defects = [
+                    *_repairable_errors(validation, fidelity),
+                    *implementation_feedback,
+                ]
                 if generation > 0:
                     if not defects:
                         break
@@ -3441,9 +3568,37 @@ def run_semantic_planning_pipeline(
                     output_dir / f"generation-{generation}",
                 )
                 write_json(output_dir / f"generation-{generation}" / "plan_fidelity.json", fidelity)
-                if not _repairable_errors(validation, fidelity):
+                implementation_binding = None
+                implementation_feedback = []
+                if validation.get("status") == "pass":
+                    implementation_binding = run_generated_composition_binding(
+                        requirement_ir,
+                        {"planning_context": planning_context, "planning_inputs": planning_inputs,
+                         "plan_ir": plan_ir, "planning_catalog_snapshot": catalog,
+                         "plan_composition_catalog": composition_catalog,
+                         "artifact_type_registry": artifact_type_registry,
+                         "artifact_conversion_registry": conversion_registry},
+                        output_dir / f"generation-{generation}" / "implementation",
+                        planner_model, reviewer_model, maximum_repairs=0,
+                    )
+                    if not implementation_binding.get("accepted"):
+                        implementation_feedback = [{
+                            "code": "CAPABILITY_IMPLEMENTATION_MISMATCH",
+                            "message": "The current DAG has no admitted semantic implementation. Redesign affected nodes using the read-only capability contracts; preserve all RequirementIR obligations, temporal constraints and permissions. Do not reselect a known-inappropriate sole candidate or weaken acceptance.",
+                            "repairable": True,
+                            "binding_errors": [
+                                *((implementation_binding.get("selection_validation") or {}).get("errors") or []),
+                                *((implementation_binding.get("fit_review") or {}).get("errors") or []),
+                            ],
+                            "candidate_evidence": composition_catalog.get("nodes") or [],
+                        }]
+                write_json(output_dir / f"generation-{generation}" / "implementation_feedback.json",
+                           {"errors": implementation_feedback, "maximum_dag_repairs": MAX_REPAIRS})
+                if not _repairable_errors(validation, fidelity) and not implementation_feedback:
                     break
-    except ElasticPlannerError as exc:
+            if implementation_feedback:
+                failure = "CAPABILITY_IMPLEMENTATION_MISMATCH: bounded DAG repair exhausted; see implementation_feedback.json."
+    except (ElasticPlannerError, StructuredModelError, OutputContractError) as exc:
         failure = str(exc)
     acceptance = decide_plan_acceptance(
         requirement_ir,
@@ -3472,7 +3627,13 @@ def run_semantic_planning_pipeline(
     if repair_attempted and (output_dir / "repair_record.json").exists():
         repair = _load_json(output_dir / "repair_record.json")
         repaired_artifact = plan_ir if plan_ir and int(plan_ir.get("generation") or 0) > 0 else direct_response
-        repair["status"] = "completed" if repaired_artifact and int(repaired_artifact.get("generation") or 0) > 0 else "failed"
+        repair["status"] = (
+            "completed"
+            if repaired_artifact
+            and int(repaired_artifact.get("generation") or 0) > 0
+            and acceptance.get("decision") == "accepted"
+            else "failed"
+        )
         repair["result_plan_ir_id"] = plan_ir.get("plan_ir_id") if plan_ir else None
         repair["result_response_id"] = direct_response.get("response_id") if direct_response else None
         write_json(output_dir / "repair_record.json", repair)
@@ -3493,6 +3654,7 @@ def run_semantic_planning_pipeline(
         "direct_response": direct_response,
         "direct_response_review": direct_response_review,
         "plan_acceptance": acceptance,
+        "prevalidated_composition_binding": implementation_binding,
     }
 
 
@@ -3791,7 +3953,7 @@ def _hard_capsule_candidate_row(
         if not isinstance(capsule, dict):
             continue
         capsule_id = str(capsule.get("capsule_id") or "")
-        reasons: list[str] = []
+        reasons = capability_admission.rejection_reasons(capsule)
         capsule_inputs = set(capsule.get("consumes") or [])
         missing_inputs = sorted(capsule_inputs - available_inputs)
         unsupported_node_inputs = sorted(required_capsule_inputs - capsule_inputs)
@@ -3836,8 +3998,6 @@ def _hard_capsule_candidate_row(
         capsule_trust = str((capsule.get("implementation") or {}).get("trust_class") or "unspecified")
         if required_trust != "any" and capsule_trust != required_trust:
             reasons.append("EXECUTION_TRUST_UNSATISFIED")
-        if not (capsule.get("task_types") or []):
-            reasons.append("TASK_TYPE_UNDECLARED")
         if reasons:
             exclusions.append(
                 {
@@ -4649,14 +4809,21 @@ def review_composition_fit(
                     "faithfully performs its logical PlanIR objective. Deterministic composition "
                     "already proves types, effects, and executable registration; you judge meaning. "
                     "Fail chains that are too narrow, add material unrequested work, omit an "
-                    "essential semantic operation, or use an inappropriate method. Do not rewrite."
+                    "essential semantic operation, or use an inappropriate method. When a requirement "
+                    "explicitly permits either resolving a question or reporting it as unresolved, a "
+                    "chain may satisfy that requirement by preserving the missing evidence, limitation, "
+                    "and unresolved status truthfully and traceably; do not require an unregistered "
+                    "resolution operation merely because resolution is one allowed alternative. Still "
+                    "fail a chain that claims resolution without the necessary operation, or when the "
+                    "requirement mandates resolution rather than allowing unresolved reporting. Do not "
+                    "rewrite."
                 ),
                 "requirement_ir": requirement_ir,
                 "upstream_artifacts": planning_inputs,
                 "plan_ir": plan_ir,
                 "composition_catalog": composition_catalog,
                 "composition_selection": selection,
-                "capsules": catalog.get("capsules") or [],
+                "capsules": [capability_admission.model_contract(row) for row in catalog.get("capsules") or []],
             },
             ensure_ascii=False,
             indent=2,
@@ -4703,7 +4870,11 @@ def run_generated_composition_binding(
     output_dir: Path,
     planner_model: JsonModel,
     reviewer_model: JsonModel,
+    *,
+    maximum_repairs: int = MAX_REPAIRS,
 ) -> dict[str, Any]:
+    if maximum_repairs not in (0, MAX_REPAIRS):
+        raise ElasticPlannerError("invalid composition repair budget")
     planning_context = semantic_result.get("planning_context") or {}
     planning_inputs = semantic_result.get("planning_inputs") or {}
     plan_ir = semantic_result.get("plan_ir") or {}
@@ -4732,7 +4903,7 @@ def run_generated_composition_binding(
     fit_review: dict[str, Any] | None = None
     repair_attempted = False
     if composition_catalog.get("verdict") == "candidates_available":
-        for generation in (0, 1):
+        for generation in range(maximum_repairs + 1):
             defects = _repairable_errors(validation, fit_review)
             if generation == 1:
                 if not defects:
@@ -5181,11 +5352,18 @@ def _generated_composition_task_graph_proposal(
             ]
             task_type = str(selected_step.get("dispatch_task_type") or "")
             capsule_description = str(capsule.get("description") or "").strip()
-            objective = (
-                str(plan_node.get("objective") or "")
-                if is_terminal
+            parent_objective = str(plan_node.get("objective") or "").strip()
+            support_objective = (
+                f"{capsule_description}\n\nComposition parent objective:\n{parent_objective}"
+                if capsule_description and parent_objective
                 else capsule_description
+                or parent_objective
                 or f"Run {capsule_id} as part of {parent_id}."
+            )
+            objective = (
+                parent_objective
+                if is_terminal
+                else support_objective
             )
             node = {
                 "id": step_id,
@@ -5380,7 +5558,31 @@ def _merge_execution_plans_into_graph(
         "sha256": sha256_payload(physical_plan),
     }
     merged["planning_authority"] = "frozen_execution_plan_v1"
+    _normalize_task_graph_schema_fields(merged)
     return merged
+
+
+def _normalize_task_graph_schema_fields(graph: dict[str, Any]) -> None:
+    """Materialize the TaskGraph fields required at the dispatch boundary."""
+    for index, node in enumerate(graph.get("nodes") or [], start=1):
+        if not isinstance(node, dict):
+            continue
+        acceptance = node.get("acceptance")
+        if not isinstance(acceptance, list) or not acceptance:
+            derived = [
+                str(row.get("requirement") or "").strip()
+                for row in node.get("proof_obligations") or []
+                if isinstance(row, dict) and str(row.get("requirement") or "").strip()
+            ]
+            node["acceptance"] = list(dict.fromkeys(derived)) or [
+                f"Complete {node.get('id') or 'node'} and produce its declared outputs."
+            ]
+        priority = node.get("priority")
+        if isinstance(priority, bool) or not isinstance(priority, (int, float)):
+            node["priority"] = index
+        node.setdefault("required_phase", None)
+        node.setdefault("required_node_id", None)
+        node.setdefault("required_node_status", None)
 
 
 def validate_capsule_bindings(capsule_plan: dict[str, Any]) -> dict[str, Any]:
@@ -5686,6 +5888,7 @@ def compile_scheduler_input(
     *,
     sprint_id: str,
     workspace_authority: dict[str, Any] | None = None,
+    execution_definitions: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Serialize admitted Planner output into the scheduler's immutable input.
 
@@ -5734,7 +5937,11 @@ def compile_scheduler_input(
             )
             if capsule_id:
                 capsule_ids = [capsule_id]
-        primary_capsule_id = str(capsule_node.get("capability_capsule_id") or "")
+        primary_capsule_id = str(
+            capsule_node.get("capability_capsule_id")
+            or node.get("capability_capsule_id")
+            or ""
+        )
         checks = [row for row in evaluation_node.get("checks") or [] if isinstance(row, dict)]
         deterministic_gate_ids = [
             str(row.get("check_id") or "")
@@ -5818,8 +6025,10 @@ def compile_scheduler_input(
                     "semantic_evaluator_ids": semantic_evaluator_ids,
                 },
                 "evaluator_gate": copy.deepcopy(node.get("evaluator_gate") or {}),
+                **({"retrieval_contract": copy.deepcopy(node["retrieval_contract"])} if node.get("retrieval_contract") else {}),
                 "evaluation_policy": copy.deepcopy(node_policy),
                 "resource_requirements": {
+                    "minimum_context_tokens": int(requirements.get("minimum_context_tokens") or 0),
                     "cpu_cores_min": float(requirements.get("cpu_cores_min") or 0),
                     "memory_mb_min": int(requirements.get("memory_mb_min") or 0),
                     "gpu_required": bool(requirements.get("gpu_required", False)),
@@ -5838,6 +6047,10 @@ def compile_scheduler_input(
                 },
             }
         )
+    if execution_definitions is not None:
+        from execution_authority import freeze_node
+        for node in compiled_nodes:
+            node["execution_authority"] = freeze_node(node, execution_definitions)
     scheduler_input = {
         "schema_version": "solar.scheduler_input.v1",
         "artifact_role": "runtime_execution_authority",
@@ -5847,6 +6060,7 @@ def compile_scheduler_input(
         "workspace_authority_ref": _scheduler_workspace_authority_ref(
             workspace_authority
         ),
+        "test_policy": copy.deepcopy(task_graph.get("test_policy") or {}),
         "graph": {
             "graph_id": str(
                 task_graph.get("workflow_contract_id")
@@ -5868,6 +6082,30 @@ def compile_scheduler_input(
     return scheduler_input
 
 
+def _bind_retrieval_contracts(graph: dict[str, Any], requirement_ir: dict[str, Any],
+                             plan_ir: dict[str, Any]) -> None:
+    """Copy accepted semantics by explicit PlanIR reference; never infer a topic."""
+    semantic = requirement_ir.get("semantic_contract")
+    if not semantic:
+        return
+    contract = semantic.get("discovery")
+    parents = {row["node_id"]: row for row in plan_ir.get("nodes", [])}
+    for node in graph.get("nodes", []):
+        parent = parents.get(node.get("composition_parent_node_id") or node["id"], {})
+        if not parent:
+            parent = next((parents.get(trace.get("plan_ir_node_id"), {})
+                           for trace in graph.get("composition_expansion_trace", [])
+                           if node["id"] in trace.get("task_graph_node_ids", [])), {})
+        produces = (node.get("semantic_artifact_contract") or {}).get("produces", [])
+        is_discovery = any("literature_discovery" in str(row.get("artifact_type", "")) for row in produces)
+        is_discovery = is_discovery or _is_discovery_node(node)
+        if not is_discovery:
+            continue
+        if not contract or parent.get("retrieval_contract_ref") != contract["contract_id"]:
+            raise ElasticPlannerError("Discovery execution lacks an accepted PlanIR retrieval_contract_ref")
+        node["retrieval_contract"] = copy.deepcopy(contract)
+
+
 def compile_and_freeze_execution_bundle(
     requirement_ir: dict[str, Any],
     semantic_result: dict[str, Any],
@@ -5877,6 +6115,7 @@ def compile_and_freeze_execution_bundle(
     workspace_root: str = "workspace",
     planner_model: JsonModel | None = None,
     reviewer_model: JsonModel | None = None,
+    test_policy: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Turn admitted semantic planning into a physically feasible frozen graph."""
     semantic_acceptance = semantic_result.get("plan_acceptance") or {}
@@ -5895,19 +6134,47 @@ def compile_and_freeze_execution_bundle(
             sprint_id=sprint_id,
             workspace_root=workspace_root,
         )
+        if str((test_policy or {}).get("mode") or "") == evaluation_budget.RAPID_SMOKE_MODE:
+            graph = evaluation_budget.apply_evaluation_budget(
+                graph,
+                requirement_ir,
+                test_policy=test_policy,
+            )
     else:
         if planner_model is None or reviewer_model is None:
             raise ElasticPlannerError(
                 "generated planning requires planner and independent capsule-fit reviewer models"
             )
-        direct_binding_attempt = run_generated_capsule_binding(
-            requirement_ir,
-            semantic_result,
-            output_dir,
-            planner_model,
-            reviewer_model,
-        )
-        if direct_binding_attempt.get("accepted"):
+        prevalidated = semantic_result.get("prevalidated_composition_binding")
+        if prevalidated is not None:
+            # The same selection already informed DAG repair. Do not call an
+            # independent selector again and invalidate that planning decision.
+            capsule_binding = prevalidated
+            composition_binding_attempt = prevalidated
+            verdict = validate_composition_selection(
+                requirement_ir, semantic_result["planning_context"], plan_ir,
+                semantic_result["planning_catalog_snapshot"],
+                prevalidated["composition_catalog"], prevalidated.get("selection"),
+                artifact_registry=prevalidated["artifact_type_registry"],
+                conversion_registry=prevalidated["artifact_conversion_registry"],
+            )
+            if (not prevalidated.get("accepted") or verdict.get("status") != "pass"
+                    or (prevalidated.get("fit_review") or {}).get("status") not in {"pass", "pass_with_warnings"}
+                    or ((prevalidated.get("fit_review") or {}).get("selection_ref") or {}).get("sha256")
+                    != sha256_payload(prevalidated.get("selection"))):
+                raise ElasticPlannerError("prevalidated composition binding changed before freeze")
+            for name, key in (("plan_composition_catalog", "composition_catalog"),
+                              ("composition_selection", "selection"),
+                              ("composition_selection_validation", "selection_validation"),
+                              ("composition_fit_review", "fit_review"),
+                              ("artifact_type_registry.snapshot", "artifact_type_registry"),
+                              ("artifact_conversion_registry.snapshot", "artifact_conversion_registry")):
+                write_json(output_dir / f"{name}.json", prevalidated[key])
+        else:
+            direct_binding_attempt = run_generated_capsule_binding(
+                requirement_ir, semantic_result, output_dir, planner_model, reviewer_model,
+            )
+        if direct_binding_attempt and direct_binding_attempt.get("accepted"):
             capsule_binding = direct_binding_attempt
             graph = _generated_task_graph_proposal(
                 requirement_ir,
@@ -5915,7 +6182,7 @@ def compile_and_freeze_execution_bundle(
                 capsule_binding["selection"],
                 sprint_id=sprint_id,
             )
-        else:
+        elif prevalidated is None:
             composition_binding_attempt = run_generated_composition_binding(
                 requirement_ir,
                 semantic_result,
@@ -5997,7 +6264,11 @@ def compile_and_freeze_execution_bundle(
                 semantic_result.get("planning_catalog_snapshot") or {},
                 sprint_id=sprint_id,
             )
-        graph = evaluation_budget.apply_evaluation_budget(graph, requirement_ir)
+        graph = evaluation_budget.apply_evaluation_budget(
+            graph,
+            requirement_ir,
+            test_policy=test_policy,
+        )
     execution = apo_plan_compiler.compile_whole_request_execution_plan(
         graph,
         request_type=str(requirement_ir.get("request_type") or ""),
@@ -6045,6 +6316,7 @@ def compile_and_freeze_execution_bundle(
             "plan_acceptance": acceptance,
         }
     merged = _merge_execution_plans_into_graph(graph, capsule_plan, physical_plan)
+    _bind_retrieval_contracts(merged, requirement_ir, plan_ir)
     capsule_registry = workflow_contract.load_capsule_registry(CONFIG_DIR)
     operator_registry = workflow_contract.load_operator_registry(PHYSICAL_OPERATORS_PATH)
     contract_id = str(merged.get("workflow_contract_id") or "pm.generic.v1")
@@ -6183,14 +6455,18 @@ def compile_and_freeze_execution_bundle(
         workspace_authority=(semantic_result.get("planning_inputs") or {}).get(
             "workspace_authority"
         ),
+        execution_definitions=(semantic_result.get("planning_catalog_snapshot") or {}).get("execution_definitions"),
     )
     _assert_schema(scheduler_input, SCHEDULER_INPUT_SCHEMA, "scheduler_input")
+    from execution_authority import check_live_definitions
+    check_live_definitions(scheduler_input, CAPSULE_REGISTRY_PATH, PHYSICAL_OPERATORS_PATH)
     write_json(output_dir / "scheduler_input.json", scheduler_input)
     frozen = {
         "schema_version": "solar.run_contract.frozen.v2",
         "artifact_role": "runtime_artifact",
         "sprint_id": sprint_id,
         "planning_authority": "frozen_execution_plan_v1",
+        "test_policy": copy.deepcopy(merged.get("test_policy") or {}),
         "requirement_ir_ref": {
             "requirement_ir_id": requirement_ir_id(requirement_ir),
             "sha256": sha256_payload(requirement_ir),
@@ -6319,15 +6595,11 @@ def compile_and_freeze_execution_bundle(
             if capsule_binding and capsule_binding.get("binding_kind") == "direct_capsule"
             else None
         ),
-        "capsule_selection": (
-            capsule_binding.get("selection")
-            if capsule_binding and capsule_binding.get("binding_kind") == "direct_capsule"
-            else None
-        ),
+        # Compatibility aliases retain the historical field names while
+        # binding_kind and composition_* identify the authoritative mode.
+        "capsule_selection": capsule_binding.get("selection") if capsule_binding else None,
         "capsule_selection_validation": (
-            capsule_binding.get("selection_validation")
-            if capsule_binding and capsule_binding.get("binding_kind") == "direct_capsule"
-            else None
+            capsule_binding.get("selection_validation") if capsule_binding else None
         ),
         "capsule_fit_review": (
             capsule_binding.get("fit_review")
@@ -6503,6 +6775,7 @@ def run_elastic_planning_request(
     workspace_root: str = "workspace",
     catalog: dict[str, Any] | None = None,
     upstream_artifacts: dict[str, dict[str, Any]] | None = None,
+    test_policy: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Run the complete static planning boundary for one accepted RequirementIR."""
     semantic_dir = output_root / "semantic"
@@ -6538,6 +6811,7 @@ def run_elastic_planning_request(
         workspace_root=workspace_root,
         planner_model=planner_model,
         reviewer_model=reviewer_model,
+        test_policy=test_policy,
     )
     verification_errors = verify_frozen_execution_chain(semantic_dir, execution_dir)
     accepted = (
@@ -6885,7 +7159,15 @@ def verify_frozen_execution_chain(
             if (semantic_dir / "inputs" / "workspace_authority.json").is_file()
             else None
         ),
+        execution_definitions=_load_json(semantic_dir / "planning_catalog_snapshot.json").get("execution_definitions"),
     )
+    # Read-only compatibility for historical freezes made before context
+    # requirements were transported. Never retrofit authority into old runs.
+    old_nodes = {node["id"]: node for node in scheduler_input["graph"]["nodes"]}
+    for node in recomputed_scheduler_input["graph"]["nodes"]:
+        old = old_nodes.get(node["id"], {})
+        if "execution_authority" not in old and "minimum_context_tokens" not in old.get("resource_requirements", {}):
+            node["resource_requirements"].pop("minimum_context_tokens", None)
     if recomputed_scheduler_input != scheduler_input:
         errors.append("scheduler_input.recomputed_mismatch")
     expected_refs = {

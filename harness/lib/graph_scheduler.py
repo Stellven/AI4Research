@@ -15,7 +15,9 @@ Core guarantees:
 from __future__ import annotations
 
 import argparse
+import contextlib
 import datetime
+import file_lock_compat as fcntl
 import json
 import os
 import shutil
@@ -321,16 +323,55 @@ def load_graph(path: str | Path) -> dict[str, Any]:
     return graph
 
 
+@contextlib.contextmanager
+def _graph_state_write_lock(state_path: Path):
+    """Serialize state-plane commits for one graph across scheduler writers."""
+    lock_path = state_path.with_name(state_path.name + ".lock")
+    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    with lock_path.open("a+b") as handle:
+        fcntl.flock(handle, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(handle, fcntl.LOCK_UN)
+
+
+def _state_revision(payload: dict[str, Any] | None) -> int:
+    value = (payload or {}).get("revision")
+    if isinstance(value, bool):
+        return 0
+    try:
+        return max(0, int(value))
+    except (TypeError, ValueError):
+        return 0
+
+
 def save_graph(path: str | Path, graph: dict[str, Any]) -> None:
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
-    state = _runtime_state_from_graph(graph, graph_path=p)
-    _save_graph_state(_state_path_for_graph(graph, p), state)
-    _save_closure_projection(_closure_path_for_graph(graph, p), graph, state)
-    spec_graph = _graph_spec_payload(graph)
-    tmp = p.with_suffix(p.suffix + ".tmp")
-    tmp.write_text(json.dumps(spec_graph, indent=2, ensure_ascii=False) + "\n")
-    os.replace(tmp, p)
+    state_path = _state_path_for_graph(graph, p)
+    with _graph_state_write_lock(state_path):
+        if graph.get("schema_version") == "solar.scheduler_runtime_projection.v1":
+            runtime = graph.get("_solar_runtime") if isinstance(graph.get("_solar_runtime"), dict) else {}
+            expected_revision = _state_revision(
+                runtime.get("state") if isinstance(runtime.get("state"), dict) else {}
+            )
+            current_state = _load_graph_state_for_path(p, graph)
+            current_revision = _state_revision(current_state)
+            if current_revision != expected_revision:
+                raise RuntimeError(
+                    "stale scheduler state revision: "
+                    f"expected {expected_revision}, found {current_revision}"
+                )
+        state = _runtime_state_from_graph(graph, graph_path=p)
+        _save_graph_state(state_path, state)
+        _save_closure_projection(_closure_path_for_graph(graph, p), graph, state)
+        spec_graph = _graph_spec_payload(graph)
+        tmp = p.with_suffix(p.suffix + ".tmp")
+        tmp.write_text(json.dumps(spec_graph, indent=2, ensure_ascii=False) + "\n")
+        os.replace(tmp, p)
+        runtime = graph.setdefault("_solar_runtime", {})
+        runtime["state"] = deepcopy(state)
 
 
 def _state_path_for_graph(graph: dict[str, Any], graph_path: str | Path | None = None) -> Path:

@@ -812,6 +812,15 @@ def submit(task_envelope: Dict[str, Any]) -> Dict[str, Any]:
     if config is None:
         raise ValueError(f"Unknown operator: '{operator_id}' not found in registry")
 
+    from execution_authority import from_envelope, check_operator
+    authority = from_envelope(payload)
+    if authority is not None:
+        from execution_resources import check as check_resources
+        check_operator(authority, operator_id, config)
+        resource_errors = check_resources(payload.get("resource_requirements") or {}, config)
+        if resource_errors:
+            raise ValueError("RESOURCE_REQUIREMENTS_UNSATISFIED:" + ";".join(resource_errors))
+
     # ── 3. Dispatchability check ───────────────────────────────────────────
     current_state = get_operator_runtime_state(operator_id)
     if current_state in _NON_DISPATCHABLE_STATES:

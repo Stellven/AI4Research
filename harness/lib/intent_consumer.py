@@ -24,9 +24,22 @@ from typing import Any
 
 import file_lock_compat as fcntl
 
-HARNESS_DIR = Path(os.environ.get("SOLAR_HARNESS_DIR", Path(__file__).resolve().parents[1]))
-SPRINTS_DIR = Path(os.environ.get("SOLAR_HARNESS_SPRINTS_DIR", Path.home() / ".solar" / "harness" / "sprints"))
-INTENTS_DIR = Path(os.environ.get("SOLAR_INTENT_GATEWAY_DIR", Path.home() / ".solar" / "harness" / "intents"))
+HARNESS_DIR = Path(
+    os.environ.get("HARNESS_DIR")
+    or os.environ.get("SOLAR_HARNESS_DIR")
+    or Path(__file__).resolve().parents[1]
+)
+DEFAULT_RUNTIME_ROOT = (
+    HARNESS_DIR
+    if os.environ.get("HARNESS_DIR") or os.environ.get("SOLAR_HARNESS_DIR")
+    else Path.home() / ".solar" / "harness"
+)
+SPRINTS_DIR = Path(
+    os.environ.get("SOLAR_HARNESS_SPRINTS_DIR") or (DEFAULT_RUNTIME_ROOT / "sprints")
+)
+INTENTS_DIR = Path(
+    os.environ.get("SOLAR_INTENT_GATEWAY_DIR") or (DEFAULT_RUNTIME_ROOT / "intents")
+)
 DEFAULT_TRUSTED_AUTODISPATCH_CHANNELS = (
     "dashboard",
     "pm_dispatch",
@@ -49,6 +62,50 @@ def write_json(path: Path, payload: dict[str, Any]) -> None:
 
 def read_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def is_formal_requirement_ir(requirement_ir: dict[str, Any]) -> bool:
+    return requirement_ir.get("schema_version") == "solar.requirement_ir.v2"
+
+
+def initialize_formal_sprint(
+    sprint_id: str,
+    raw: dict[str, Any],
+    planning_view: dict[str, Any],
+) -> Path:
+    """Create only lifecycle state for the typed path; never synthesize a DAG."""
+    status_path = SPRINTS_DIR / f"{sprint_id}.status.json"
+    if status_path.exists():
+        return status_path
+    created = now_iso()
+    write_json(
+        status_path,
+        {
+            "schema_version": "solar.sprint_status.v1",
+            "sprint_id": sprint_id,
+            "title": str(planning_view.get("title") or sprint_id),
+            "objective": str(planning_view.get("objective") or ""),
+            "status": "drafting",
+            "phase": "requirement_compiled",
+            "handoff_to": "elastic_planner",
+            "target_role": "planner",
+            "round": 0,
+            "created_at": created,
+            "updated_at": created,
+            "planning_authority": "solar.requirement_ir.v2",
+            "plan_compile_required": True,
+            "runtime_handoff_allowed": False,
+            "source_intent_id": str(raw.get("intent_id") or ""),
+            "history": [
+                {
+                    "ts": created,
+                    "event": "formal_requirement_compiled",
+                    "by": "intent_consumer",
+                }
+            ],
+        },
+    )
+    return status_path
 
 
 def is_direct_answer_requirement(requirement_ir: dict[str, Any]) -> bool:
@@ -348,48 +405,84 @@ def planner_handoff_policy(
 
 def planner_objective_for_compiled_sprint(sprint_id: str) -> str:
     base = str(SPRINTS_DIR / sprint_id)
-    planning_dir = str(SPRINTS_DIR / sprint_id / "planning")
-    compiled_dir = str(SPRINTS_DIR / sprint_id / "compiled")
-    objective = textwrap.dedent(
+    return textwrap.dedent(
         f"""\
-        请接手 {sprint_id}：RawIntent 已经通过 Intent Compiler 和 Requirement Compiler，权威输入是 RequirementIR v2。
+        请接手 {sprint_id}：RawIntent 已通过 Intent Compiler 和 Requirement Compiler。
+        Planner 只负责需求整理与向下游交接。
 
         权威输入：
         - {base}.requirement_ir.json
+        - {base}.contract.md
+        - {base}.prd.md
 
-        Planner 步骤输出到 {planning_dir}：
-        - planning_decision.json
-        - plan_ir.json（仅 generate/exact_reuse；必须符合 solar.plan_ir.v2）
-        - direct_response.json（仅 direct_response）
-
-        Planner 的独立 evaluator 输出到同一目录：
-        - plan_validation.json
-        - plan_fidelity.json
-        - binding_trace.json
+        只允许输出：
+        - {base}.planner-requirements.md
+        - {base}.planner-handoff.md
 
         规则：
-        1. PlanIR 只定义语义节点、依赖、typed artifact ports、effects、execution trust 和 requirement ownership。
-        2. 不要读取、细化或输出旧 task_graph.json；不要在 PlanIR 中选择 physical operator、lease、attempt 或运行状态。
-        3. plan_validation、plan_fidelity 和 binding_trace 是 evaluator artifacts，不得由 Planner 自评代写。
-        4. planner_hints.preferred_outcome=direct_answer 且 runtime_handoff_allowed=false 时，Planner 必须亲自生成 direct_response；Intent Compiler 和 Requirement Compiler 只能提出路由建议，不得代写答案。独立 direct-response review 通过后立即终止，不得生成 PlanIR/TaskGraph 或派发 Builder。
-        5. 只有非 direct_response 路径的三个 evaluator verdict 均通过后，协调器才可调用 static_execution_compiler.py，把 bundle 编译到 {compiled_dir}。
-        6. scheduler 只接收 {compiled_dir}\\scheduler_input.json；它不得直接接收 RequirementIR 或 PlanIR。
-        7. 如果 RequirementIR 缺失关键字段或存在 requirements_gap，生成明确的 planning decision 并停止 runtime handoff。
+        1. 整理目标、约束、验收标准、风险、输入和建议的下游执行模式。
+        2. 不得创建或修改 design.md、plan.md、task_graph.json、PlanIR 或 DAG。
+        3. 不得研究、调用浏览器、生成 HTML/最终答案/报告、执行任务或评估。
+        4. 不得派发其他角色，也不得修改 status.json；Solar 根据 handoff 决定下一角色。
+        5. 简单问题可在 handoff 中建议 direct_response，但答案必须由下游 direct-response worker 生成。
         """
     ).strip()
-    # P5 G2: teach the planner the compile rules it will be checked against
-    # (env-gated inside the helper; "" when SOLAR_PLAN_VALIDATOR is off, so
-    # legacy prompts stay byte-identical). Prompt enrichment must never break
-    # dispatch — enforcement lives at the compile/dispatch seams.
-    try:
-        import plan_validator  # noqa: WPS433
 
-        policy_block = plan_validator.planner_compile_policy_block(SPRINTS_DIR, sprint_id)
-    except Exception:
-        policy_block = ""
-    if policy_block:
-        objective = f"{objective}\n\n{policy_block}"
-    return objective
+
+def submit_typed_planner(
+    sprint_id: str,
+    requirement_ir_path: Path,
+    *,
+    workspace_root: str,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    output_root = SPRINTS_DIR / sprint_id / "planning"
+    log_dir = HARNESS_DIR / "logs" / "elastic-planner"
+    log_path = log_dir / f"{sprint_id}.log"
+    command = [
+        sys.executable,
+        str(HARNESS_DIR / "tools" / "elastic_planner_adapter.py"),
+        "--requirement-ir",
+        str(requirement_ir_path),
+        "--output-root",
+        str(output_root),
+        "--sprint-id",
+        sprint_id,
+        "--workspace-root",
+        workspace_root,
+    ]
+    if dry_run:
+        return {
+            "status": "dry_run",
+            "mode": "elastic_planner",
+            "cmd": command,
+            "output_root": str(output_root),
+        }
+    log_dir.mkdir(parents=True, exist_ok=True)
+    environment = dict(os.environ)
+    environment["HARNESS_DIR"] = str(HARNESS_DIR)
+    environment["SOLAR_HARNESS_DIR"] = str(HARNESS_DIR)
+    environment["SOLAR_HARNESS_SPRINTS_DIR"] = str(SPRINTS_DIR)
+    with log_path.open("ab") as output:
+        process = subprocess.Popen(
+            command,
+            stdin=subprocess.DEVNULL,
+            stdout=output,
+            stderr=subprocess.STDOUT,
+            cwd=str(HARNESS_DIR),
+            env=environment,
+            start_new_session=(os.name != "nt"),
+        )
+    (output_root / "adapter.pid").parent.mkdir(parents=True, exist_ok=True)
+    (output_root / "adapter.pid").write_text(f"{process.pid}\n", encoding="utf-8")
+    return {
+        "status": "submitted",
+        "mode": "elastic_planner",
+        "pid": process.pid,
+        "cmd": command,
+        "log": str(log_path),
+        "output_root": str(output_root),
+    }
 
 
 def submit_planner_handoff(sprint_id: str, requirement_ir_path: Path, *, dry_run: bool = False) -> dict[str, Any]:
@@ -401,7 +494,7 @@ def submit_planner_handoff(sprint_id: str, requirement_ir_path: Path, *, dry_run
         "--objective", planner_objective_for_compiled_sprint(sprint_id),
         "--sprint", sprint_id,
         "--node", "N0",
-        "--task-type", "planning",
+        "--task-type", "requirements_handoff",
         "--context", f"compiled_requirement_ir={requirement_ir_path}",
     ]
     if dry_run:
@@ -426,7 +519,11 @@ def submit_planner_handoff(sprint_id: str, requirement_ir_path: Path, *, dry_run
 
 
 def submit_direct_answer_runtime(sprint_id: str, requirement_ir_path: Path) -> dict[str, Any]:
-    """Start the Planner-owned no-DAG path without blocking the intake request."""
+    """Compatibility launcher for the downstream no-DAG response worker.
+
+    New intake never calls this directly: Planner handoff must complete first,
+    and the coordinator then launches the worker.
+    """
     from activity_runtime import ActivityRuntime
     from runtime_status import transition_status
 
@@ -460,21 +557,21 @@ def submit_direct_answer_runtime(sprint_id: str, requirement_ir_path: Path) -> d
             "status_fields": {
                 "phase": "direct_answer",
                 "stage": "direct_answer_queued",
-                "handoff_to": "planner",
-                "target_role": "planner",
+                "handoff_to": "direct_response_worker",
+                "target_role": "direct_response_worker",
                 "runtime_handoff_allowed": False,
                 "direct_answer_status": "queued",
                 "plan_compile_required": False,
                 "planner_dispatch_claim": None,
             },
-            "note": "Queued the Planner-owned direct-answer path; no TaskGraph dispatch is allowed.",
+            "note": "Queued the downstream direct-response worker; no TaskGraph dispatch is allowed.",
         },
     )
     runtime = ActivityRuntime(sprint_id, harness_dir=str(HARNESS_DIR))
     runtime.command_issued(
         "direct-answer",
         actor="intent_consumer",
-        target="planner",
+        target="direct_response_worker",
         payload={"stage": "direct_answer", "runtime_handoff_allowed": False},
     )
     try:
@@ -961,7 +1058,8 @@ def consume_one(
     native_elastic_planner = bool(
         handoff.get("requested") and handoff.get("source_channel") == "dashboard"
     )
-    if not native_elastic_planner:
+    formal_requirement = is_formal_requirement_ir(ir)
+    if not (native_elastic_planner or formal_requirement):
         handoff = suppress_pm_operator_dispatch_for_codex(handoff)
     if research_required and not research:
         payload = {
@@ -974,6 +1072,95 @@ def consume_one(
         }
         write_json(base / "consumer.json", payload)
         return payload
+
+    if formal_requirement:
+        workspace_root = os.environ.get(
+            "SOLAR_INTENT_CONSUMER_WORKSPACE_ROOT", str(HARNESS_DIR)
+        )
+        requirement_ir_path = SPRINTS_DIR / f"{sid}.requirement_ir.json"
+        if dry_run:
+            typed_handoff = (
+                submit_typed_planner(
+                    sid,
+                    requirement_ir_path,
+                    workspace_root=workspace_root,
+                    dry_run=True,
+                )
+                if handoff.get("requested")
+                else {"status": "skipped", "mode": "elastic_planner"}
+            )
+            return {
+                "ok": True,
+                "intent_id": intent_id,
+                "status": "dry_run",
+                "sprint_id": sid,
+                "planner_handoff": {**handoff, **typed_handoff},
+            }
+
+        initialize_formal_sprint(sid, raw, rewritten)
+        env = dict(os.environ)
+        env["SOLAR_HARNESS_DIR"] = str(HARNESS_DIR)
+        env["HARNESS_DIR"] = str(HARNESS_DIR)
+        env["SOLAR_HARNESS_SPRINTS_DIR"] = str(SPRINTS_DIR)
+        env["SOLAR_INTENT_GATEWAY_DIR"] = str(INTENTS_DIR)
+        bind_cmd = [
+            sys.executable,
+            str(HARNESS_DIR / "lib" / "intent_gateway.py"),
+            "bind",
+            "--intent-id",
+            intent_id,
+            "--sprint-id",
+            sid,
+            "--json",
+        ]
+        bind = subprocess.run(
+            bind_cmd, text=True, capture_output=True, env=env, timeout=30
+        )
+        if bind.returncode != 0:
+            payload = {
+                "ok": False,
+                "status": "bind_failed",
+                "intent_id": intent_id,
+                "sprint_id": sid,
+                "updated_at": now_iso(),
+                "planner_handoff": handoff,
+                "bind_stderr_tail": (bind.stderr or bind.stdout or "")[-4000:],
+            }
+            write_json(base / "consumer.json", payload)
+            return payload
+
+        if handoff.get("requested"):
+            handoff = {
+                **handoff,
+                **submit_typed_planner(
+                    sid,
+                    requirement_ir_path,
+                    workspace_root=workspace_root,
+                ),
+            }
+        else:
+            handoff = {**handoff, "status": "skipped", "mode": "elastic_planner"}
+        payload = {
+            "ok": True,
+            "status": "consumed",
+            "intent_id": intent_id,
+            "sprint_id": sid,
+            "updated_at": now_iso(),
+            "consumer": "intent_consumer.py",
+            "direct_pane_dispatch": False,
+            "planner_runtime_submit": handoff.get("status") == "submitted",
+            "planner_handoff": handoff,
+            "artifacts": {
+                "status": str(SPRINTS_DIR / f"{sid}.status.json"),
+                "raw_intent": str(SPRINTS_DIR / f"{sid}.raw_intent.json"),
+                "intent_ir": str(SPRINTS_DIR / f"{sid}.intent_ir.json"),
+                "requirement_ir": str(requirement_ir_path),
+                "planning_output_root": str(SPRINTS_DIR / sid / "planning"),
+            },
+        }
+        write_json(base / "consumer.json", payload)
+        return payload
+
     request_text = build_consumer_text(raw, rewritten, ir)
     cmd = [
         sys.executable,
@@ -1148,14 +1335,7 @@ def consume_one(
         annotate_compiled_package_with_research_artifact(sid, research)
 
     requirement_ir_path = SPRINTS_DIR / f"{sid}.requirement_ir.json"
-    compiled_requirement_ir = read_json(requirement_ir_path)
-    if handoff.get("requested") and is_direct_answer_requirement(compiled_requirement_ir):
-        handoff = {
-            **handoff,
-            "reason": "direct_answer_elastic_planner",
-            **submit_direct_answer_runtime(sid, requirement_ir_path),
-        }
-    elif handoff.get("requested"):
+    if handoff.get("requested"):
         handoff = {**handoff, **submit_planner_handoff(sid, requirement_ir_path)}
     else:
         handoff = {**handoff, "status": "skipped"}

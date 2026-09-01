@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from jsonschema import Draft202012Validator
+from structured_output import OutputContractError, parse_json, project_schema, validate_output
 
 from .production_research import ResearchModelService, ResearchOperatorError
 
@@ -380,7 +381,7 @@ class CodexResearchModelService(ResearchModelService):
         response_path = invocation_root / "response.json"
         events_path = invocation_root / "events.jsonl"
         schema = _response_schema(node_id)
-        _write_json(schema_path, schema)
+        _write_json(schema_path, project_schema(schema, "openai"))
         prompt_payload = {
             "schema": "solar.codex_research_prompt.v1",
             "node_id": node_id,
@@ -388,6 +389,7 @@ class CodexResearchModelService(ResearchModelService):
             "model": self.model,
             "system": system,
             "input": user,
+            "source_output_contract": schema,
             "instructions": [
                 "Return exactly the JSON object required by the output schema.",
                 "Do not call tools; every authoritative input is included in this prompt.",
@@ -540,8 +542,8 @@ class CodexResearchModelService(ResearchModelService):
             if not response_bytes or len(response_bytes) > MAX_CODEX_RESPONSE_BYTES:
                 raise ResearchOperatorError("Codex research response is empty or oversized", error_type="provider_contract")
             try:
-                payload = json.loads(response_bytes.decode("utf-8"))
-            except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+                payload = validate_output(parse_json(response_bytes.decode("utf-8")), schema, profile="openai")
+            except (UnicodeDecodeError, ValueError) as exc:
                 raise ResearchOperatorError("Codex research response is invalid JSON", error_type="provider_contract") from exc
             schema_errors = sorted(
                 Draft202012Validator(schema).iter_errors(payload),

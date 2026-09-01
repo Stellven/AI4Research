@@ -35,14 +35,34 @@
       "const": "frozen_execution_plan_v1"
     },
     "workspace_authority_ref": {
-      "type": ["object", "null"],
+      "type": [
+        "object",
+        "null"
+      ],
       "additionalProperties": false,
-      "required": ["authority_id", "path", "sha256", "workspace_root"],
+      "required": [
+        "authority_id",
+        "path",
+        "sha256",
+        "workspace_root"
+      ],
       "properties": {
-        "authority_id": {"type": "string", "minLength": 1},
-        "path": {"type": "string", "minLength": 1},
-        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-        "workspace_root": {"type": "string", "minLength": 1}
+        "authority_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "workspace_root": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
     "graph": {
@@ -63,6 +83,21 @@
           "items": {
             "$ref": "#/$defs/node"
           }
+        }
+      }
+    },
+    "test_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "const": "rapid_smoke"
+        },
+        "semantic_evaluation_budget": {
+          "const": 0
+        },
+        "deterministic_gates_required": {
+          "const": true
         }
       }
     }
@@ -217,12 +252,33 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["artifact_type", "route_kind", "relative_path", "materialization_kind"],
+            "required": [
+              "artifact_type",
+              "route_kind",
+              "relative_path",
+              "materialization_kind"
+            ],
             "properties": {
-              "artifact_type": {"type": "string", "minLength": 1},
-              "route_kind": {"enum": ["sprint_private", "workspace_publish"]},
-              "relative_path": {"type": "string", "minLength": 1},
-              "materialization_kind": {"enum": ["file", "directory"]}
+              "artifact_type": {
+                "type": "string",
+                "minLength": 1
+              },
+              "route_kind": {
+                "enum": [
+                  "sprint_private",
+                  "workspace_publish"
+                ]
+              },
+              "relative_path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "materialization_kind": {
+                "enum": [
+                  "file",
+                  "directory"
+                ]
+              }
             }
           }
         },
@@ -231,11 +287,26 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["kind", "relative_path", "sha256"],
+            "required": [
+              "kind",
+              "relative_path",
+              "sha256"
+            ],
             "properties": {
-              "kind": {"enum": ["file", "directory"]},
-              "relative_path": {"type": "string", "minLength": 1},
-              "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+              "kind": {
+                "enum": [
+                  "file",
+                  "directory"
+                ]
+              },
+              "relative_path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              }
             }
           }
         },
@@ -316,6 +387,10 @@
                 "optional",
                 "forbidden"
               ]
+            },
+            "minimum_context_tokens": {
+              "type": "integer",
+              "minimum": 0
             }
           }
         },
@@ -355,6 +430,205 @@
                 "block_dependents",
                 "continue_independent"
               ]
+            }
+          }
+        },
+        "retrieval_contract": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "contract_id",
+            "subject",
+            "search_queries",
+            "source_refs",
+            "inclusion_criteria",
+            "exclusion_criteria",
+            "coverage",
+            "time_range",
+            "minimum_candidates"
+          ],
+          "properties": {
+            "contract_id": {
+              "type": "string",
+              "minLength": 1
+            },
+            "subject": {
+              "type": "string",
+              "minLength": 1
+            },
+            "search_queries": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 1,
+              "maxItems": 8
+            },
+            "source_refs": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 1
+            },
+            "inclusion_criteria": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "field",
+                  "any_of",
+                  "source_refs"
+                ],
+                "properties": {
+                  "field": {
+                    "enum": [
+                      "title_abstract",
+                      "publication_type"
+                    ]
+                  },
+                  "any_of": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "minItems": 1
+                  },
+                  "source_refs": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "minItems": 1
+                  }
+                }
+              }
+            },
+            "exclusion_criteria": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "field",
+                  "any_of",
+                  "source_refs"
+                ],
+                "properties": {
+                  "field": {
+                    "enum": [
+                      "title_abstract",
+                      "publication_type"
+                    ]
+                  },
+                  "any_of": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "minItems": 1
+                  },
+                  "source_refs": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "minItems": 1
+                  }
+                }
+              }
+            },
+            "coverage": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "label",
+                  "any_of",
+                  "required"
+                ],
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "any_of": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "minItems": 1
+                  },
+                  "required": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            },
+            "time_range": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "start_year",
+                "end_year"
+              ],
+              "properties": {
+                "start_year": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 1000,
+                  "maximum": 9999
+                },
+                "end_year": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 1000,
+                  "maximum": 9999
+                }
+              }
+            },
+            "minimum_candidates": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        },
+        "execution_authority": {
+          "type": "object",
+          "required": [
+            "schema_version",
+            "capsules",
+            "operators",
+            "sha256"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "schema_version": {
+              "const": "solar.node_execution_authority.v1"
+            },
+            "capsules": {
+              "type": "object"
+            },
+            "operators": {
+              "type": "object"
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
             }
           }
         }

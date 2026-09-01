@@ -15,6 +15,9 @@
         "repo_or_path": "experiments/sample",
         "files": ["experiments/sample/run.py"],
         "execution_entrypoint": "python run.py",
+        "mapping_status": "unknown",
+        "relevance_label": "unknown",
+        "relevance_reason": "Illustrative fixture path; no repository inspection or execution was performed.",
         "evidence_ids": ["claim.sample.001"]
       }
     ]

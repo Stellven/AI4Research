@@ -59,10 +59,16 @@ def test_windows_gate_argv_preserves_native_path_separators(monkeypatch) -> None
 def _node(gate: dict, node_id: str = "D2", status: str = "reviewing") -> dict:
     return {
         "id": node_id,
+        "goal": f"Execute deterministic gate fixture {node_id}.",
         "status": status,
         "task_type": "evidence",
         "evaluator_gate": gate,
         "depends_on": [],
+        "acceptance": ["The declared gate completes."],
+        "priority": 1,
+        "required_phase": None,
+        "required_node_id": None,
+        "required_node_status": None,
     }
 
 
@@ -231,6 +237,7 @@ def test_repaired_node_gate_verdict_is_consumed_not_archived(sandbox):
             "on_fail": "repair_once_then_fail"}
     node = _node(gate)
     node["repair_attempts"] = 1
+    node["eval_repair_attempts"] = 1
     node["max_repair_attempts"] = 1
     node["repair_context"] = {"attempt": 1, "created_at": "2026-07-08T00:00:00Z"}
     graph = _graph([node])

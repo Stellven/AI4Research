@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "solar.requirement_semantic_review.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "accepted",
+    "errors"
+  ],
+  "properties": {
+    "accepted": {
+      "type": "boolean"
+    },
+    "errors": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  }
+}

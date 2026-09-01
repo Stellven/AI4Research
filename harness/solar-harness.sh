@@ -1858,7 +1858,7 @@ intake_request() {
   # contract compiler — fail-closed, never a silent fall-through to the generic
   # planner path (smoke 20260707T180639Z ran a 5-node planner DAG because this
   # seam did not exist and code.cli_smoke's trigger is explicit-workflow_id-only).
-  if [[ -n "${SOLAR_INTAKE_WORKFLOW_ID:-}" && "${SOLAR_INTAKE_WORKFLOW_ID}" != "research.evidence_to_poc.v1" ]]; then
+  if [[ "${SOLAR_INTAKE_COMPAT_MODE:-}" == "legacy" && -n "${SOLAR_INTAKE_WORKFLOW_ID:-}" && "${SOLAR_INTAKE_WORKFLOW_ID}" != "research.evidence_to_poc.v1" ]]; then
     if [[ "${SOLAR_WORKFLOW_ROUTER:-0}" != "1" || ! -f "$HARNESS_DIR/lib/workflow_intake.py" ]]; then
       err "SOLAR_INTAKE_WORKFLOW_ID is set but the workflow router is unavailable (need SOLAR_WORKFLOW_ROUTER=1 and lib/workflow_intake.py) — refusing generic fallback"
       return 1
@@ -1924,7 +1924,7 @@ intake_request() {
   # Requirement compilation may expose this registered workflow as a memoized
   # TaskGraph candidate, but only the elastic planner may select it. A research
   # lane by itself must continue into the normal Planner handoff.
-  if [[ "$intent_rc" == "0" && -n "$intent_id" && "$intent_lane" == "research" && "$planner_selected_workflow" == "research.evidence_to_poc.v1" ]]; then
+  if [[ "${SOLAR_INTAKE_COMPAT_MODE:-}" == "legacy" && "$intent_rc" == "0" && -n "$intent_id" && "$intent_lane" == "research" && "$planner_selected_workflow" == "research.evidence_to_poc.v1" ]]; then
     local fixed_args fixed_out fixed_rc fixed_sid fixed_execution_profile fixed_acquisition_mode
     fixed_execution_profile="${SOLAR_RESEARCH_EXECUTION_PROFILE:-part_a_only}"
     fixed_acquisition_mode="${SOLAR_RESEARCH_ACQUISITION_MODE:-source_pack}"
@@ -1998,7 +1998,7 @@ intake_request() {
     fixed_route=1
   fi
   if [[ "$fixed_route" != "1" ]]; then
-    if [[ "$intent_rc" == "0" && -n "$intent_id" && -f "$HARNESS_DIR/lib/intent_consumer.py" ]] && ! should_epic_decompose_request "$req"; then
+    if [[ "$intent_rc" == "0" && -n "$intent_id" && -f "$HARNESS_DIR/lib/intent_consumer.py" ]] && { [[ "${SOLAR_INTAKE_COMPAT_MODE:-}" != "legacy" ]] || ! should_epic_decompose_request "$req"; }; then
       set +e
       consumer_out=$(SOLAR_HARNESS_SPRINTS_DIR="$SPRINTS_DIR" \
         SOLAR_INTENT_CONSUMER_WORKSPACE_ROOT="$intake_workspace_root" \
@@ -2026,7 +2026,7 @@ PY
         out="$consumer_out"
         rc="$consumer_rc"
       fi
-    else
+    elif [[ "${SOLAR_INTAKE_COMPAT_MODE:-}" == "legacy" ]]; then
       set +e
       out=$(new_sprint "$req" 2>&1)
       rc=$?
@@ -2036,6 +2036,18 @@ patterns=(r"Sprint created:\s*(\S+)", r"Epic:\s*(\S+)", r"\"epic_id\":\s*\"([^\"
 print(next((m.group(1) for p in patterns for m in [re.search(p,text)] if m), ""))' <<<"$out" 2>/dev/null || true)
       if [[ "$rc" == "0" && -n "$intent_id" && -n "$sid_from_out" && -f "$HARNESS_DIR/lib/intent_gateway.py" ]]; then
         SOLAR_HARNESS_SPRINTS_DIR="$SPRINTS_DIR" python3 "$HARNESS_DIR/lib/intent_gateway.py" bind --intent-id "$intent_id" --sprint-id "$sid_from_out" --json >/dev/null 2>&1 || true
+      fi
+    else
+      rc="$intent_rc"
+      [[ "$rc" != "0" ]] || rc=2
+      if [[ ! -f "$HARNESS_DIR/lib/intent_gateway.py" ]]; then
+        out="production intake refused: LLM Intent Compiler is unavailable"
+      elif [[ -z "$intent_id" ]]; then
+        out="production intake refused: LLM Intent Compiler did not produce an accepted IntentIR"
+        [[ -n "$intent_out" ]] && out="$out
+$intent_out"
+      else
+        out="production intake refused: Requirement Compiler / Intent Consumer is unavailable"
       fi
     fi
   fi
@@ -2061,11 +2073,11 @@ print(next((m.group(1) for p in patterns for m in [re.search(p,text)] if m), "")
     if [[ "$autopilot_rc" != "0" ]]; then
       rc="$autopilot_rc"
     fi
-  elif [[ "$dispatch" == "1" && "$planner_handoff_mode" == "direct_answer" ]]; then
-    # The consumer already started Elastic Planner. Running the legacy global
-    # autopilot scan here is both slow and unsafe: it can dispatch a generic
-    # Planner against the proposal-only compatibility graph.
-    autopilot_out="direct_answer_runtime_submitted"
+  elif [[ "$dispatch" == "1" && "$planner_handoff_mode" =~ ^(direct_answer|elastic_planner)$ ]]; then
+    # The consumer already started a typed downstream path. Running the legacy
+    # global autopilot here could dispatch an uncertified task_graph before the
+    # frozen SchedulerInput exists.
+    autopilot_out="typed_planner_runtime_submitted"
     autopilot_rc=0
   elif [[ "$dispatch" == "1" && -f "$HARNESS_DIR/tools/solar-autopilot-monitor.py" ]]; then
     set +e
@@ -2101,8 +2113,8 @@ PY
       if [[ "$autopilot_rc" == "0" ]]; then
         if [[ "$fixed_route" == "1" ]]; then
           ok "Fixed research A1 dispatch triggered"
-        elif [[ "$planner_handoff_mode" == "direct_answer" ]]; then
-          ok "Direct answer Planner started; legacy autopilot skipped"
+        elif [[ "$planner_handoff_mode" =~ ^(direct_answer|elastic_planner)$ ]]; then
+          ok "Typed Planner path started; legacy autopilot skipped"
         else
           ok "Autopilot scan/dispatch triggered"
         fi
@@ -2406,7 +2418,7 @@ else:
         python3 "$HARNESS_DIR/lib/runtime_status.py" "$sf" "drafting" "wake_workflow_guard_to_pm" "wake" '{"status_fields":{"phase":"spec","handoff_to":"pm","target_role":"pm","auto_held":false},"note":"Workflow guard: PM PRD is required before planner or builder dispatch."}' >/dev/null 2>&1 || true
         st="drafting"
         target_pane="$LIVE_PM"
-        target_task="Sprint ${sid} 恢复：Workflow Guard 判定必须先走 PM。请研究用户要求，产出正式 PRD 到 ~/.solar/harness/sprints/${sid}.prd.md；完成后只交给 Planner，不要直接给 Builder。原因: ${workflow_reason}; violations=${workflow_violations}"
+        target_task="Sprint ${sid} 恢复：Workflow Guard 判定必须先走 PM。请研究用户要求，产出正式 PRD 到 ${SPRINTS_DIR}/${sid}.prd.md；完成后只交给 Planner，不要直接给 Builder。原因: ${workflow_reason}; violations=${workflow_violations}"
         ;;
       planner)
         python3 "$HARNESS_DIR/lib/runtime_status.py" "$sf" "drafting" "wake_workflow_guard_to_planner" "wake" '{"status_fields":{"phase":"prd_ready","handoff_to":"planner","target_role":"planner","auto_held":false},"note":"Workflow guard: planner must produce design.md, plan.md, and task_graph.json before builder dispatch."}' >/dev/null 2>&1 || true
@@ -2428,7 +2440,7 @@ else:
         target_pane="$LIVE_EVALUATOR"
         dispatch_role="evaluator"
         dispatch_task_type="review"
-        target_task="Sprint ${sid} 恢复：Workflow Guard 判定已有 handoff，需要 Evaluator 评审。cat ~/.solar/harness/sprints/${sid}.handoff.md"
+        target_task="Sprint ${sid} 恢复：Workflow Guard 判定已有 handoff，需要 Evaluator 评审。读取 ${SPRINTS_DIR}/${sid}.handoff.md"
         ;;
       *)
         target_pane="$LIVE_PM"
@@ -2462,7 +2474,7 @@ else:
       target_pane="$LIVE_EVALUATOR"
       dispatch_role="evaluator"
       dispatch_task_type="review"
-      target_task="Sprint ${sid} 恢复：建设者已提交计划，请审批。cat ~/.solar/harness/sprints/${sid}.plan.md"
+      target_task="Sprint ${sid} 恢复：建设者已提交计划，请审批。读取 ${SPRINTS_DIR}/${sid}.plan.md"
       ;;
     approved)
       if [[ "$workflow_role" != "builder" && "$workflow_role" != "builder_main" ]]; then
@@ -2471,20 +2483,20 @@ else:
         target_pane="$LIVE_BUILDER"
         dispatch_role="builder"
         dispatch_task_type="implementation"
-        target_task="Sprint ${sid} 恢复：计划已批准，请继续实现。cat ~/.solar/harness/sprints/${sid}.plan.md"
+        target_task="Sprint ${sid} 恢复：计划已批准，请继续实现。读取 ${SPRINTS_DIR}/${sid}.plan.md"
       fi
       ;;
     reviewing|ready_for_review)
       target_pane="$LIVE_EVALUATOR"
       dispatch_role="evaluator"
       dispatch_task_type="review"
-      target_task="Sprint ${sid} 恢复：建设者已提交，请评审。cat ~/.solar/harness/sprints/${sid}.handoff.md"
+      target_task="Sprint ${sid} 恢复：建设者已提交，请评审。读取 ${SPRINTS_DIR}/${sid}.handoff.md"
       ;;
     failed_review)
       target_pane="$LIVE_BUILDER"
       dispatch_role="builder"
       dispatch_task_type="implementation"
-      target_task="Sprint ${sid} 恢复：评审未通过，请修复。cat ~/.solar/harness/sprints/${sid}.eval.md"
+      target_task="Sprint ${sid} 恢复：评审未通过，请修复。读取 ${SPRINTS_DIR}/${sid}.eval.md"
       ;;
     interrupted)
       # 被 kill_harness 打断，改回 reviewing 让 coordinator 重新派发
@@ -2492,7 +2504,7 @@ else:
       target_pane="$LIVE_EVALUATOR"
       dispatch_role="evaluator"
       dispatch_task_type="review"
-      target_task="Sprint ${sid} 恢复 (从 interrupted)：请评审。cat ~/.solar/harness/sprints/${sid}.handoff.md"
+      target_task="Sprint ${sid} 恢复 (从 interrupted)：请评审。读取 ${SPRINTS_DIR}/${sid}.handoff.md"
       ;;
     *)
       warn "未知状态: ${st}，派发给 PM 做状态诊断，不直接给建设者执行"
@@ -2500,6 +2512,22 @@ else:
       target_task="Sprint ${sid} 恢复：当前状态 ${st} 未被 wake 状态机识别。请先诊断 status/phase/handoff_to，修正状态后再派发，不要直接实现。"
       ;;
   esac
+
+  # The pre-write hook contract refers to one stable state file. Older installs
+  # could dispatch that requirement without provisioning the file, which made
+  # every role stop before its first write. Create a minimal, non-secret
+  # locator once; per-sprint status/events remain the runtime source of truth.
+  local state_file="${SOLAR_STATE_FILE:-$HOME/.solar/STATE.md}"
+  if [[ ! -f "$state_file" ]]; then
+    mkdir -p "$(dirname "$state_file")" || return 78
+    {
+      printf '# Solar Runtime State\n\n'
+      printf -- '- Canonical harness root: `%s`\n' "$HARNESS_DIR"
+      printf -- '- Canonical sprint directory: `%s`\n' "$SPRINTS_DIR"
+      printf -- '- Runtime truth: read the active sprint status/events files; do not infer completion from this locator.\n'
+    } > "$state_file" || return 78
+    chmod 600 "$state_file" 2>/dev/null || true
+  fi
 
   # Step 4: 重新生成 dispatch.md 并派发
   cat > "$SPRINTS_DIR/${sid}.dispatch.md" << DISPATCH_EOF
@@ -2510,7 +2538,7 @@ else:
 
 在任何 Write/Edit/handoff/eval/status 更新之前，必须先用 Claude/Codex 的 **Read 工具**读取：
 
-\`~/.solar/STATE.md\`
+\`${state_file}\`
 
 不要用 \`cat\` 替代这一步；本地 \`state-read-enforcer.sh\` hook 只认 Read 工具标记。
 

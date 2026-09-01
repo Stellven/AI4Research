@@ -37,6 +37,7 @@ def convert(raw: dict[str, Any], envelope: dict[str, Any] | None = None) -> dict
         "source_fan_in",
         "source_provider_boundary",
         "relevance_gate",
+        "study_protocol",
     ):
         if raw.get(key) not in (None, "", []):
             outputs[key] = raw[key]

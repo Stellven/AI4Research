@@ -1,5 +1,44 @@
 {
   "version": 1,
+  "structured_output_providers": {
+    "openai": {
+      "transport": "codex_cli", "allowed_transports": ["codex_cli", "chat_completions"],
+      "schema_mode": "native", "allowed_schema_modes": ["native"],
+      "key_envs": ["OPENAI_API_KEY"],
+      "endpoints": {"chat_completions": "https://api.openai.com/v1/chat/completions"}
+    },
+    "anthropic": {
+      "transport": "claude_cli", "allowed_transports": ["claude_cli", "anthropic_api"],
+      "schema_mode": "prompt_json", "allowed_schema_modes": ["native", "prompt_json"],
+      "notes": "Use the original contract in the prompt with mandatory local validation for the recursive shared Intent contract. Native is opt-in for acyclic contracts within provider complexity limits.",
+      "key_envs": ["ANTHROPIC_API_KEY"],
+      "endpoints": {"anthropic_api": "https://api.anthropic.com/v1/messages"}
+    },
+    "zhipu": {
+      "transport": "chat_completions", "allowed_transports": ["chat_completions"],
+      "schema_mode": "json_object", "allowed_schema_modes": ["json_object"],
+      "key_envs": ["ZHIPU_API_KEY"],
+      "endpoints": {"chat_completions": "https://open.bigmodel.cn/api/paas/v4/chat/completions"}
+    },
+    "deepseek": {
+      "transport": "chat_completions", "allowed_transports": ["chat_completions"],
+      "schema_mode": "json_object", "allowed_schema_modes": ["json_object"],
+      "key_envs": ["DEEPSEEK_API_KEY"],
+      "endpoints": {"chat_completions": "https://api.deepseek.com/chat/completions"}
+    },
+    "gemini": {
+      "transport": "gemini_api", "allowed_transports": ["gemini_api"],
+      "schema_mode": "json_object", "allowed_schema_modes": ["native", "json_object"],
+      "notes": "The shared Intent contract has required recursive references, which Gemini native schemas do not support. Use JSON MIME output plus mandatory source validation; native remains opt-in for compatible contracts.",
+      "key_envs": ["GEMINI_API_KEY", "GOOGLE_AI_API_KEY"],
+      "endpoints": {"gemini_api": "https://generativelanguage.googleapis.com/v1beta"}
+    },
+    "local": {
+      "transport": "chat_completions", "allowed_transports": ["chat_completions"],
+      "schema_mode": "prompt_json", "allowed_schema_modes": ["prompt_json", "json_object"],
+      "key_envs": ["THUNDEROMLX_AUTH_TOKEN"], "endpoints": {}
+    }
+  },
   "defaults": {
     "main_model": "opus",
     "lab_builder_matrix": "glm,glm,glm,deepseek"
@@ -28,6 +67,7 @@
       ]
     },
     "claude-sonnet": {
+      "transport_models": {"anthropic_api": "claude-sonnet-4-6"},
       "label": "Claude Sonnet",
       "short_label": "Sonnet",
       "provider": "anthropic",
@@ -84,6 +124,7 @@
       ]
     },
     "zhipu-glm-5.1": {
+      "structured_model": "glm-5.1",
       "label": "GLM-5.1",
       "short_label": "GLM-5.1",
       "provider": "zhipu",
@@ -99,6 +140,7 @@
       ]
     },
     "zhipu-glm-4.7": {
+      "structured_model": "glm-4.7",
       "label": "GLM-4.7",
       "short_label": "GLM-4.7",
       "provider": "zhipu",
@@ -114,6 +156,7 @@
       ]
     },
     "deepseek-v4-pro": {
+      "structured_model": "deepseek-v4-pro",
       "label": "DeepSeek V4 Pro",
       "short_label": "DeepSeek V4",
       "provider": "deepseek",

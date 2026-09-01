@@ -2,7 +2,7 @@ capability_capsule_id: cap.research-literature-discover
 capsule_kind: capability
 metadata:
   name: Scientific Literature Discover
-  description: Retrieve a ranked and reviewable scientific paper shortlist from live public literature providers without hidden ingestion or memory mutation.
+  description: Retrieve a ranked and reviewable scientific paper shortlist from live public literature providers together with an explicit study protocol, without hidden ingestion or memory mutation.
 applicability:
   task_types:
     - scientific-research
@@ -26,6 +26,7 @@ contract:
     required:
       - name: literature_discovery
         schema_ref: schemas/evidence/literature_discovery.v1.schema.json
+        description: Ranked candidates plus the explicit study_protocol used to discover and select them.
     optional:
       - name: degraded_sources
         description: Source channels that failed or returned incomplete data.
@@ -39,18 +40,21 @@ contract:
       description: Candidate ranking includes sources, rationale, and dedup status.
     - check: live_public_sources_recorded
       description: Completed discovery contains at least one non-fixture online source channel and a reviewable public source reference.
+    - check: study_protocol_traceable
+      description: Discovery records its search strategy, source-selection criteria, time range, inclusion criteria, exclusion criteria, and unresolved protocol fields.
   invariants:
     - A completed result never falls back to fixtures, synthetic candidates, or memory-only candidates.
     - Scientific reliability is not self-certified at discovery; downstream ingestion and claim verification decide evidentiary support.
     - Does not ingest selected papers directly.
     - Does not mutate durable research memory directly.
+    - Missing protocol parameters remain explicitly unresolved rather than being silently invented.
 composition:
   consumes:
     - schema_ref: request-envelope.schema.json
       purpose: Discovery request.
   produces:
     - schema_ref: schemas/evidence/literature_discovery.v1.schema.json
-      purpose: Ranked literature candidates.
+      purpose: Ranked literature candidates and the auditable study protocol used to select them.
   compatible_with:
     - cap.research-paper-ingest
     - cap.research-memory-update
@@ -85,10 +89,12 @@ verification:
     - Validate emitted evidence against literature_discovery.v1.schema.json.
     - Confirm candidates include source channels, ranking rationale, and dedup status.
     - Require completed evidence to contain a non-fixture online source channel.
+    - Confirm outputs.study_protocol records all systematic-review protocol fields and identifies unresolved values.
   external_verifier:
     required: false
   pass_conditions:
     - Live provider discovery emits at least one traceable public candidate; provider failure remains inconclusive or failed.
+    - The discovery artifact always carries a study_protocol, including when provider discovery is inconclusive.
     - No memory or ingestion artifact is created by this capsule alone.
 operator_compatibility:
   preferred:

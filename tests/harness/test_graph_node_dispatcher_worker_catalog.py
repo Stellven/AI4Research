@@ -40,6 +40,22 @@ def test_worker_catalog_advertises_requirement_compiler_capsules(monkeypatch) ->
     assert "artifact.requirement_trace" in capabilities
 
 
+def test_stale_contract_closeout_does_not_cooldown_shared_operator(monkeypatch) -> None:
+    import operator_flow_control as ofc
+
+    monkeypatch.setattr(ofc, "contract_closeout_evidence_is_stale", lambda _closeout: True)
+    monkeypatch.setattr(ofc, "persist_operator_block", lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("must not persist")))
+    monkeypatch.setattr(ofc, "set_operator_state", lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("must not set runtime state")))
+
+    result = mod._cooldown_operator_after_contract_closeout(
+        "shared-operator",
+        {"result_json": "/selected/runtime/run/operator-results/old/result.json"},
+    )
+
+    assert result["ok"] is False
+    assert result["reason"] == "stale_contract_closeout_cannot_cooldown_operator"
+
+
 def test_worker_discovery_keeps_planner_panes_for_role_aware_dispatch(monkeypatch) -> None:
     monkeypatch.setattr(
         mod.subprocess,

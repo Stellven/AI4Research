@@ -101,7 +101,7 @@ def _outcome_acceptance(outcome_class: str) -> tuple[list[str], str]:
     )
 
 
-def compile_requirement_ir(
+def compile_requirement_ir_legacy(
     intent_ir: dict[str, Any],
     *,
     intent_ir_sha256: str,
@@ -281,12 +281,26 @@ def compile_requirement_ir(
     }
 
 
+def compile_requirement_ir(intent_ir: dict[str, Any], *, intent_ir_sha256: str,
+                           work_dir: Path | None = None, model: Any = None,
+                           reviewer: Any = None, legacy: bool = False) -> dict[str, Any]:
+    """Compile semantics with an LLM; old literal flattening is explicit opt-in."""
+    if legacy:
+        return compile_requirement_ir_legacy(intent_ir, intent_ir_sha256=intent_ir_sha256)
+    if work_dir is None:
+        raise RequirementCompilationError("LLM requirement compilation requires an explicit work_dir")
+    from .semantic import compile_semantic_requirement_ir
+    return compile_semantic_requirement_ir(intent_ir, intent_ir_sha256=intent_ir_sha256,
+                                           work_dir=work_dir, model=model, reviewer=reviewer)
+
+
 def compile_requirement_file(input_path: Path, output_path: Path) -> dict[str, Any]:
     encoded = input_path.read_bytes()
     intent_ir = json.loads(encoded.decode("utf-8"))
     requirement_ir = compile_requirement_ir(
         intent_ir,
         intent_ir_sha256=hashlib.sha256(encoded).hexdigest(),
+        work_dir=output_path.parent / "requirement_compilation",
     )
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(
