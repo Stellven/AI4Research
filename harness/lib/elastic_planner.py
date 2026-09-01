@@ -24,6 +24,8 @@ except ModuleNotFoundError:  # Ubuntu's jsonschema 4.10.x predates referencing.
     Resource = None
 
 from intent_compiler import JsonModel, sha256_payload, write_json
+from structured_model import StructuredModelError
+from structured_output import OutputContractError
 import workflow_contract as workflow_contract
 import apo_plan_compiler
 import capsule_composition
@@ -2931,7 +2933,7 @@ def run_semantic_planning_pipeline(
                     break
             if implementation_feedback:
                 failure = "CAPABILITY_IMPLEMENTATION_MISMATCH: bounded DAG repair exhausted; see implementation_feedback.json."
-    except ElasticPlannerError as exc:
+    except (ElasticPlannerError, StructuredModelError, OutputContractError) as exc:
         failure = str(exc)
     acceptance = decide_plan_acceptance(
         requirement_ir,

@@ -1,8 +1,12 @@
 # 新机器接手入口：OpenSolar / AI4Research
 
-核对日期：2026-08-31。最后产品代码：`f463b861bf47bddff46cc2ce3de151dcd8d78992`。
+核对日期：2026-08-31。历史迁移测试的产品代码：`f463b861bf47bddff46cc2ce3de151dcd8d78992`。
 先读 [最后一次 E2E 与迁移状态](migration-handoff-20260831.md)。最后测试在 Planner
-模型输出 schema 准入失败，未到 Scheduler；用户要求停止修复并迁移，不能宣称全流程通过。
+模型输出 schema 准入失败，未到 Scheduler；当时用户要求停止修复并迁移，不能宣称全流程通过。
+后续用户已授权修复多阶段、多模型输出合同；当前工作树修复见
+[结构化输出兼容说明](structured-output-compatibility-20260831.md) 与
+[问题日志](pre-scheduler-stabilization-log-20260829.md) 最新条目。
+本次是源码修复与离线验证，未部署到旧 runtime，未重新验收线上 E2E。
 本说明由当前生产源码与已记录运行证据整理，不将设计示例当作已实现功能。
 所有下文代码路径均相对**源码仓库根目录**；安装后 `harness/` 对应已批准的 runtime。
 

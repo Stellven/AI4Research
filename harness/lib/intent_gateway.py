@@ -1006,22 +1006,23 @@ def capture(args: argparse.Namespace) -> dict[str, Any]:
     base = INTENTS_DIR / intent_id
     artifact_compiler_provider = os.environ.get("SOLAR_INTENT_COMPILER_PROVIDER", "").strip()
     if not artifact_compiler_provider and formal_intent_required:
-        # The formal compiler currently supports Codex and model_from_environment
-        # already defaults both compiler and independent reviewer to that
-        # provider.  Setting the sentinel here makes the production contract
-        # explicit and prevents the legacy deterministic implementation label.
-        artifact_compiler_provider = "codex"
+        # Select the formal path. The registry factory below determines the
+        # actual provider; this sentinel is not provenance.
+        artifact_compiler_provider = "registry"
     if artifact_compiler_provider:
         from intent_compiler import (
             model_from_environment,
             run_pipeline,
         )
 
+        compiler_model = model_from_environment("compiler")
+        reviewer_model = model_from_environment("reviewer")
+        artifact_compiler_provider = getattr(compiler_model, "provider", artifact_compiler_provider)
         compiler_result = run_pipeline(
             raw_intent,
             base / "intent",
-            model_from_environment("compiler"),
-            model_from_environment("reviewer"),
+            compiler_model,
+            reviewer_model,
         )
         acceptance = compiler_result["intent_acceptance"]
         accepted_intent = compiler_result.get("intent_ir")

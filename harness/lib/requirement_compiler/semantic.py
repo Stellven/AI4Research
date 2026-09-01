@@ -76,14 +76,15 @@ def semantic_defects(ir: dict[str, Any], intent: dict[str, Any] | None = None,
 def compile_semantic_requirement_ir(intent: dict[str, Any], *, intent_ir_sha256: str,
                                     work_dir: Path, model: Any = None,
                                     reviewer: Any = None) -> dict[str, Any]:
-    from intent_compiler import CodexJsonModel, write_json
+    from intent_compiler import write_json
+    from structured_model import StructuredJsonModel, stage_model
     from evaluation_plan import load_evaluation_check_registry
     if model is None:
-        model = CodexJsonModel(model=os.environ.get("SOLAR_REQUIREMENT_MODEL") or None,
-                               timeout_seconds=int(os.environ.get("SOLAR_REQUIREMENT_TIMEOUT_SEC", "240")))
+        model = stage_model("requirement", "compiler",
+                            timeout_seconds=int(os.environ.get("SOLAR_REQUIREMENT_TIMEOUT_SEC", "240")))
     if reviewer is None:
-        reviewer = CodexJsonModel(model=os.environ.get("SOLAR_REQUIREMENT_REVIEWER_MODEL") or None,
-                                  timeout_seconds=int(os.environ.get("SOLAR_REQUIREMENT_TIMEOUT_SEC", "240")))
+        reviewer = stage_model("requirement", "reviewer",
+                               timeout_seconds=int(os.environ.get("SOLAR_REQUIREMENT_TIMEOUT_SEC", "240")))
     checks = load_evaluation_check_registry()
     template = make_template(intent, checks)
     write_json(Path(work_dir) / "template.json", template)
@@ -103,7 +104,7 @@ def compile_semantic_requirement_ir(intent: dict[str, Any], *, intent_ir_sha256:
         if calls >= 5 or remaining < 1:
             raise RequirementCompilationError("REQUIREMENT_COMPILE_BUDGET_EXHAUSTED")
         calls += 1
-        if isinstance(client, CodexJsonModel):
+        if isinstance(client, StructuredJsonModel):
             original = client.timeout_seconds
             client.timeout_seconds = min(original, remaining)
             try:
@@ -122,13 +123,17 @@ def compile_semantic_requirement_ir(intent: dict[str, Any], *, intent_ir_sha256:
     previous = None
     for generation in range(3):
         directory = Path(work_dir) / f"generation-{generation}"
-        body = generate(model, instruction + "\n" + json.dumps({
-            "intent_ir": intent, "template": template,
-            "previous_candidate": previous, "repair_defects": errors,
-        }, ensure_ascii=False), compiler_schema, directory / "compile")
+        body = None
         try:
+            body = generate(model, instruction + "\n" + json.dumps({
+                "intent_ir": intent, "template": template,
+                "previous_candidate": previous, "repair_defects": errors,
+            }, ensure_ascii=False), compiler_schema, directory / "compile")
             filled = fill_template(template, body)
             errors = selection_authority_defects(filled["values"])
+        except RequirementCompilationError:
+            # Budget exhaustion is terminal, never a schema-repair request.
+            raise
         except ValueError as exc:
             errors = [str(exc)]
         if errors:

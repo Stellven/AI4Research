@@ -11,7 +11,7 @@ import file_lock_compat as fcntl
 
 from activity_runtime import ActivityRuntime
 from elastic_planner import run_elastic_planning_request
-from intent_compiler import CodexJsonModel
+from structured_model import StructuredJsonModel, stage_model
 from runtime_status import transition_status
 
 
@@ -60,12 +60,9 @@ def _answer_markdown(response: dict[str, Any]) -> str:
     return answer.rstrip() + "\n"
 
 
-def _model(role: str) -> CodexJsonModel:
-    role_key = role.upper()
-    default_model = os.environ.get("SOLAR_DIRECT_ANSWER_MODEL", "gpt-5.5")
-    model = os.environ.get(f"SOLAR_DIRECT_ANSWER_{role_key}_MODEL", default_model).strip()
+def _model(role: str) -> StructuredJsonModel:
     timeout = int(os.environ.get("SOLAR_DIRECT_ANSWER_TIMEOUT_SEC", "240") or "240")
-    return CodexJsonModel(model=model, timeout_seconds=timeout)
+    return stage_model("direct_answer", role, timeout_seconds=timeout, default_model="gpt-5.5")
 
 
 def _run_direct_answer_locked(

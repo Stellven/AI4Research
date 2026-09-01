@@ -82,7 +82,11 @@ def claude_usage(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> list[dict[s
     import harness.plugins.autosci.services.claude_research as claude_research
 
     node_id = "evidence_synthesis"
-    body = json.dumps({"node_id": node_id, "limitations": [], "claims": []})
+    body = json.dumps({"node_id": node_id, "limitations": [], "claims": [{
+        "claim_id": "c1", "text": "A bounded finding", "evidence_ids": ["s1"],
+        "evidence_quotes": [{"source_id": "s1", "quote": "A bounded finding"}],
+        "uncertainty": "low", "limitations": [],
+    }]})
 
     monkeypatch.setattr(claude_research.shutil, "which", lambda _name: "/usr/bin/claude")
     monkeypatch.setattr(
@@ -170,7 +174,7 @@ def test_guard_rejects_a_stage_that_reported_no_provenance(
 
 def test_unknown_provider_selection_stops_the_run(monkeypatch: pytest.MonkeyPatch) -> None:
     adapter = _adapter()
-    monkeypatch.setenv("SOLAR_RESEARCH_MODEL_PROVIDER", "gemini")
+    monkeypatch.setenv("SOLAR_RESEARCH_MODEL_PROVIDER", "unregistered-provider")
     with pytest.raises(adapter.AdapterError):
         adapter._expected_usage_provider()
 

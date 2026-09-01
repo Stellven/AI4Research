@@ -13,9 +13,11 @@ import os
 import subprocess
 import time
 from copy import deepcopy
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
+
+from structured_model import StructuredJsonModel, StructuredModelError, stage_model
+from structured_output import OutputContractError, project_schema
 
 from jsonschema import Draft202012Validator
 
@@ -48,44 +50,7 @@ class JsonModel(Protocol):
 
 
 def codex_compatible_schema(schema: dict[str, Any]) -> dict[str, Any]:
-    """Project Solar's strict schema into the JSON-Schema subset Codex accepts.
-
-    This copy constrains generation only. Solar validates the returned artifact
-    against the original strict schema after the model call.
-    """
-    projected = deepcopy(schema)
-
-    def visit(value: Any) -> None:
-        if isinstance(value, list):
-            for child in value:
-                visit(child)
-            return
-        if not isinstance(value, dict):
-            return
-        value.pop("$schema", None)
-        value.pop("$id", None)
-        value.pop("uniqueItems", None)
-        if "oneOf" in value:
-            value["anyOf"] = value.pop("oneOf")
-        declared_type = value.get("type")
-        if isinstance(declared_type, list) and "number" in declared_type and "integer" in declared_type:
-            value["type"] = [item for item in declared_type if item != "integer"]
-        prefix_items = value.pop("prefixItems", None)
-        if prefix_items is not None and value.get("items") is False:
-            integer_minimums = [
-                item.get("minimum", 0)
-                for item in prefix_items
-                if isinstance(item, dict) and item.get("type") == "integer"
-            ]
-            value["items"] = {
-                "type": "integer",
-                "minimum": min(integer_minimums) if integer_minimums else 0,
-            }
-        for child in value.values():
-            visit(child)
-
-    visit(projected)
-    return projected
+    return project_schema(schema, "openai")
 
 
 def canonical_bytes(payload: Any) -> bytes:
@@ -114,84 +79,19 @@ def _load_json(path: Path) -> dict[str, Any]:
     return payload
 
 
-@dataclass
-class CodexJsonModel:
-    """Fresh, schema-bound Codex invocation for one semantic boundary."""
+class CodexJsonModel(StructuredJsonModel):
+    """Explicit Codex transport retained for existing integrations."""
 
-    model: str
-    timeout_seconds: int = 180
-    provider: str = "codex"
-
-    def generate(self, prompt: str, schema_path: Path, work_dir: Path) -> dict[str, Any]:
-        # Codex resolves --output-schema and --output-last-message relative to
-        # its subprocess cwd.  Normalize the managed directory first so a
-        # caller may safely provide a relative output root.
-        work_dir = work_dir.resolve()
-        work_dir.mkdir(parents=True, exist_ok=True)
-        output_path = work_dir / "model_output.json"
-        provider_schema_path = work_dir / "model_output.schema.json"
-        write_json(provider_schema_path, codex_compatible_schema(_load_json(schema_path)))
-        command = [
-            "codex",
-            "exec",
-            "--ephemeral",
-            "--ignore-user-config",
-            "--ignore-rules",
-            "--skip-git-repo-check",
-            "--sandbox",
-            "read-only",
-            "--output-schema",
-            str(provider_schema_path),
-            "--output-last-message",
-            str(output_path),
-        ]
-        if self.model:
-            command.extend(["--model", self.model])
-        command.append("-")
-        started = time.monotonic()
-        try:
-            process = subprocess.run(
-                command,
-                input=prompt,
-                text=True,
-                capture_output=True,
-                timeout=self.timeout_seconds,
-                cwd=work_dir,
-                check=False,
-            )
-        except subprocess.TimeoutExpired as exc:
-            raise IntentCompilerError(
-                f"{self.provider} model call timed out after {self.timeout_seconds}s"
-            ) from exc
-        if process.returncode != 0:
-            detail = " ".join(
-                str(process.stderr or process.stdout or "").strip().split()
-            )[-2000:]
-            raise IntentCompilerError(
-                f"{self.provider} model call failed with exit {process.returncode}"
-                + (f": {detail}" if detail else "")
-            )
-        if not output_path.exists():
-            raise IntentCompilerError(f"{self.provider} model call produced no structured output")
-        payload = _load_json(output_path)
-        receipt = {
-            "provider": self.provider,
-            "model": self.model or "configured_default",
-            "duration_ms": round((time.monotonic() - started) * 1000, 3),
-        }
-        write_json(work_dir / "model_call_receipt.json", receipt)
-        return payload
+    def __init__(self, model: str, timeout_seconds: int = 180, provider: str = "codex"):
+        if provider != "codex":
+            raise IntentCompilerError("CodexJsonModel only supports the Codex transport")
+        super().__init__(model=model or "", provider=provider, transport="codex_cli",
+                         schema_mode="native", timeout_seconds=timeout_seconds)
 
 
 def model_from_environment(role: str) -> JsonModel:
-    provider = os.environ.get(f"SOLAR_INTENT_{role.upper()}_PROVIDER", "codex").strip().lower()
-    if provider != "codex":
-        raise IntentCompilerError(
-            f"unsupported {role} provider {provider!r}; this increment currently supports codex"
-        )
-    model = os.environ.get(f"SOLAR_INTENT_{role.upper()}_MODEL", "").strip()
     timeout = int(os.environ.get("SOLAR_INTENT_MODEL_TIMEOUT_SEC", "180") or "180")
-    return CodexJsonModel(model=model, timeout_seconds=timeout)
+    return stage_model("intent", role, timeout_seconds=timeout)
 
 
 def normalize_input(raw: dict[str, Any]) -> dict[str, Any]:
@@ -833,7 +733,7 @@ def run_pipeline(
             fidelity,
             repair_attempted=repair_attempted,
         )
-    except IntentCompilerError as exc:
+    except (IntentCompilerError, StructuredModelError, OutputContractError) as exc:
         acceptance = decide_acceptance(
             raw_input,
             intent_ir,

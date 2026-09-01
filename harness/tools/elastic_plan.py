@@ -16,7 +16,7 @@ if str(LIB_DIR) not in sys.path:
     sys.path.insert(0, str(LIB_DIR))
 
 from elastic_planner import run_elastic_planning_request  # noqa: E402
-from intent_compiler import CodexJsonModel  # noqa: E402
+from structured_model import StructuredJsonModel, stage_model  # noqa: E402
 
 
 def _load_object(path: Path) -> dict:
@@ -39,13 +39,9 @@ def _load_context_artifacts(values: list[str]) -> dict[str, dict]:
     return artifacts
 
 
-def _codex_model(role: str) -> CodexJsonModel:
-    provider = os.environ.get(f"SOLAR_PLANNER_{role.upper()}_PROVIDER", "codex").strip().lower()
-    if provider != "codex":
-        raise ValueError(f"unsupported planner {role} provider: {provider!r}")
-    model = os.environ.get(f"SOLAR_PLANNER_{role.upper()}_MODEL", "").strip()
+def _codex_model(role: str) -> StructuredJsonModel:
     timeout = int(os.environ.get("SOLAR_PLANNER_MODEL_TIMEOUT_SEC", "240") or "240")
-    return CodexJsonModel(model=model, timeout_seconds=timeout)
+    return stage_model("planner", role, timeout_seconds=timeout)
 
 
 def build_parser() -> argparse.ArgumentParser:

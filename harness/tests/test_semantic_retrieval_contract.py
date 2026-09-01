@@ -89,7 +89,7 @@ def test_requirement_provider_schema_preserves_typed_true_constraint(tmp_path, m
         schema_path = Path(command[command.index("--output-schema") + 1])
         schema = json.loads(schema_path.read_text(encoding="utf-8"))
         checkable = schema["properties"]["requirements"]["items"]["properties"]["checkable"]
-        assert checkable == {"type": "boolean", "const": True}
+        assert checkable == {"type": "boolean", "enum": [True]}
         validator = Draft202012Validator(checkable)
         assert validator.is_valid(True)
         assert all(not validator.is_valid(value) for value in (False, 1, "true", None))
@@ -259,7 +259,7 @@ def test_frozen_projection_transports_and_detects_contract_tampering(tmp_path):
 
 def test_intake_deadline_covers_both_compilers():
     import ast
-    source = ast.parse((ROOT / "lib/symphony/status-server.py").read_text())
+    source = ast.parse((ROOT / "lib/symphony/status-server.py").read_text(encoding="utf-8"))
     selected = [node for node in source.body if
                 isinstance(node, ast.FunctionDef) and node.name == "_intake_timeout_seconds" or
                 isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id in

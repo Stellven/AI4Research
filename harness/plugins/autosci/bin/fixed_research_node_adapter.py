@@ -321,8 +321,19 @@ def _codex_services(
     # provider is now selectable, and the model default follows it so a Codex
     # model id cannot leak into a Claude run.
     provider = _selected_provider()
+    _expected_usage_provider()
     service_cls = CodexResearchModelService
     default_model = "gpt-5.5"
+    service_options: dict[str, Any] = {}
+    if provider in {"gemini", "google", "zhipu", "glm", "deepseek", "local", "thunderomlx"}:
+        from structured_model import ALIASES
+        import model_registry
+        from harness.plugins.autosci.services.registry_research import RegistryResearchModelService
+        canonical = ALIASES.get(provider, provider)
+        service_cls = RegistryResearchModelService
+        service_options["provider"] = canonical
+        default_model = next(model_id for model_id, spec in model_registry.load_registry()["models"].items()
+                             if spec["provider"] == canonical)
     if provider in {"openrouter", "openai"}:
         configured_provider = str(os.environ.get("AUTOSCI_RESEARCH_LLM_PROVIDER") or "").strip().lower()
         if configured_provider != provider:
@@ -346,7 +357,7 @@ def _codex_services(
         if node_id in {"independent_review", "report_revision"}:
             services["review_model_generate"] = reviewer
         return services
-    if provider == "claude":
+    if provider in {"claude", "anthropic"}:
         # Same absolute package path the Codex service is imported by above;
         # the adapter runs as a bare module, so a relative `services.` import
         # does not resolve and fails only at dispatch time.
@@ -359,7 +370,7 @@ def _codex_services(
         default_model = DEFAULT_CLAUDE_MODEL
 
     writer_model = str(os.environ.get("SOLAR_RESEARCH_MODEL") or os.environ.get("SOLAR_CODEX_RESEARCH_MODEL") or default_model).strip()
-    reviewer_model = str(os.environ.get("SOLAR_CODEX_REVIEW_MODEL") or writer_model).strip()
+    reviewer_model = str(os.environ.get("SOLAR_RESEARCH_REVIEWER_MODEL") or os.environ.get("SOLAR_CODEX_REVIEW_MODEL") or writer_model).strip()
     reasoning_effort = str(os.environ.get("SOLAR_CODEX_RESEARCH_REASONING_EFFORT") or "high").strip()
     # Shared deliberately: the resolver deepcopies the services dict, so a plain
     # list would leave the adapter reading an empty journal and unable to
@@ -371,6 +382,7 @@ def _codex_services(
         role="writer",
         reasoning_effort=reasoning_effort,
         invocation_journal=invocation_journal,
+        **service_options,
     )
     reviewer = service_cls(
         stage_dir,
@@ -378,6 +390,7 @@ def _codex_services(
         role="reviewer",
         reasoning_effort=reasoning_effort,
         invocation_journal=invocation_journal,
+        **service_options,
     )
     services: dict[str, Any] = {
         "service_metadata": {
@@ -460,6 +473,10 @@ MAX_CALLS_BY_NODE = {
 _USAGE_PROVIDER_BY_SELECTION = {
     "codex": "codex_subscription",
     "claude": "claude_subscription",
+    "anthropic": "claude_subscription",
+    "gemini": "gemini", "google": "gemini",
+    "zhipu": "zhipu", "glm": "zhipu",
+    "deepseek": "deepseek", "local": "local", "thunderomlx": "local",
     "openrouter": "openrouter",
     "openai": "openai",
 }

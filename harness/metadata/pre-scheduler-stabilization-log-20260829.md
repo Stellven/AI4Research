@@ -192,3 +192,33 @@ Scope-extension note: rows 11–16 record the later user authorization to repair
 - Issue: “all code is portable” was not established. Action: inspect 3,113 source files at b000106a78beed09e95c4ee3806ba7319ffa922f, parse 2,232 Python files, syntax-check 141 harness shell scripts in the locked runtime, and triage 60 path/address matches. Old optional tools still have 8765 or personal-vault defaults; Linux Node is absent in current WSL PATH. These remain limitations; no unrelated product repair or dependency installation was attempted.
 - Verification: runtime unittest discovery with test_migration*.py passed 13/13 in 5.469 s; Python/shell syntax had zero failures; Windows Node 22.23.2 frontend typecheck and four prebuild checks passed. All 165 contract assets and 139 schemas remain valid. Outgoing baseline history scan: 49 commits, 545 objects, 184 blobs, no tested token/private-key pattern matches. This is not a new-host install/E2E pass or a complete secret-audit guarantee.
 - Safety/publication: no backend/task start, endpoint change, branch switch, merge, reset or push during this audit; 50 sessions retained. Both GitHub remotes are public; final push awaits explicit confirmation of the migration branch/remote exception to the openJiuwen-Solar publishing policy. Only assigned source/doc/test changes are staged. Detailed evidence and reproducible commands: portability-audit-20260830.md.
+
+## 多阶段、多模型输出合同修复 — 2026-08-31（当前工作树）
+
+- 授权与基线：用户明确要求修复所有 step 的 LLM 输出请求，并兼顾 registry 中的模型；本次不属于旧迁移时的停止修复指令。开始时工作树干净，分支 `codex/safety-before-intent-rollback-20260828`，`repo_head=b7d5afd05db840586ef41de0002fb184af76743c`。未切换分支、提交、暂存或推送。
+- 修复：新增统一的 provider Schema 投影、严格 JSON 解析、原始合同校验及 registry 传输层，接入 Intent、动态 Requirement、Planner 各生成/审查边界、direct-answer 和固定科研流程。原始业务 Schema 未修改；OpenAI wire-required 的可选字段只在原合同不允许 null 时把 null 还原为缺省，保留明确的 0/false，不凭空补资源默认值。
+- 多服务：11 个 registry 模型归入 OpenAI、Anthropic、Zhipu、DeepSeek、Gemini、本地六类配置。GLM/DeepSeek 不再把 Claude proxy 的 opus/sonnet 简写当成 API ID；Claude API Sonnet 明确使用 `claude-sonnet-4-6`，CLI 保留 `sonnet`。通用 Claude 递归合同采用保守 prompt JSON 策略，Gemini 采用 JSON MIME；原生模式显式可选，原合同仍必须完整校验。固定科研流程非递归 Claude 合同保留原生模式。详细边界及规则来源见 `structured-output-compatibility-20260831.md`。
+- 失败行为：不增加自动模型切换或无界重试，不放宽来源门禁。服务拒绝、截断、无效 JSON/合同不会交给 Scheduler；Planner 留下拒绝记录。Requirement 仍为原有结构/语义修复与五次调用、截止时间预算。
+- 环境：使用 `.venv` Python 3.12.13，pytest 9.1.1、jsonschema 4.26.0、PyYAML 6.0.3。初始沙箱测试因 Windows 临时目录 PermissionError 无法有效执行，后获准在沙箱外运行离线测试。未通过更改产品权限来规避沙箱，未触碰真实用户 home 的安装/卸载状态。
+- 初轮完整回归为 278 passed / 2 failed（326.62 s）：一处是本次新增异常捕获误把 Requirement 预算耗尽当结构修复，已恢复预算异常立即终止；另一处是既有测试以 GBK 读取 UTF-8 源文件，已显式指定 UTF-8。中断/沙箱失败的尝试不作为验收证据。
+- 第二轮：`structured-final-2.xml` 为 281 passed / 0 failed（137.67 s）；`structured-integration-2.xml` 为 37 passed / 0 failed（252.22 s）。后续收尾补充 provider 大小写/空格兼容、Claude 模式/API ID 区分和 Planner 失败回执；最终复验记录追加在本条后，不把旧快照冒充最终源码证据。
+- 线上状态：当前进程没有配置所检查的 API key 环境变量，Codex CLI 可见，Claude/Gemini CLI 和本地 endpoint 不可见；此结论仅针对当前 shell，不推断其他 runtime 的账号状态。线上 provider 调用数为 0，逐模型线上验收与新 E2E 均为 `NOT_TESTED`。2026-08-31 历史 E2E `FAIL` 保留，不能回写成 PASS。
+- 安全：没有读取/复制个人凭据文件，没有启动 backend/Scheduler、恢复旧 session、安装或登录模型 CLI，也没有同步 Phase 22 共享报表。测试中的凭据均为临时假值，不代表用户账号。
+
+### 最终离线复验
+
+最终源码运行 **284 passed，0 failed，0 skipped，exit 0**，pytest 用时 **134.47 s**（JUnit suite 133.331 s）。包含 11 模型 × 15 合同的请求边界、原 Planner 资源字段回归、生成/审查 factories、Requirement 修复预算、科研输出与来源门禁，以及新增的 Claude 策略/API ID、provider 规范化和 Planner 失败回执用例。均为离线模拟边界，不是在线模型成功记录。
+
+在仓库根目录执行的最终命令：
+
+```powershell
+.venv/Scripts/python.exe -B -m pytest harness/tests/test_structured_model_contracts.py harness/tests/test_requirement_admission_repair.py harness/tests/test_semantic_retrieval_contract.py harness/tests/test_requirement_template_contract.py harness/tests/scenarios/test_rc10_research_provider_provenance.py -q --maxfail=3 --basetemp .codex-tmp/structured-final-3-temp -o cache_dir=.codex-tmp/structured-final-3-cache --junitxml=.codex-tmp/structured-final-3.xml
+```
+
+前一快照 37 项既有集成回归的完整命令（37 passed，exit 0，252.22 s；不计作最终源码的额外 37 项）：
+
+```powershell
+.venv/Scripts/python.exe -B -m pytest tests/harness/test_intent_compiler.py tests/harness/test_model_registry_codex_aliases.py tests/harness/requirement_compiler/test_pipeline_integration.py tests/harness/test_elastic_planner.py::test_pipeline_repairs_once_then_accepts_and_hash_chain_verifies tests/harness/test_elastic_planner.py::test_direct_response_stops_without_plan_or_runtime_handoff tests/harness/test_elastic_planner.py::test_direct_response_has_one_bounded_repair tests/harness/workflow_contract/test_fixed_research_workflow.py::test_codex_research_service_uses_fresh_schema_bound_context_and_scrubs_api_keys -q --maxfail=3 --basetemp .codex-tmp/structured-integration-2-temp -o cache_dir=.codex-tmp/structured-integration-2-cache --junitxml=.codex-tmp/structured-integration-2.xml
+```
+
+最终本地证据：`.codex-tmp/structured-output-verification.json`，包含基线 HEAD/分支、Python 版本、19 个变动 Python/JSON 文件的 SHA-256、最终 JUnit 计数和线上调用数 0。19 个文件的 AST/JSON 解析通过；`git diff --check` 通过；`git diff --name-only -- harness/schemas` 无变更。原业务合同、旧 E2E FAIL 和所有未测试环境限制保留。忽略目录中的证据未暂存或提交。

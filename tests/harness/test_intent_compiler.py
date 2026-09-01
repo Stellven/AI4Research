@@ -99,10 +99,15 @@ def test_codex_model_uses_absolute_managed_paths_with_relative_work_dir(
 
     monkeypatch.setattr(compiler.subprocess, "run", fake_run)
     model = compiler.CodexJsonModel(model="test-model")
+    source_path = tmp_path / "path-test.schema.json"
+    source_path.write_text(json.dumps({
+        "type": "object", "properties": {"ok": {"type": "boolean"}},
+        "required": ["ok"], "additionalProperties": False,
+    }), encoding="utf-8")
 
     result = model.generate(
         "Return JSON.",
-        compiler.SEMANTIC_SCHEMA,
+        source_path,
         Path("relative") / "model-call",
     )
 
