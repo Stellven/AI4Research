@@ -813,7 +813,7 @@ def submit(task_envelope: Dict[str, Any]) -> Dict[str, Any]:
         raise ValueError(f"Unknown operator: '{operator_id}' not found in registry")
 
     from execution_authority import from_envelope, check_operator
-    authority = from_envelope(payload)
+    authority = from_envelope(payload, current_operator=config)
     if authority is not None:
         from execution_resources import check as check_resources
         check_operator(authority, operator_id, config)

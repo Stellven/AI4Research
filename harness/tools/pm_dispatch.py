@@ -351,25 +351,45 @@ def _build_pm_operator_envelope(
             "acceptance": task_graph_node.get("acceptance", []),
             "requirement_ids": task_graph_node.get("requirement_ids", []),
         }
+        graph_evaluation = (
+            str(envelope.get("task_type") or "").strip().lower() == "graph_eval"
+            and str(envelope.get("requested_role") or "").strip().lower() == "evaluator"
+            and str(context_payload.get("source") or "") == "graph_node_dispatcher"
+        )
         envelope["read_scope"] = list(task_graph_node.get("read_scope") or [])
-        envelope["write_scope"] = list(task_graph_node.get("write_scope") or [])
+        envelope["write_scope"] = (
+            list(expected_artifacts or [])
+            if graph_evaluation
+            else list(task_graph_node.get("write_scope") or [])
+        )
         envelope["write_scope_root"] = envelope["work_dir"]
         envelope["write_scope_resolution"] = "relative_to_write_scope_root"
         if str(context_payload.get("source") or "") == "graph_node_dispatcher":
-            for field in (
-                "artifact_contract",
-                "artifact_routes",
-                "capsule_binding",
-                "resource_requirements",
-            ):
-                value = task_graph_node.get(field)
-                envelope[field] = dict(value) if isinstance(value, dict) else {}
-            for candidate in task_graph_node.get("physical_candidates") or []:
-                if not isinstance(candidate, dict):
-                    continue
-                if str(candidate.get("operator_id") or "") == operator_id:
-                    envelope["physical_candidate_rank"] = candidate.get("rank")
-                    break
+            if graph_evaluation:
+                envelope["evaluation_binding"] = dict(
+                    task_graph_node.get("evaluation_binding") or {}
+                )
+                envelope["evaluation_plan"] = dict(
+                    task_graph_node.get("evaluation_plan") or {}
+                )
+                envelope["evaluated_execution_authority_sha256"] = str(
+                    (task_graph_node.get("execution_authority") or {}).get("sha256") or ""
+                )
+            else:
+                for field in (
+                    "artifact_contract",
+                    "artifact_routes",
+                    "capsule_binding",
+                    "resource_requirements",
+                ):
+                    value = task_graph_node.get(field)
+                    envelope[field] = dict(value) if isinstance(value, dict) else {}
+                for candidate in task_graph_node.get("physical_candidates") or []:
+                    if not isinstance(candidate, dict):
+                        continue
+                    if str(candidate.get("operator_id") or "") == operator_id:
+                        envelope["physical_candidate_rank"] = candidate.get("rank")
+                        break
             envelope["handoff_path"] = str(
                 SPRINTS_DIR / f"{sprint_id}.{node_id}-handoff.md"
             )

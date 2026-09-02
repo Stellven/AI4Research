@@ -794,6 +794,78 @@ def test_frozen_pm_envelope_forwards_registry_and_graph_authority(monkeypatch, t
     assert envelope["handoff_path"] == str(sprints / "sprint-1.source_assessment-handoff.md")
 
 
+def test_graph_eval_envelope_uses_evaluation_binding_instead_of_builder_authority(monkeypatch, tmp_path):
+    pm_dispatch = _load_pm_dispatch()
+    sprints = tmp_path / "sprints"
+    work_dir = sprints / "sprint-1" / "workdir"
+    work_dir.mkdir(parents=True)
+    graph_path = sprints / "sprint-1.task_graph.json"
+    graph_path.write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(pm_dispatch, "SPRINTS_DIR", sprints)
+    monkeypatch.setattr(pm_dispatch, "_graph_path_for_sprint", lambda _sid: str(graph_path))
+    evaluation_binding = {
+        "deterministic_gate_ids": ["gate.bundle"],
+        "semantic_evaluator_ids": ["check.acceptance.v1"],
+    }
+    evaluation_plan = {
+        "review_mode": "single",
+        "required_evaluators": 1,
+        "evaluator_classes": ["check.acceptance.v1"],
+        "evidence_requirements": ["handoff_md"],
+    }
+    expected = [
+        str(sprints / "sprint-1.publish-eval.md"),
+        str(sprints / "sprint-1.publish-eval.json"),
+    ]
+    envelope = pm_dispatch._build_pm_operator_envelope(
+        task_id="task-eval",
+        sprint_id="sprint-1",
+        node_id="publish",
+        operator_id="evaluator-1",
+        operator={"backend": "command", "role": "evaluator"},
+        task_type="graph_eval",
+        objective="Review publication",
+        dispatch_file=tmp_path / "eval-dispatch.md",
+        result_path=str(tmp_path / "eval-result.md"),
+        context=json.dumps({"source": "graph_node_dispatcher"}),
+        role="evaluator",
+        work_dir=str(work_dir),
+        logical_operator="Verifier",
+        task_graph_node={
+            "id": "publish",
+            "goal": "Publish",
+            "acceptance": ["gate.bundle"],
+            "requirement_ids": ["R1"],
+            "read_scope": ["builder-input.json"],
+            "write_scope": ["publication-output"],
+            "artifact_contract": {"produces": ["publication.bundle"]},
+            "artifact_routes": {"produces": {}},
+            "capsule_binding": {"capsule_ids": ["cap.publish"]},
+            "resource_requirements": {"network": "forbidden"},
+            "physical_candidates": [{"operator_id": "builder-1", "rank": 1}],
+            "execution_authority": {"sha256": "a" * 64},
+            "evaluation_binding": evaluation_binding,
+            "evaluation_plan": evaluation_plan,
+        },
+        capsule_submit={
+            "capability_native": True,
+            "capability_capsule_id": "cap.requirement-compiler-verification",
+        },
+        expected_artifacts=expected,
+        additional_read_scope=[str(sprints / "sprint-1.publish-eval-snapshot.json")],
+    )
+
+    assert envelope["evaluation_binding"] == evaluation_binding
+    assert envelope["evaluation_plan"] == evaluation_plan
+    assert envelope["evaluated_execution_authority_sha256"] == "a" * 64
+    assert envelope["write_scope"] == expected
+    assert envelope["capability_capsule_id"] == "cap.requirement-compiler-verification"
+    assert "artifact_contract" not in envelope
+    assert "capsule_binding" not in envelope
+    assert "resource_requirements" not in envelope
+    assert "physical_candidate_rank" not in envelope
+
+
 def test_missing_operator_runtime_never_bypasses_lease_with_direct_inbox(monkeypatch, tmp_path):
     pm_dispatch = _load_pm_dispatch()
     monkeypatch.setenv("SOLAR_PM_DISPATCH_ALLOW_DIRECT", "1")

@@ -1537,3 +1537,215 @@ def test_publication_quality_gate_blocks_unreviewed_report(tmp_path: Path, monke
     assert result["status"] == "failed"
     assert result["errors"][0]["error_type"] == "quality_gate_failed"
     assert not (tmp_path / "out/publication_produce/publication.md").exists()
+
+
+def _manifest_publication_inputs(tmp_path: Path) -> tuple[dict, dict, dict]:
+    report = _external_ref(tmp_path, "manifest-report", "scientific_report.v1", {
+        "report": {
+            "report_id": "report-manifest",
+            "title": "KV cache landscape",
+            "sections": [{"section_id": "summary", "title": "Summary", "evidence_ids": ["paper-1"]}],
+            "evidence_ids": ["paper-1"],
+            "unsupported_claims": [],
+            "markdown": "# KV cache landscape\n\n" + "Evidence-grounded comparison. " * 8,
+        }
+    })
+    review = _external_ref(tmp_path, "manifest-review", "artifact_review.v1", {
+        "review": {
+            "artifact_id": "report-manifest",
+            "target": "scientific_report",
+            "review_mode": "local_surrogate",
+            "review_available": True,
+            "difficulty": "standard",
+            "focus": "completeness",
+            "score": 0.9,
+            "recommendation": "pass_with_review_required",
+            "evidence_ids": ["paper-1"],
+        },
+        "findings": [],
+        "artifact": {},
+    })
+    requirement_ir = {
+        "schema_version": "solar.requirement_ir.v2",
+        "semantic_contract": {
+            "delivery_manifest": {
+                "output_root": "Downloads/demo_outputs/kv_cache_landscape",
+                "exact_file_set": True,
+                "files": [
+                    {
+                        "file_id": "report",
+                        "relative_path": "report.md",
+                        "media_type": "text/markdown",
+                        "description": "Technical report",
+                        "content_requirements": ["Compare methods"],
+                        "required_fields": [],
+                        "source_refs": ["D1"],
+                        "required": True,
+                    },
+                    {
+                        "file_id": "matrix",
+                        "relative_path": "evidence_matrix.csv",
+                        "media_type": "text/csv",
+                        "description": "Evidence matrix",
+                        "content_requirements": ["One row per paper"],
+                        "required_fields": ["source_id", "claim"],
+                        "source_refs": ["D1"],
+                        "required": True,
+                    },
+                    {
+                        "file_id": "index",
+                        "relative_path": "claim_evidence_index.json",
+                        "media_type": "application/json",
+                        "description": "Claim index",
+                        "content_requirements": ["Map claims to evidence"],
+                        "required_fields": ["claim_id", "source_id"],
+                        "source_refs": ["D1"],
+                        "required": True,
+                    },
+                ],
+            }
+        },
+    }
+    return report, review, requirement_ir
+
+
+def test_manifest_publication_materializes_exact_required_file_set(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    report, review, requirement_ir = _manifest_publication_inputs(tmp_path)
+
+    def model_generate(**kwargs):
+        assert kwargs["node_id"] == "publication_produce"
+        assert len(kwargs["delivery_manifest"]["files"]) == 3
+        return {
+            "files": [
+                {"relative_path": "report.md", "content": "# Report\n\nA complete evidence-grounded comparison."},
+                {"relative_path": "evidence_matrix.csv", "content": "source_id,claim\npaper-1,Supported claim\n"},
+                {"relative_path": "claim_evidence_index.json", "content": json.dumps({"claims": [{"claim_id": "c1", "source_id": "paper-1"}]})},
+            ],
+            "limitations": ["Only supplied evidence was used."],
+            "provider_usage": [],
+        }
+
+    result = execute_operator(
+        _request(
+            "publication_produce",
+            refs=[report, review],
+            payload={"requirement_ir": requirement_ir},
+            write_scope=["Downloads/demo_outputs/kv_cache_landscape"],
+        ),
+        services={"model_generate": model_generate},
+    )
+    assert result["status"] == "completed"
+    _validate_evidence(tmp_path, result)
+    bundle = _artifact(tmp_path, result, "publication_bundle")["outputs"]["bundle"]
+    assert [row["manifest_relative_path"] for row in bundle["files"]] == [
+        "report.md",
+        "evidence_matrix.csv",
+        "claim_evidence_index.json",
+    ]
+    assert bundle["deliverable_inspection"]["exact_manifest_match"] is True
+    output_root = tmp_path / "Downloads/demo_outputs/kv_cache_landscape"
+    assert (output_root / "report.md").is_file()
+    assert (output_root / "evidence_matrix.csv").is_file()
+    assert (output_root / "claim_evidence_index.json").is_file()
+    assert not (output_root / "publication.md").exists()
+
+
+def test_manifest_publication_rejects_incomplete_model_output_before_writing(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    report, review, requirement_ir = _manifest_publication_inputs(tmp_path)
+    result = execute_operator(
+        _request(
+            "publication_produce",
+            refs=[report, review],
+            payload={"requirement_ir": requirement_ir},
+            write_scope=["Downloads/demo_outputs/kv_cache_landscape"],
+        ),
+        services={"model_generate": lambda **_kwargs: {
+            "files": [{"relative_path": "report.md", "content": "# Report"}],
+            "limitations": [],
+        }},
+    )
+    assert result["status"] == "failed"
+    assert result["errors"][0]["error_type"] == "provider_contract_failure"
+    assert not (tmp_path / "Downloads/demo_outputs/kv_cache_landscape/report.md").exists()
+
+
+def test_kv_cache_demo_manifest_materializes_all_eight_named_deliverables(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    report, review, requirement_ir = _manifest_publication_inputs(tmp_path)
+    names_and_types = [
+        ("executive_summary.md", "text/markdown", []),
+        ("method_taxonomy.md", "text/markdown", []),
+        (
+            "evidence_matrix.csv",
+            "text/csv",
+            [
+                "method", "paper", "source_id", "year", "target_stage",
+                "memory_reduction", "throughput_or_latency", "quality_metric",
+                "hardware", "context_length", "evidence_status",
+                "reported_or_reproduced", "limitations",
+            ],
+        ),
+        ("claim_evidence_index.json", "application/json", ["claim_id", "evidence_ids", "citation_spans", "support_direction", "evidence_strength", "verdict"]),
+        ("contradictions_and_open_questions.md", "text/markdown", []),
+        ("report.md", "text/markdown", []),
+        ("poster.html", "text/html", []),
+        ("research_run_manifest.json", "application/json", ["sources", "nodes", "dependencies", "operators", "status", "artifact_paths", "artifact_hashes"]),
+    ]
+    requirement_ir["semantic_contract"]["delivery_manifest"] = {
+        "output_root": "Downloads/demo_outputs/kv_cache_landscape",
+        "exact_file_set": True,
+        "files": [
+            {
+                "file_id": f"file-{index}",
+                "relative_path": name,
+                "media_type": media_type,
+                "description": f"Required KV-cache demo deliverable {name}",
+                "content_requirements": ["Complete, evidence-grounded, and non-placeholder"],
+                "required_fields": required_fields,
+                "source_refs": ["D1"],
+                "required": True,
+            }
+            for index, (name, media_type, required_fields) in enumerate(names_and_types, start=1)
+        ],
+    }
+
+    def model_generate(**_kwargs):
+        outputs = []
+        csv_fields = names_and_types[2][2]
+        claim_fields = names_and_types[3][2]
+        run_fields = names_and_types[7][2]
+        for name, media_type, _required_fields in names_and_types:
+            if media_type == "text/csv":
+                content = ",".join(csv_fields) + "\n" + ",".join(["unknown"] * len(csv_fields)) + "\n"
+            elif name == "claim_evidence_index.json":
+                content = json.dumps({field: [] if field in {"evidence_ids", "citation_spans"} else "unknown" for field in claim_fields})
+            elif name == "research_run_manifest.json":
+                content = json.dumps({field: [] if field != "status" else "not_recorded_in_frozen_graph" for field in run_fields})
+            elif media_type == "text/html":
+                content = "<!doctype html><html><body><h1>KV cache landscape</h1></body></html>"
+            else:
+                content = f"# {name}\n\nEvidence-grounded demo content."
+            outputs.append({"relative_path": name, "content": content})
+        return {"files": outputs, "limitations": ["Offline deterministic fixture."], "provider_usage": []}
+
+    result = execute_operator(
+        _request(
+            "publication_produce",
+            refs=[report, review],
+            payload={"requirement_ir": requirement_ir},
+            write_scope=["Downloads/demo_outputs/kv_cache_landscape"],
+        ),
+        services={"model_generate": model_generate},
+    )
+    assert result["status"] == "completed"
+    _validate_evidence(tmp_path, result)
+    bundle = _artifact(tmp_path, result, "publication_bundle")["outputs"]["bundle"]
+    assert [item["manifest_relative_path"] for item in bundle["files"]] == [
+        item[0] for item in names_and_types
+    ]
+    output_root = tmp_path / "Downloads/demo_outputs/kv_cache_landscape"
+    assert {path.name for path in output_root.iterdir() if path.name != "publication_bundle.v1.json"} == {
+        item[0] for item in names_and_types
+    }

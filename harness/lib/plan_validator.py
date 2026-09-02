@@ -157,8 +157,10 @@ MAX_REPAIR_ATTEMPTS_CEILING = 2
 ON_FAIL_BUDGETS = {"fail": 0, "repair_once_then_fail": 1}
 
 # R2(g): over-decomposition bound (epic-explosion hazard) when the contract
-# does not carry plan_limits.max_nodes.
-DEFAULT_MAX_NODES = 12
+# does not carry plan_limits.max_nodes. Keep this aligned with the canonical
+# PlanIR schema ceiling: full research journeys legitimately require more than
+# twelve semantic stages, while twenty-four remains a bounded static graph.
+DEFAULT_MAX_NODES = 24
 
 # Owner decision 2026-07-09 (REVIEW-FIXROUND2 finding 2, option B): operator
 # selection is deliberately RUNTIME-owned — quota/auth-failure recovery

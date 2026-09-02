@@ -11,7 +11,9 @@
     "requirement_ir_ref": {"type": "object"},
     "plan_ir_ref": {"type": "object"},
     "status": {"enum": ["pass", "pass_with_warnings", "fail"]},
-    "review_method": {"const": "independent_model_call"},
+    "review_method": {
+      "enum": ["independent_model_call", "consolidated_deterministic_admission"]
+    },
     "reviewer": {
       "type": "object",
       "required": ["provider", "model"],

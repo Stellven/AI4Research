@@ -5,7 +5,7 @@
   "additionalProperties": false,
   "required": [
     "schema_version", "artifact_role", "catalog_ref", "conversion_registry_ref",
-    "available_inputs", "target_outputs", "effect_policy", "execution_trust_policy",
+    "available_inputs", "target_outputs", "target_satisfaction", "effect_policy", "execution_trust_policy",
     "bounds", "hyperedges", "excluded_capsules", "candidates", "unreachable_targets",
     "blocking_frontiers", "search_stats", "verdict"
   ],
@@ -16,6 +16,12 @@
     "conversion_registry_ref": {"$ref": "#/$defs/ref"},
     "available_inputs": {"$ref": "#/$defs/string_set"},
     "target_outputs": {"$ref": "#/$defs/nonempty_string_set"},
+    "target_satisfaction": {
+      "type": "object", "additionalProperties": false, "required": ["mode"],
+      "properties": {
+        "mode": {"enum": ["produced_by_composition", "existing_or_produced"]}
+      }
+    },
     "effect_policy": {
       "type": "object", "additionalProperties": false, "required": ["allowed_effects"],
       "properties": {"allowed_effects": {"$ref": "#/$defs/effects"}}

@@ -1377,8 +1377,8 @@
       "launch_cmd_kind": "print_once",
       "compat_alias_for": "tmux_pane",
       "quota_cycle": "monthly",
-      "quota_refresh_at": "2026-09-01T09:43:46Z",
-      "quota_guard_state": "auth_expired",
+      "quota_refresh_at": null,
+      "quota_guard_state": "ok",
       "enabled": true,
       "enabled_at": "2026-05-23T00:53:00Z",
       "available": true,
@@ -1426,11 +1426,11 @@
       },
       "state": {
         "availability": "enabled",
-        "runtime_state": "auth_expired",
-        "cooldown_until": "2026-09-01T09:43:46Z",
-        "last_error": "auth_expired",
+        "runtime_state": "idle",
+        "cooldown_until": null,
+        "last_error": null,
         "last_error_at": "2026-09-01T03:43:46Z",
-        "last_pruned_at": "2026-08-29T00:42:14Z"
+        "last_pruned_at": "2026-09-02T02:38:27Z"
       },
       "flow_control": {
         "last_block_state": "auth_expired",
@@ -1440,7 +1440,7 @@
         "last_block_expires_at": "2026-09-01T09:43:46Z",
         "last_block_excerpt": "Not logged in · Please run /login",
         "last_prune_reason": "expired_operator_block",
-        "last_pruned_at": "2026-08-29T00:42:14Z"
+        "last_pruned_at": "2026-09-02T02:38:27Z"
       },
       "compat_maps_to": {
         "host_type": "tmux_pane",
@@ -4570,6 +4570,37 @@
       },
       "deprecated": false
     },
+    "autosci-paper-analyze-native-worker": {
+      "display_name": "Native AutoSci typed paper analysis",
+      "owner_host": "research_operator_registry",
+      "role": "scientific-paper-ingestor",
+      "persona": "scientific-paper-ingestor",
+      "backend": "research_operator_registry",
+      "model_provider_neutral": true,
+      "enabled": true,
+      "available": true,
+      "health_status": "ok",
+      "max_concurrency": 1,
+      "execution_trust": "evidence_transform",
+      "resource_requirements": {
+        "required_services": [],
+        "required_authorizations": [],
+        "required_artifact_types": [
+          "schema:schemas/evidence/research_paper.v1.schema.json"
+        ],
+        "network": "forbidden",
+        "compute_profiles": []
+      },
+      "runtime_binding": {
+        "registry": "plugins.autosci.operators.scientific_lifecycle.evidence.registry",
+        "node_id": "paper_analyze",
+        "implementation_operator_id": "autosci-evidence-paper-analyze"
+      },
+      "compat_maps_to": {
+        "host_type": "local_command_worker"
+      },
+      "deprecated": false
+    },
     "autosci-paper-analyze-worker": {
       "display_name": "AutoSci paper analyze worker",
       "owner_host": "stub_docker_sandbox",
@@ -4904,16 +4935,33 @@
       "deprecated": false
     },
     "autosci-publication-compile-worker": {
-      "display_name": "AutoSci publication compile worker",
-      "owner_host": "stub_docker_sandbox",
+      "display_name": "Native AutoSci manifest-driven publication producer",
+      "owner_host": "research_operator_registry",
       "role": "lab-builder",
       "persona": "lab-builder",
-      "backend": "command",
-      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action compile_paper --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "backend": "research_operator_registry",
+      "model_provider_neutral": true,
       "enabled": true,
       "available": true,
       "health_status": "ok",
       "max_concurrency": 1,
+      "execution_trust": "evidence_transform",
+      "resource_requirements": {
+        "required_services": [],
+        "required_authorizations": [],
+        "required_artifact_types": [
+          "requirement_ir.v1",
+          "schema:schemas/evidence/scientific_report.v1.schema.json",
+          "schema:schemas/evidence/artifact_review.v1.schema.json"
+        ],
+        "network": "forbidden",
+        "compute_profiles": []
+      },
+      "runtime_binding": {
+        "registry": "plugins.autosci.operators.scientific_lifecycle.registry",
+        "node_id": "publication_produce",
+        "implementation_operator_id": "autosci-publication-production-physical"
+      },
       "compat_maps_to": {
         "host_type": "local_command_worker"
       },

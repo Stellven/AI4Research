@@ -29,6 +29,9 @@ SCHEMA = "solar.workspace_binding.v1"
 AUTHORITY_SCHEMA = "solar.workspace_authority.v1"
 BINDING_FILENAME = "workspace-binding.json"
 SAFE_SPRINT_ID = re.compile(r"^[A-Za-z0-9_.-]+$")
+EXPLICIT_RELATIVE_PATH = re.compile(r"(?<!\S)\./[^\s,;:]+")
+SOURCE_INVENTORY_SCHEMA = "solar.workspace_source_inventory.v1"
+MAX_SOURCE_INVENTORY_FILES = 2000
 
 
 def _utc_now() -> str:
@@ -152,6 +155,174 @@ def _canonical_input_paths(sprints_dir: Path, sprint_id: str) -> dict[str, Path]
     }
 
 
+def _explicit_source_paths(requirement_ir: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return user-relative paths admitted by source-pack requirements only."""
+
+    grouped: dict[str, set[str]] = {}
+    for requirement in requirement_ir.get("requirements") or []:
+        if not isinstance(requirement, dict):
+            continue
+        check = str(
+            requirement.get("check")
+            or requirement.get("verification_method")
+            or ""
+        )
+        if check != "check.source_packs_verified":
+            continue
+        requirement_id = str(
+            requirement.get("requirement_id") or requirement.get("id") or ""
+        ).strip()
+        acceptance = (
+            requirement.get("acceptance")
+            if isinstance(requirement.get("acceptance"), dict)
+            else {}
+        )
+        values = [
+            str(requirement.get("statement") or requirement.get("source_text") or ""),
+            *[str(value) for value in acceptance.get("required_values") or []],
+        ]
+        for value in values:
+            for match in EXPLICIT_RELATIVE_PATH.findall(value):
+                raw = match.rstrip("'\"`)]}>.!")
+                relative = raw[2:].replace("\\", "/").rstrip("/")
+                path = Path(relative)
+                if (
+                    not relative
+                    or path.is_absolute()
+                    or any(part in {"", ".", ".."} for part in path.parts)
+                ):
+                    continue
+                grouped.setdefault(relative, set()).add(requirement_id)
+    return [
+        {
+            "relative_path": relative,
+            "requirement_ids": sorted(value for value in requirement_ids if value),
+        }
+        for relative, requirement_ids in sorted(grouped.items())
+    ]
+
+
+def _freeze_source_inventory(
+    workspace: Path,
+    requirement_ir: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Freeze exact files under explicitly admitted local-source paths.
+
+    The result is a table-like controller artifact. It gives Planner exact
+    fillable workspace-read rows without granting a scan of the whole project.
+    """
+
+    declared = _explicit_source_paths(requirement_ir)
+    if not declared:
+        return None
+    files_by_path: dict[str, dict[str, Any]] = {}
+    declared_rows: list[dict[str, Any]] = []
+    for row in declared:
+        relative = str(row["relative_path"])
+        cursor = workspace
+        unsafe = False
+        for part in Path(relative).parts:
+            cursor = cursor / part
+            if cursor.is_symlink():
+                unsafe = True
+                break
+        if unsafe:
+            raise ValueError(f"declared source path contains a symlink: {relative}")
+        try:
+            source = (workspace / relative).resolve(strict=True)
+            source.relative_to(workspace)
+        except FileNotFoundError:
+            declared_rows.append({**row, "kind": "missing", "status": "missing"})
+            continue
+        except (OSError, ValueError) as exc:
+            raise ValueError(f"declared source path is unsafe: {relative}") from exc
+        candidates = [source] if source.is_file() else (
+            sorted(path for path in source.rglob("*") if path.is_file())
+            if source.is_dir()
+            else []
+        )
+        declared_rows.append(
+            {
+                **row,
+                "kind": "file" if source.is_file() else "directory",
+                "status": "available" if candidates else "empty",
+            }
+        )
+        for candidate in candidates:
+            if candidate.is_symlink():
+                raise ValueError(
+                    f"declared source inventory contains a symlink: "
+                    f"{candidate.relative_to(workspace)}"
+                )
+            resolved = candidate.resolve(strict=True)
+            try:
+                file_relative = resolved.relative_to(workspace).as_posix()
+            except ValueError as exc:
+                raise ValueError("declared source file escapes workspace") from exc
+            existing = files_by_path.setdefault(
+                file_relative,
+                {
+                    "relative_path": file_relative,
+                    "sha256": _sha256(resolved),
+                    "size_bytes": resolved.stat().st_size,
+                    "requirement_ids": [],
+                },
+            )
+            existing["requirement_ids"] = sorted(
+                set(existing["requirement_ids"]) | set(row["requirement_ids"])
+            )
+            if len(files_by_path) > MAX_SOURCE_INVENTORY_FILES:
+                raise ValueError(
+                    f"declared source inventory exceeds {MAX_SOURCE_INVENTORY_FILES} files"
+                )
+    return {
+        "schema_version": SOURCE_INVENTORY_SCHEMA,
+        "artifact_role": "controller_frozen_source_inventory",
+        "selection_basis": "accepted_source_pack_requirements",
+        "declared_paths": declared_rows,
+        "files": [files_by_path[path] for path in sorted(files_by_path)],
+    }
+
+
+def _verify_source_inventory(workspace: Path, inventory: Any) -> None:
+    if not isinstance(inventory, dict) or inventory.get("schema_version") != SOURCE_INVENTORY_SCHEMA:
+        raise ValueError("workspace source inventory schema is invalid")
+    seen: set[str] = set()
+    for row in inventory.get("files") or []:
+        if not isinstance(row, dict):
+            raise ValueError("workspace source inventory row is invalid")
+        relative = str(row.get("relative_path") or "")
+        path = Path(relative)
+        if (
+            not relative
+            or relative in seen
+            or path.is_absolute()
+            or any(part in {"", ".", ".."} for part in path.parts)
+        ):
+            raise ValueError("workspace source inventory path is invalid")
+        seen.add(relative)
+        cursor = workspace
+        for part in path.parts:
+            cursor = cursor / part
+            if cursor.is_symlink():
+                raise ValueError(f"workspace source inventory contains a symlink: {relative}")
+        try:
+            source = (workspace / path).resolve(strict=True)
+            source.relative_to(workspace)
+        except (OSError, ValueError) as exc:
+            raise ValueError(f"workspace source inventory file is unavailable: {relative}") from exc
+        if not source.is_file():
+            raise ValueError(f"workspace source inventory path is not a file: {relative}")
+        try:
+            declared_size = int(row["size_bytes"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(f"workspace source inventory size is invalid: {relative}") from exc
+        if declared_size != source.stat().st_size:
+            raise ValueError(f"workspace source inventory size mismatch: {relative}")
+        if str(row.get("sha256") or "") != _sha256(source):
+            raise ValueError(f"workspace source inventory hash mismatch: {relative}")
+
+
 def freeze_sprint_workspace_authority(
     sprints_dir: os.PathLike[str] | str,
     sprint_id: str,
@@ -191,6 +362,10 @@ def freeze_sprint_workspace_authority(
         except ValueError:
             effective_relative = "."
     target = workspace_authority_path(root, sid)
+    source_inventory = _freeze_source_inventory(
+        workspace,
+        _read_json_object(inputs["requirement_ir"]),
+    )
     payload = {
         "schema_version": AUTHORITY_SCHEMA,
         "artifact_role": "controller_frozen_authority",
@@ -209,6 +384,8 @@ def freeze_sprint_workspace_authority(
         },
         "created_at": _utc_now(),
     }
+    if source_inventory is not None:
+        payload["declared_source_inventory"] = source_inventory
     if target.exists():
         existing = verify_sprint_workspace_authority(
             target,
@@ -222,6 +399,7 @@ def freeze_sprint_workspace_authority(
             "workspace_root",
             "cwd",
             "inputs",
+            "declared_source_inventory",
         )
         if any(existing.get(field) != payload.get(field) for field in stable_fields):
             raise ValueError("workspace authority conflicts with existing frozen authority")
@@ -259,6 +437,8 @@ def verify_sprint_workspace_authority(
     workspace = _existing_directory(payload.get("workspace_root"))
     if workspace is None:
         raise ValueError("workspace authority root is unavailable")
+    if "declared_source_inventory" in payload:
+        _verify_source_inventory(workspace, payload.get("declared_source_inventory"))
     if require_active_binding:
         active_workspace = sprint_workspace_root(root, sid, harness_dir=harness_dir)
         if active_workspace is None or active_workspace != workspace:

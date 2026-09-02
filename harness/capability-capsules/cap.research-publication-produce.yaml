@@ -18,6 +18,9 @@ applicability:
 contract:
   inputs:
     required:
+      - name: requirement_ir
+        type: controller_input
+        description: Accepted requirements, including the exact table-like delivery manifest when named files were requested.
       - name: scientific_report
         schema_ref: schemas/evidence/scientific_report.v1.schema.json
       - name: artifact_review
@@ -35,13 +38,18 @@ contract:
   preconditions:
     - check: report_evidence_available
       description: Source report evidence exists and unsupported claims are explicit.
+    - check: delivery_manifest_available
+      description: When the user requested named files, RequirementIR carries one row per exact file with format and content requirements.
   postconditions:
     - check: bundle_manifest_emitted
-      description: Publication files, source report id, and evidence ids are recorded.
+      description: Every required delivery-manifest row is materialized, hash-recorded, and represented exactly once in the publication bundle.
   invariants:
     - Publication output remains traceable to report and evidence ids.
+    - Named deliverables are neither collapsed into one generic report nor satisfied by empty placeholder files.
 composition:
   consumes:
+    - type: requirement_ir.v1
+      purpose: Exact output root, file set, formats, and per-file requirements accepted before planning.
     - schema_ref: schemas/evidence/scientific_report.v1.schema.json
       purpose: Source report or paper draft evidence.
     - schema_ref: schemas/evidence/artifact_review.v1.schema.json
@@ -85,11 +93,12 @@ verification:
   self_check:
     - Validate emitted evidence against publication_bundle.v1.schema.json.
     - Confirm bundle files point back to source_report_id and evidence ids.
+    - Confirm the emitted file set exactly matches delivery_manifest and every file is non-empty, format-valid, and hash-bound.
   external_verifier:
     required: true
   pass_conditions:
     - Fixture bundle emits valid publication_bundle.v1 evidence.
-    - Missing build outputs produce failed or inconclusive evidence.
+    - Missing, extra, malformed, empty, or renamed required outputs produce failed evidence.
 operator_compatibility:
   preferred:
     - autosci-publication-compile-worker

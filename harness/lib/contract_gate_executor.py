@@ -20,9 +20,10 @@ Verdict mapping:
 - unrunnable/timeout-> FAIL, verdict_kind "infrastructure" (AC-R4.1 already
                        prevents infrastructure FAILs from flipping
                        policy-passed nodes)
-- gate kind "none"  -> PASS, generation_mode "evaluator_gate_none" (records
-                       that the contract declares no evaluator for the stage;
-                       the proof gate still applies at mark time)
+- gate kind "none"  -> consumes a required AutoSci deterministic artifact
+                       gate when present; otherwise records a policy PASS with
+                       generation_mode "evaluator_gate_none". A semantic LLM
+                       evaluator remains unassigned in both cases.
 
 Command convention (commands arrive fully substituted from instantiate()):
 - `research <args>`   -> [sys.executable, -m, research.cli, <args>]
@@ -206,21 +207,72 @@ def execute_gate(
     eval_md_path = sprints / f"{sid}.{node_id}-eval.md"
 
     if kind == "none":
-        verdict, verdict_kind, exit_code = "PASS", "content", 0
+        evidence_policy = (
+            node.get("evidence_policy")
+            if isinstance(node.get("evidence_policy"), dict)
+            else {}
+        )
+        resume_policy = (
+            node.get("resume_policy")
+            if isinstance(node.get("resume_policy"), dict)
+            else {}
+        )
+        expected_schema = str(
+            evidence_policy.get("expected_schema")
+            or resume_policy.get("expected_schema")
+            or node.get("expected_schema")
+            or ""
+        ).strip()
+        scientific_gate = (
+            node.get("autosci_scientific_gate")
+            if isinstance(node.get("autosci_scientific_gate"), dict)
+            else {}
+        )
+        # An artifact-review node is never self-accepting. Its ABI may validly
+        # encode inconclusive/failed evidence, so absence of the Scheduler's
+        # final-admission gate must fail closed instead of becoming a policy
+        # PASS merely because no separate semantic evaluator was assigned.
+        scientific_gate_required = bool(
+            scientific_gate.get("required") is True
+            or expected_schema == "artifact_review.v1"
+        )
         rapid_smoke = str(gate.get("test_policy_mode") or "") == "rapid_smoke"
-        generation_mode = (
-            "rapid_smoke_bypass" if rapid_smoke else "evaluator_gate_none"
-        )
         command = ""
-        summary = (
-            "Rapid smoke policy bypassed semantic LLM evaluation; deterministic "
-            "schema, hash, artifact, and proof gates remain required."
-            if rapid_smoke
-            else "Contract declares no evaluator gate for this stage "
-            "(evaluator_gate.kind=none); policy pass recorded. The proof gate "
-            "(manifest/proof obligations) still applies at mark time."
-        )
-        output_tail = ""
+        if scientific_gate_required:
+            scientific_verdict = str(scientific_gate.get("verdict") or "").upper()
+            scientific_ok = bool(scientific_gate.get("ok") and scientific_verdict == "PASS")
+            invocation_ok = scientific_gate.get("invocation_ok") is True
+            verdict = "PASS" if scientific_ok else "FAIL"
+            verdict_kind = "content" if invocation_ok else "infrastructure"
+            exit_code = 0 if scientific_ok else (-1 if not invocation_ok else 1)
+            generation_mode = "deterministic_scientific_gate"
+            summary = (
+                "No semantic evaluator is assigned, and the required deterministic "
+                f"scientific artifact gate returned {verdict}."
+            )
+            output_tail = "\n".join(
+                item
+                for item in (
+                    f"scientific_gate_verdict={scientific_verdict or 'MISSING'}",
+                    f"scientific_gate_reason={scientific_gate.get('reason') or ''}",
+                    f"scientific_gate_json={scientific_gate.get('json_path') or ''}",
+                )
+                if item.split("=", 1)[1]
+            )
+        else:
+            verdict, verdict_kind, exit_code = "PASS", "content", 0
+            generation_mode = (
+                "rapid_smoke_bypass" if rapid_smoke else "evaluator_gate_none"
+            )
+            summary = (
+                "Rapid smoke policy bypassed semantic LLM evaluation; deterministic "
+                "schema, hash, artifact, and proof gates remain required."
+                if rapid_smoke
+                else "Contract declares no evaluator gate for this stage "
+                "(evaluator_gate.kind=none); policy pass recorded. The proof gate "
+                "(manifest/proof obligations) still applies at mark time."
+            )
+            output_tail = ""
         duration = 0.0
     else:
         command = str(gate.get("command") or "").strip()
@@ -365,7 +417,15 @@ def execute_gate(
         "",
         f"- verdict: **{verdict}** ({verdict_kind})",
         f"- gate kind: {kind}",
-        f"- command: `{command}`" if command else "- command: (none — contract declares no evaluator gate)",
+        (
+            f"- command: `{command}`"
+            if command
+            else (
+                "- command: (Solar deterministic scientific artifact gate)"
+                if generation_mode == "deterministic_scientific_gate"
+                else "- command: (none — contract declares no evaluator gate)"
+            )
+        ),
         f"- exit code: {exit_code}",
         f"- generation: {generation}",
         f"- evaluated at: {payload['evaluated_at']}",

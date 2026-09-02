@@ -9,6 +9,7 @@ from __future__ import annotations
 import copy
 import json
 import os
+import re
 import time
 from pathlib import Path
 from typing import Any
@@ -18,11 +19,21 @@ from .compiler import (
     _intent_acceptance_ref,
     requirement_ir_id_for_intent,
 )
-from .template_contract import fill_template, make_template, review_defects, selection_authority_defects
+from .template_contract import (
+    delivery_manifest_defects,
+    fill_template,
+    make_template,
+    review_defects,
+    selection_authority_defects,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 BODY_SCHEMA = ROOT / "schemas/compiler/requirement-semantics.v2.schema.json"
 REVIEW_SCHEMA = ROOT / "schemas/compiler/requirement-semantic-review.v2.schema.json"
+_NAMED_DELIVERABLE_PATTERN = re.compile(
+    r"(?<![A-Za-z0-9_.-])([A-Za-z0-9][A-Za-z0-9_.-]*\.(?:md|markdown|csv|json|html|htm|txt))(?![A-Za-z0-9_.-])",
+    re.IGNORECASE,
+)
 
 
 def _schema_defects(value: Any, path: Path) -> list[str]:
@@ -41,8 +52,10 @@ def semantic_defects(ir: dict[str, Any], intent: dict[str, Any] | None = None,
     rows = ir.get("requirements") or []
     body = {"requirements": [{**row, "semantic_role": roles.get(row.get("requirement_id"))} for row in rows],
             "assumptions": ir.get("assumptions"), "discovery": contract.get("discovery"),
-            "selection_authority": contract.get("selection_authority", [])}
+            "selection_authority": contract.get("selection_authority", []),
+            "delivery_manifest": contract.get("delivery_manifest")}
     errors = _schema_defects(body, BODY_SCHEMA)
+    errors.extend(delivery_manifest_defects(body))
     ids = {row.get("requirement_id") for row in rows}
     if set(roles) != ids or len(ids) != len(rows):
         errors.append("REQUIREMENT_ROLE_IDENTITY_MISMATCH")
@@ -57,6 +70,39 @@ def semantic_defects(ir: dict[str, Any], intent: dict[str, Any] | None = None,
         refs = {ref for row in rows for ref in row.get("source_refs", [])}
         if refs != source_ids:
             errors.append(f"SOURCE_COVERAGE_MISMATCH: missing={sorted(source_ids-refs)} unknown={sorted(refs-source_ids)}")
+        named_files: dict[str, set[str]] = {}
+        for outcome in intent.get("outcomes", []):
+            if outcome.get("class") != "artifact":
+                continue
+            outcome_id = str(outcome.get("outcome_id") or "")
+            for match in _NAMED_DELIVERABLE_PATTERN.findall(str(outcome.get("description") or "")):
+                named_files.setdefault(match, set()).add(outcome_id)
+        delivery_manifest = contract.get("delivery_manifest")
+        manifest_rows = (
+            [row for row in delivery_manifest.get("files") or [] if isinstance(row, dict)]
+            if isinstance(delivery_manifest, dict)
+            else []
+        )
+        manifest_by_name = {
+            Path(str(row.get("relative_path") or "")).name: row for row in manifest_rows
+        }
+        if named_files and set(manifest_by_name) != set(named_files):
+            errors.append(
+                "NAMED_DELIVERY_FILE_SET_MISMATCH: "
+                f"missing={sorted(set(named_files)-set(manifest_by_name))} "
+                f"extra={sorted(set(manifest_by_name)-set(named_files))}"
+            )
+        for filename, source_outcomes in named_files.items():
+            row = manifest_by_name.get(filename) or {}
+            if not source_outcomes.intersection(str(ref) for ref in row.get("source_refs") or []):
+                errors.append(f"NAMED_DELIVERY_SOURCE_MISMATCH: {filename}")
+        manifest_refs = {
+            str(ref)
+            for row in manifest_rows
+            for ref in row.get("source_refs") or []
+        }
+        if manifest_refs - source_ids:
+            errors.append("UNKNOWN_DELIVERY_SOURCE_REFERENCE")
         discovery = contract.get("discovery")
         if isinstance(discovery, dict):
             discovery_refs = list(discovery.get("source_refs", []))
@@ -96,16 +142,18 @@ def compile_semantic_requirement_ir(intent: dict[str, Any], *, intent_ir_sha256:
     reviewer_schema = Path(work_dir) / "reviewer-output.schema.json"
     write_json(compiler_schema, template["read_only"]["compiler_output_schema"])
     write_json(reviewer_schema, template["read_only"]["reviewer_output_schema"])
-    # Separate repair allowances, but retain the existing intake's four timeout
-    # slots. At most 3 compiler + 2 reviewer calls, never an unbounded retry.
+    # Structural compilation may receive one bounded retry.  The independent
+    # semantic reviewer is advisory: deterministic schema/source/registry
+    # checks own admission, so subjective review never starts another compiler
+    # generation or blocks Planner handoff.
     call_timeout = max(1, int(os.environ.get("SOLAR_REQUIREMENT_TIMEOUT_SEC", "240")))
     deadline = time.monotonic() + 4 * call_timeout
-    structural_repairs = semantic_repairs = calls = 0
+    structural_repairs = calls = 0
 
     def generate(client, prompt, schema, directory):
         nonlocal calls
         remaining = int(deadline - time.monotonic())
-        if calls >= 5 or remaining < 1:
+        if calls >= 3 or remaining < 1:
             raise RequirementCompilationError("REQUIREMENT_COMPILE_BUDGET_EXHAUSTED")
         calls += 1
         if isinstance(client, StructuredJsonModel):
@@ -134,7 +182,10 @@ def compile_semantic_requirement_ir(intent: dict[str, Any], *, intent_ir_sha256:
                 "previous_candidate": previous, "repair_defects": errors,
             }, ensure_ascii=False), compiler_schema, directory / "compile")
             filled = fill_template(template, body)
-            errors = selection_authority_defects(filled["values"])
+            errors = [
+                *selection_authority_defects(filled["values"]),
+                *delivery_manifest_defects(filled["values"]),
+            ]
         except RequirementCompilationError:
             # Budget exhaustion is terminal, never a schema-repair request.
             raise
@@ -171,6 +222,7 @@ def compile_semantic_requirement_ir(intent: dict[str, Any], *, intent_ir_sha256:
             "semantic_contract": {"schema_version": "solar.requirement_semantics.v1",
                                   "requirement_roles": roles, "discovery": body["discovery"],
                                   "selection_authority": body["selection_authority"],
+                                  "delivery_manifest": body["delivery_manifest"],
                                   "runtime_policies": copy.deepcopy(filled["read_only"]["contract"]["policies"]),
                                   "template_ref": copy.deepcopy(template["contract_ref"]),
                                   "source_constraints": copy.deepcopy(filled["read_only"]["source_constraints"])},
@@ -178,30 +230,57 @@ def compile_semantic_requirement_ir(intent: dict[str, Any], *, intent_ir_sha256:
         errors = semantic_defects(ir, intent, check_registry=checks)
         phase = "structure" if errors else "semantic"
         if not errors:
-            review = generate(reviewer,
-                "You are Solar's independent Requirement Reviewer. Review filled_template.values "
-                "against IntentIR using the EXACT read_only contract, definitions, schemas, registry "
-                "and policies attached to that template. The program has already checked structure "
-                "and source identities. Apply every fidelity_rule; do not substitute assumed field "
-                "meanings or infer user requirements from runtime policies. Report substantive "
-                "defects rather than modifying the candidate. Return ONLY the reviewer output schema.\n"
-                + json.dumps({"intent_ir": intent, "filled_template": filled}, ensure_ascii=False),
-                reviewer_schema, directory / "review")
-            errors = review_defects(template, review, body)
-        write_json(directory / "validation.json", {"accepted": not errors, "errors": errors,
-                                                   "contract_ref": template["contract_ref"],
-                                                   "failure_phase": phase if errors else None,
-                                                   "model_calls": calls})
-        write_json(directory / "requirement_ir.json", ir)
-        if not errors:
+            try:
+                review = generate(
+                    reviewer,
+                    "You are Solar's advisory Requirement Reviewer. Review filled_template.values "
+                    "against IntentIR using the EXACT read_only contract, definitions, schemas, registry "
+                    "and policies attached to that template. The program has already checked structure "
+                    "and source identities. Apply every fidelity_rule; do not substitute assumed field "
+                    "meanings or infer user requirements from runtime policies. Report substantive "
+                    "diagnostics rather than modifying the candidate. Your findings are warnings; "
+                    "deterministic validation owns admission. Return ONLY the reviewer output schema.\n"
+                    + json.dumps({"intent_ir": intent, "filled_template": filled}, ensure_ascii=False),
+                    reviewer_schema,
+                    directory / "review",
+                )
+                write_json(directory / "review.json", review)
+                review_diagnostics = review_defects(template, review, body)
+            except Exception as exc:
+                # The optional judge must not become a second provider
+                # availability gate. Retain only a non-sensitive typed summary.
+                review_diagnostics = [
+                    json.dumps(
+                        {
+                            "code": "ADVISORY_REQUIREMENT_REVIEW_UNAVAILABLE",
+                            "error_type": type(exc).__name__,
+                        },
+                        sort_keys=True,
+                    )
+                ]
+            write_json(
+                directory / "validation.json",
+                {
+                    "accepted": True,
+                    "errors": [],
+                    "warnings": review_diagnostics,
+                    "contract_ref": template["contract_ref"],
+                    "failure_phase": None,
+                    "model_calls": calls,
+                    "admission_authority": "deterministic_contract_validation",
+                },
+            )
+            write_json(directory / "requirement_ir.json", ir)
             return ir
+        write_json(directory / "validation.json", {"accepted": False, "errors": errors,
+                                                   "warnings": [],
+                                                   "contract_ref": template["contract_ref"],
+                                                   "failure_phase": phase,
+                                                   "model_calls": calls,
+                                                   "admission_authority": "deterministic_contract_validation"})
+        write_json(directory / "requirement_ir.json", ir)
         previous = body
-        if phase == "structure":
-            if structural_repairs >= 1:
-                break
-            structural_repairs += 1
-        else:
-            if semantic_repairs >= 1:
-                break
-            semantic_repairs += 1
+        if structural_repairs >= 1:
+            break
+        structural_repairs += 1
     raise RequirementCompilationError("Semantic Requirement compilation failed: " + "; ".join(errors))

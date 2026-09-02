@@ -101,6 +101,35 @@ def test_discovery_ingest_contract_is_one_real_collection_primitive() -> None:
     assert capsule["implementation"]["trust_class"] == "evidence_transform"
 
 
+def test_same_typed_target_requires_a_real_transforming_capsule() -> None:
+    search = composition.search_composition_candidates(
+        _catalog(),
+        available_inputs=[PAPER],
+        target_outputs=[PAPER],
+        allowed_effects=["read", "write", "execute"],
+    )
+
+    assert search["target_satisfaction"] == {"mode": "produced_by_composition"}
+    assert search["verdict"] == "candidates_found"
+    assert search["candidates"][0]["step_count"] == 1
+    assert [
+        step["capsule_id"] for step in search["candidates"][0]["steps"]
+    ] == ["cap.research-paper-analyze"]
+    assert search["candidates"][0]["produced_types"] == [PAPER]
+
+
+def test_existing_target_is_reused_only_with_explicit_passthrough_policy() -> None:
+    search = composition.search_composition_candidates(
+        _catalog(),
+        available_inputs=[PAPER],
+        target_outputs=[PAPER],
+        allow_existing_targets=True,
+    )
+
+    assert search["target_satisfaction"] == {"mode": "existing_or_produced"}
+    assert search["candidates"][0]["steps"] == []
+
+
 def test_discovery_to_ingestion_and_internal_report_plan_compose_exactly() -> None:
     ingest = composition.search_composition_candidates(
         _catalog(), available_inputs=[LITERATURE], target_outputs=[PAPER]

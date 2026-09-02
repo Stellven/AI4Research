@@ -13,11 +13,13 @@
       "properties": {
         "artifact_type": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Representation/schema identity only. This output is a distinct artifact produced by this node even when an input uses the same artifact_type; schema equality never authorizes an implicit passthrough."
         },
         "verifier_ids": {
           "type": "array",
           "minItems": 1,
+          "description": "Checks applied to this specific output slot. Select only registered verifier IDs whose allowed artifact_types include the sibling artifact_type, and include the exact check for each requirement this output actually proves. Do not copy an upstream requirement's verifier onto a final publication bundle merely because the bundle depends on or summarizes that upstream evidence; keep that requirement owned by the verifier-compatible producing node instead.",
           "items": {
             "type": "string",
             "minLength": 1
@@ -28,7 +30,8 @@
           "type": "object",
           "required": [
             "kind",
-            "path"
+            "path",
+            "route"
           ],
           "additionalProperties": false,
           "properties": {
@@ -41,6 +44,12 @@
             "path": {
               "type": "string",
               "minLength": 1
+            },
+            "route": {
+              "enum": [
+                "sprint_private",
+                "workspace_publish"
+              ]
             }
           }
         }
@@ -112,6 +121,7 @@
         "depends_on",
         "consumes",
         "produces",
+        "workspace_reads",
         "requirement_ids",
         "operator_requirements",
         "gate_requirement",
@@ -148,6 +158,7 @@
         },
         "consumes": {
           "type": "array",
+          "description": "Artifact types available to the node as inputs. Each value resolves to the unique closest producer in the dependency ancestry (or a controller input). A later same-typed transform shadows its earlier upstream state; incomparable closest producers are ambiguous. A consumed type is not satisfied by this node's own same-typed output and does not authorize aliasing.",
           "items": {
             "type": "string",
             "minLength": 1
@@ -157,12 +168,34 @@
         "produces": {
           "type": "array",
           "minItems": 1,
+          "description": "Table-like output slots to fill. Every row is a new node-produced artifact with its own materialization and verification contract, even when artifact_type matches a consumed input.",
           "items": {
             "$ref": "#/$defs/artifact_output"
           }
         },
+        "workspace_reads": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "kind",
+              "path"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "const": "file"
+              },
+              "path": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
         "requirement_ids": {
           "type": "array",
+          "description": "Requirements this node itself proves through at least one produced output. Bind a requirement here only when a produced artifact can carry that requirement's exact registered check and its artifact_type is allowed by that check. Do not duplicate an upstream evidence, classification, or claim-verdict requirement on a downstream publication/delivery node merely because the final bundle reports or depends on the result; dependency carries the evidence while ownership remains on the verifier-compatible producer.",
           "items": {
             "type": "string",
             "minLength": 1

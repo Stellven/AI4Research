@@ -57,6 +57,9 @@ _NODE_INPUT_PAYLOAD_KEYS = {
         "literature_discovery.v1": "discovery_evidence",
         "research_paper.v1": "paper_evidence",
     },
+    "paper_analyze": {
+        "research_paper.v1": "paper_evidence",
+    },
     "claim_extract": {
         "research_paper.v1": "paper_evidence",
     },
@@ -97,6 +100,7 @@ _NODE_INPUT_PAYLOAD_KEYS = {
     "report_plan": {
         "requirement_ir.v1": "requirement_ir",
         "claim_verdict.v1": "verdicts",
+        "literature_discovery.v1": "literature_discovery",
         "research_method.v1": "research_method",
         "research_source_assessment.v1": "source_assessment",
         "experiment_plan.v1": "experiment_plan",
@@ -109,6 +113,11 @@ _NODE_INPUT_PAYLOAD_KEYS = {
         "research_source_assessment.v1": "source_assessment",
         "experiment_plan.v1": "experiment_plan",
         "experiment_result.v1": "experiment_result",
+    },
+    "publication_produce": {
+        "requirement_ir.v1": "requirement_ir",
+        "scientific_report.v1": "report",
+        "artifact_review.v1": "artifact_review",
     },
 }
 _MULTI_DOCUMENT_PAYLOAD_NODES = {"claim_verify"}
@@ -482,6 +491,62 @@ def _matching_input_documents(
     return documents, source_paths
 
 
+def _verified_workspace_sources(
+    graph: dict[str, Any],
+    node: dict[str, Any],
+) -> list[dict[str, str]]:
+    """Resolve only the exact hash-bound workspace files frozen for this node."""
+
+    rows = [row for row in node.get("workspace_reads") or [] if isinstance(row, dict)]
+    if not rows:
+        return []
+    authority = (
+        graph.get("workspace_authority_ref")
+        if isinstance(graph.get("workspace_authority_ref"), dict)
+        else {}
+    )
+    root = _resolved_path(
+        authority.get("workspace_root"), label="workspace authority root", strict=True
+    )
+    if not root.is_dir() or root.is_symlink():
+        raise RegistryAdapterError("workspace authority root is unavailable or unsafe")
+    declared_scope = {str(value) for value in node.get("read_scope") or []}
+    result: list[dict[str, str]] = []
+    for row in rows:
+        relative = str(row.get("relative_path") or "")
+        relative_path = Path(relative)
+        if (
+            not relative
+            or relative_path.is_absolute()
+            or any(part in {"", ".", ".."} for part in relative_path.parts)
+        ):
+            raise RegistryAdapterError("workspace source path is not a safe relative file")
+        cursor = root
+        for part in relative_path.parts:
+            cursor = cursor / part
+            if cursor.is_symlink():
+                raise RegistryAdapterError(f"workspace source contains a symlink: {relative}")
+        source = (root / relative_path).resolve(strict=True)
+        try:
+            source.relative_to(root)
+        except ValueError as exc:
+            raise RegistryAdapterError(f"workspace source escapes authority: {relative}") from exc
+        if not source.is_file() or str(source) not in declared_scope:
+            raise RegistryAdapterError(f"workspace source is not in frozen read scope: {relative}")
+        actual_hash = hashlib.sha256(source.read_bytes()).hexdigest()
+        expected_hash = str(row.get("sha256") or "").lower()
+        if not expected_hash or actual_hash != expected_hash:
+            raise RegistryAdapterError(f"workspace source hash does not match: {relative}")
+        result.append(
+            {
+                "path": str(source),
+                "relative_path": relative,
+                "sha256": actual_hash,
+            }
+        )
+    return result
+
+
 def _run_contract_ref(graph: dict[str, Any], envelope: dict[str, Any]) -> dict[str, str]:
     ref = graph.get("run_contract_ref") if isinstance(graph.get("run_contract_ref"), dict) else {}
     return {
@@ -575,6 +640,7 @@ def execute(envelope: dict[str, Any], *, receipt_path: Path) -> dict[str, Any]:
         },
     )
     documents, source_paths = _matching_input_documents(graph, node, work_dir)
+    workspace_sources = _verified_workspace_sources(graph, node)
     if not documents and expected["node_id"] != "literature_discover":
         raise RegistryAdapterError("no artifact matching the frozen consume contract was found")
     payload = {
@@ -582,11 +648,34 @@ def execute(envelope: dict[str, Any], *, receipt_path: Path) -> dict[str, Any]:
         "source_artifacts": [
             {"path": path, "sha256": hashlib.sha256(Path(path).read_bytes()).hexdigest()}
             for path in source_paths
+        ] + [
+            {"path": row["path"], "sha256": row["sha256"]}
+            for row in workspace_sources
         ],
         "task_contract": {"user_intent": str(node.get("goal") or "")},
         "requirement_ids": [
             str(item) for item in node.get("requirement_ids") or [] if str(item).strip()
         ],
+        "run_context": {
+            "sprint_id": str(graph.get("sprint_id") or ""),
+            "run_contract_ref": _run_contract_ref(graph, envelope),
+            "frozen_nodes": [
+                {
+                    "node_id": str(item.get("id") or item.get("node_id") or ""),
+                    "depends_on": [str(value) for value in item.get("depends_on") or []],
+                    "logical_operator": str(item.get("logical_operator") or ""),
+                    "physical_operator_ids": [
+                        str(candidate.get("operator_id") or "")
+                        for candidate in item.get("physical_candidates") or []
+                        if isinstance(candidate, dict) and str(candidate.get("operator_id") or "")
+                    ],
+                    "status": "not_recorded_in_frozen_graph",
+                    "artifact_routes": item.get("artifact_routes") or item.get("output_routes") or [],
+                }
+                for item in graph.get("nodes") or []
+                if isinstance(item, dict)
+            ],
+        },
     }
     experiment_write_scope = _experiment_run_write_scope(graph)
     if expected["node_id"] == "dataset_prepare":
@@ -605,6 +694,10 @@ def execute(envelope: dict[str, Any], *, receipt_path: Path) -> dict[str, Any]:
                 "require_online_source_evidence": network_mode == "required",
             }
         )
+        if workspace_sources:
+            payload["local_sources"] = workspace_sources
+            payload["max_retries"] = 0
+            payload["max_retry_wait_seconds"] = 0
     if expected["node_id"] in {"report_plan", "report_draft"}:
         payload["topic"] = (
             _report_title_from_frozen_context(graph, node, documents)
@@ -619,7 +712,7 @@ def execute(envelope: dict[str, Any], *, receipt_path: Path) -> dict[str, Any]:
     read_scope = sorted({
         path if path in external_inputs else str(Path(path).parent) + os.sep
         for path in source_paths
-    })
+    } | {row["path"] for row in workspace_sources})
     write_scope = [str(item) for item in node.get("write_scope") or [] if str(item).strip()]
     required_authorizations = [
         str(value)
@@ -671,7 +764,7 @@ def execute(envelope: dict[str, Any], *, receipt_path: Path) -> dict[str, Any]:
     }
     services: dict[str, Any] = {}
     research_model = str(os.environ.get("SOLAR_RESEARCH_MODEL") or "").strip()
-    if expected["node_id"] == "report_draft" and research_model:
+    if expected["node_id"] in {"report_draft", "publication_produce"} and research_model:
         services["model_generate"] = CodexResearchModelService(
             work_dir,
             model=research_model,

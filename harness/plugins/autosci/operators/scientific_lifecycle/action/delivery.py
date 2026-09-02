@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import csv
+import io
 import json
 import re
 from pathlib import Path
@@ -2173,7 +2175,9 @@ def review_artifact(node_request: dict[str, Any], context: OperatorContext) -> d
     )
 
 
-def _report_and_review(context: OperatorContext) -> tuple[dict[str, Any], dict[str, Any], list[dict[str, Any]]]:
+def _report_and_review(
+    context: OperatorContext,
+) -> tuple[dict[str, Any], dict[str, Any], list[dict[str, Any]], dict[str, Any]]:
     documents = load_documents(
         context,
         schemas=("scientific_report.v1", "artifact_review.v1"),
@@ -2181,6 +2185,11 @@ def _report_and_review(context: OperatorContext) -> tuple[dict[str, Any], dict[s
     )
     report: dict[str, Any] = {}
     review: dict[str, Any] = {}
+    requirement_ir = (
+        context.payload.get("requirement_ir")
+        if isinstance(context.payload.get("requirement_ir"), dict)
+        else {}
+    )
     findings: list[dict[str, Any]] = []
     for document in documents:
         values = _outputs(document)
@@ -2191,11 +2200,160 @@ def _report_and_review(context: OperatorContext) -> tuple[dict[str, Any], dict[s
             findings = [item for item in values.get("findings") or [] if isinstance(item, dict)]
     if not report or not review:
         raise ResearchOperatorError("Report and artifact review are required", error_type="missing_input")
-    return report, review, findings
+    return report, review, findings, requirement_ir
+
+
+def _safe_delivery_path(value: Any, *, label: str) -> str:
+    raw = str(value or "").strip().replace("\\", "/")
+    path = Path(raw)
+    if (
+        not raw
+        or raw.startswith("/")
+        or re.match(r"^[A-Za-z]:", raw)
+        or path.is_absolute()
+        or any(part in {"", ".", ".."} for part in raw.split("/"))
+    ):
+        raise ResearchOperatorError(f"Unsafe delivery path: {label}", error_type="invalid_input")
+    return raw
+
+
+def _json_keys(value: Any) -> set[str]:
+    if isinstance(value, dict):
+        return set(value) | {key for child in value.values() for key in _json_keys(child)}
+    if isinstance(value, list):
+        return {key for child in value for key in _json_keys(child)}
+    return set()
+
+
+def _validated_delivery_content(row: dict[str, Any], content: Any) -> str:
+    text = require_text(content, f"delivery content for {row.get('relative_path')}")
+    media_type = str(row.get("media_type") or "")
+    required_fields = [str(item) for item in row.get("required_fields") or []]
+    if media_type == "application/json":
+        try:
+            parsed = json.loads(text)
+        except json.JSONDecodeError as exc:
+            raise ResearchOperatorError(
+                f"Delivery JSON is invalid: {row.get('relative_path')}",
+                error_type="provider_contract_failure",
+            ) from exc
+        missing = [field for field in required_fields if field not in _json_keys(parsed)]
+        if missing:
+            raise ResearchOperatorError(
+                f"Delivery JSON is missing required fields: {', '.join(missing)}",
+                error_type="provider_contract_failure",
+            )
+    elif media_type == "text/csv":
+        try:
+            header = next(csv.reader(io.StringIO(text)))
+        except (csv.Error, StopIteration) as exc:
+            raise ResearchOperatorError(
+                f"Delivery CSV is invalid: {row.get('relative_path')}",
+                error_type="provider_contract_failure",
+            ) from exc
+        missing = [field for field in required_fields if field not in header]
+        if missing:
+            raise ResearchOperatorError(
+                f"Delivery CSV is missing required columns: {', '.join(missing)}",
+                error_type="provider_contract_failure",
+            )
+    elif media_type == "text/html" and not re.search(r"<html(?:\s|>)", text, re.IGNORECASE):
+        raise ResearchOperatorError(
+            f"Delivery HTML has no html root: {row.get('relative_path')}",
+            error_type="provider_contract_failure",
+        )
+    return text
+
+
+def _manifest_publication(
+    context: OperatorContext,
+    *,
+    report: dict[str, Any],
+    manifest: dict[str, Any],
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, str]], list[str], list[dict[str, Any]]]:
+    rows = [item for item in manifest.get("files") or [] if isinstance(item, dict)]
+    if not rows or len(rows) != len(manifest.get("files") or []):
+        raise ResearchOperatorError("Delivery manifest requires file rows", error_type="invalid_input")
+    expected_paths = [_safe_delivery_path(row.get("relative_path"), label=f"files[{index}]")
+                      for index, row in enumerate(rows)]
+    if len(expected_paths) != len(set(expected_paths)):
+        raise ResearchOperatorError("Delivery manifest contains duplicate paths", error_type="invalid_input")
+    model_generate = context.services.get("model_generate")
+    if model_generate is None:
+        raise ResearchOperatorError(
+            "Manifest-driven publication requires the configured semantic model service",
+            error_type="provider_unavailable",
+        )
+    response = model_generate(
+        node_id="publication_produce",
+        task_contract=context.payload.get("task_contract") or {},
+        delivery_manifest=manifest,
+        scientific_report=report,
+        run_context=context.payload.get("run_context") or {},
+    )
+    if not isinstance(response, dict):
+        raise ResearchOperatorError(
+            "model_generate service must return a JSON object",
+            error_type="provider_contract_failure",
+        )
+    generated = [item for item in response.get("files") or [] if isinstance(item, dict)]
+    generated_paths = [str(item.get("relative_path") or "") for item in generated]
+    if (
+        len(generated) != len(response.get("files") or [])
+        or len(generated_paths) != len(set(generated_paths))
+        or set(generated_paths) != set(expected_paths)
+    ):
+        raise ResearchOperatorError(
+            "Generated file set does not exactly match delivery manifest",
+            error_type="provider_contract_failure",
+        )
+    generated_by_path = {str(item["relative_path"]): item for item in generated}
+    validated = [
+        _validated_delivery_content(row, generated_by_path[path].get("content"))
+        for row, path in zip(rows, expected_paths)
+    ]
+    first_scope = context.write_scope[0] if context.write_scope else ""
+    if not first_scope or Path(first_scope).suffix:
+        raise ResearchOperatorError(
+            "Manifest-driven publication requires a directory write scope",
+            error_type="scope_violation",
+        )
+    expected_root = _safe_delivery_path(manifest.get("output_root"), label="output_root")
+    normalized_scope = str(first_scope).replace("\\", "/").rstrip("/")
+    if normalized_scope != expected_root and not normalized_scope.endswith("/" + expected_root):
+        raise ResearchOperatorError(
+            "Frozen publication write scope does not match delivery manifest output_root",
+            error_type="scope_violation",
+        )
+    artifacts: list[dict[str, Any]] = []
+    hashes: list[dict[str, str]] = []
+    files: list[dict[str, Any]] = []
+    for index, (row, relative_path, content) in enumerate(zip(rows, expected_paths, validated), start=1):
+        artifact_id = f"publication_file_{index}"
+        ref, digest = write_scoped_text(
+            context,
+            relative_path=f"{first_scope.rstrip('/\\')}/{relative_path}",
+            content=content,
+            artifact_id=artifact_id,
+            schema=str(row.get("media_type") or "text/plain"),
+        )
+        artifacts.append(ref)
+        hashes.append(digest)
+        files.append(
+            {
+                "type": str(row.get("media_type") or "text/plain"),
+                "path": ref["path"],
+                "sha256": ref["sha256"],
+                "manifest_relative_path": relative_path,
+            }
+        )
+    limitations = [str(item) for item in response.get("limitations") or [] if str(item).strip()]
+    usage = [item for item in response.get("provider_usage") or [] if isinstance(item, dict)]
+    return files, artifacts, hashes, limitations, usage
 
 
 def produce_publication(node_request: dict[str, Any], context: OperatorContext) -> dict[str, Any]:
-    report, review, findings = _report_and_review(context)
+    report, review, findings, requirement_ir = _report_and_review(context)
     if review.get("recommendation") != "pass_with_review_required" or any(item.get("severity") == "high" for item in findings):
         raise ResearchOperatorError("Artifact review requires revision before publication", error_type="quality_gate_failed")
     publication_type = str(context.payload.get("publication_type") or "paper")
@@ -2207,9 +2365,23 @@ def produce_publication(node_request: dict[str, Any], context: OperatorContext) 
         raise ResearchOperatorError("Compiled deliverable body is too small to inspect as a real deliverable", error_type="quality_gate_failed")
     extra_artifacts: list[dict[str, Any]] = []
     extra_hashes: list[dict[str, str]] = []
+    result_limitations: list[str] = []
+    model_provider_usage: list[dict[str, Any]] = []
     first_scope = context.write_scope[0] if context.write_scope else ""
     markdown_scope = next((scope for scope in context.write_scope if Path(scope).suffix.lower() == ".md"), "")
-    if markdown_scope:
+    semantic_contract = (
+        requirement_ir.get("semantic_contract")
+        if isinstance(requirement_ir.get("semantic_contract"), dict)
+        else {}
+    )
+    delivery_manifest = semantic_contract.get("delivery_manifest")
+    if isinstance(delivery_manifest, dict):
+        files, extra_artifacts, extra_hashes, result_limitations, model_provider_usage = _manifest_publication(
+            context,
+            report=report,
+            manifest=delivery_manifest,
+        )
+    elif markdown_scope:
         compiled_ref, compiled_hash = write_scoped_text(
             context,
             relative_path=markdown_scope,
@@ -2249,6 +2421,17 @@ def produce_publication(node_request: dict[str, Any], context: OperatorContext) 
         },
         "review_score": review.get("score"),
     }
+    if isinstance(delivery_manifest, dict):
+        bundle["delivery_manifest"] = delivery_manifest
+        bundle["delivery_manifest_sha256"] = stable_json_sha256(delivery_manifest)
+        bundle["deliverable_inspection"] = {
+            "status": "inspected",
+            "format": "mixed" if len({item["type"] for item in files}) > 1 else files[0]["type"],
+            "body_characters": sum(len(Path(context.workspace_root, item["path"]).read_text(encoding="utf-8")) for item in files),
+            "evidence_linked": bool(report.get("evidence_ids")),
+            "not_schema_only": True,
+            "exact_manifest_match": True,
+        }
     return completed_result(
         context,
         operator_id=PUBLICATION_PRODUCER_ID,
@@ -2258,6 +2441,8 @@ def produce_publication(node_request: dict[str, Any], context: OperatorContext) 
         artifact_id="publication_bundle",
         extra_artifacts=extra_artifacts,
         extra_hashes=extra_hashes,
+        limitations=result_limitations,
+        model_provider_usage=model_provider_usage,
     )
 
 

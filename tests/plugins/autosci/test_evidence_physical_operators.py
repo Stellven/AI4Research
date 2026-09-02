@@ -323,6 +323,29 @@ def test_each_evidence_operator_executes_real_positive_path(node_id: str, worksp
     assert artifact["outputs"]
 
 
+def test_composed_scheduler_node_routes_by_frozen_implementation_identity(
+    workspace: Path,
+) -> None:
+    request, services = request_for("literature_discover", workspace)
+    scheduled_node_id = "source_acquisition__7fd24db4_c01"
+    request.update(
+        {
+            "node_id": scheduled_node_id,
+            "scheduled_node_id": scheduled_node_id,
+            "implementation_node_id": "literature_discover",
+        }
+    )
+
+    result = execute_operator(request, services=services, workspace_root=workspace)
+
+    assert result["status"] == "completed", result
+    assert result["node_id"] == scheduled_node_id
+    artifact = json.loads(
+        (workspace / result["output_artifacts"][0]["path"]).read_text(encoding="utf-8")
+    )
+    assert artifact["provenance"]["node_id"] == scheduled_node_id
+
+
 @pytest.mark.parametrize("node_id", NODE_IDS)
 def test_each_evidence_operator_rejects_missing_required_input_as_product_failure(node_id: str, workspace: Path) -> None:
     request, _services = request_for(node_id, workspace)
@@ -364,6 +387,67 @@ def test_discovery_provider_failure_is_classified_as_environment_failure(workspa
     artifact = json.loads((workspace / result["output_artifacts"][0]["path"]).read_text(encoding="utf-8"))
     assert artifact["status"] == "inconclusive"
     assert artifact["provenance"]["outcome_class"] == "provider_environment_failure"
+
+
+def test_discovery_provider_failure_continues_with_frozen_local_seeds(workspace: Path) -> None:
+    request, _services = request_for("literature_discover", workspace)
+    local = workspace / "inputs" / "local-paper.md"
+    local.write_text("# Local paper\n\nEvidence from a real local source.", encoding="utf-8")
+    digest = hashlib.sha256(local.read_bytes()).hexdigest()
+    request["typed_inputs"]["payload"]["local_sources"] = [
+        {"path": str(local), "relative_path": "inputs/local-paper.md", "sha256": digest}
+    ]
+
+    def unavailable(**_kwargs):
+        raise ConnectionError("provider unavailable")
+
+    result = execute_operator(
+        request,
+        services={"discover_literature": unavailable},
+        workspace_root=workspace,
+    )
+
+    assert result["status"] == "completed"
+    artifact = json.loads((workspace / result["output_artifacts"][0]["path"]).read_text(encoding="utf-8"))
+    assert artifact["status"] == "completed"
+    assert artifact["outputs"]["candidates"][0]["candidate_id"] == f"local-{digest[:16]}"
+    assert artifact["outputs"]["candidates"][0]["source_ref"] == str(local)
+    assert any("provider failed" in item.lower() for item in artifact["limitations"])
+
+
+def test_structured_inconclusive_discovery_continues_with_frozen_local_seeds(
+    workspace: Path,
+) -> None:
+    request, _services = request_for("literature_discover", workspace)
+    local = workspace / "inputs" / "local-paper.md"
+    local.write_text("# Local paper\n\nEvidence from a real local source.", encoding="utf-8")
+    digest = hashlib.sha256(local.read_bytes()).hexdigest()
+    request["typed_inputs"]["payload"]["local_sources"] = [
+        {"path": str(local), "relative_path": "inputs/local-paper.md", "sha256": digest}
+    ]
+
+    def structured_environment_failure(**kwargs):
+        return {
+            "status": "inconclusive",
+            "query": kwargs["query"],
+            "candidates": [],
+            "limitations": ["Discovery source failed: provider rate limited."],
+        }
+
+    result = execute_operator(
+        request,
+        services={"discover_literature": structured_environment_failure},
+        workspace_root=workspace,
+    )
+
+    assert result["status"] == "completed"
+    artifact = json.loads((workspace / result["output_artifacts"][0]["path"]).read_text(encoding="utf-8"))
+    assert artifact["status"] == "completed"
+    assert artifact["outputs"]["candidates"][0]["candidate_id"] == f"local-{digest[:16]}"
+    assert artifact["artifacts"] == [
+        {"type": "local_seed", "path": str(local), "sha256": digest}
+    ]
+    assert any("continued with 1 controller-frozen local seed" in item for item in artifact["limitations"])
 
 
 def test_discovery_prefers_production_multi_provider_service(workspace: Path) -> None:

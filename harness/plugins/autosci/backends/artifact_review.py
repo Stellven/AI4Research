@@ -110,7 +110,108 @@ def _path_candidates(raw: str, roots: list[Path]) -> list[Path]:
     return candidates
 
 
+def _scientific_report_routes(inputs: dict[str, Any]) -> list[str]:
+    routes = inputs.get("artifact_routes")
+    if not isinstance(routes, dict):
+        return []
+    values: list[str] = []
+    for artifact_type, raw_route in routes.items():
+        if "scientific_report.v1" not in str(artifact_type):
+            continue
+        route_values = raw_route if isinstance(raw_route, list) else [raw_route]
+        for value in route_values:
+            text = str(value or "").strip()
+            if text and text not in values:
+                values.append(text)
+    return values
+
+
+def _resolve_routed_scientific_report(
+    inputs: dict[str, Any],
+    workspace_root: Path,
+) -> dict[str, Any] | None:
+    """Resolve the exact typed report supplied by the Scheduler route.
+
+    A declared ``scientific_report.v1`` route is authoritative.  If it is
+    missing, malformed, or ambiguous, fail closed instead of falling back to
+    a similarly named wiki page or legacy ``target`` value.
+    """
+
+    raw_routes = _scientific_report_routes(inputs)
+    if not raw_routes:
+        return None
+
+    checked: list[str] = []
+    matches: list[tuple[Path, str, str]] = []
+    errors: list[str] = []
+    for raw_route in raw_routes:
+        route = Path(raw_route).expanduser()
+        if not route.is_absolute():
+            route = workspace_root / route
+        route = route.resolve(strict=False)
+        candidates = sorted(route.rglob("*.json")) if route.is_dir() else [route]
+        for candidate in candidates:
+            checked.append(str(candidate))
+            if not candidate.is_file():
+                continue
+            try:
+                source_bytes = candidate.read_bytes()
+                payload = json.loads(source_bytes.decode("utf-8"))
+            except (OSError, ValueError) as exc:
+                errors.append(f"{candidate}: {type(exc).__name__}")
+                continue
+            if not isinstance(payload, dict) or payload.get("schema") != "scientific_report.v1":
+                continue
+            if payload.get("status") != "completed":
+                errors.append(
+                    f"{candidate}: scientific_report.v1 status is "
+                    f"{payload.get('status') or 'missing'}, not completed"
+                )
+                continue
+            outputs = payload.get("outputs") if isinstance(payload.get("outputs"), dict) else {}
+            if not isinstance(outputs.get("report"), dict):
+                errors.append(f"{candidate}: outputs.report is missing")
+                continue
+            matches.append(
+                (
+                    candidate.resolve(),
+                    json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True),
+                    hashlib.sha256(source_bytes).hexdigest(),
+                )
+            )
+
+    unique_matches = {str(path): (path, text, sha256) for path, text, sha256 in matches}
+    if len(unique_matches) == 1:
+        path, text, sha256 = next(iter(unique_matches.values()))
+        return {
+            "path": path,
+            "text": text,
+            "target": str(path),
+            "schema": "scientific_report.v1",
+            "sha256": sha256,
+            "checked_paths": checked,
+            "route_authority": "artifact_routes:scientific_report.v1",
+        }
+    reason = (
+        "scientific_report.v1 route did not contain one completed report"
+        if not unique_matches
+        else "scientific_report.v1 route contained multiple completed reports"
+    )
+    return {
+        "path": None,
+        "text": "",
+        "target": raw_routes[0],
+        "checked_paths": checked,
+        "route_authority": "artifact_routes:scientific_report.v1",
+        "route_error": reason,
+        "route_errors": errors,
+    }
+
+
 def _resolve_artifact(inputs: dict[str, Any], workspace_root: Path, repository_root: Path) -> dict[str, Any]:
+    routed_report = _resolve_routed_scientific_report(inputs, workspace_root)
+    if routed_report is not None:
+        return routed_report
     raw_wiki_root = str(inputs.get("wiki_root") or "").strip()
     active_roots = [workspace_root]
     if raw_wiki_root:
@@ -1005,6 +1106,7 @@ def review_artifact(
     review_llm = _review_llm_assessment(review_inputs, workspace_root=workspace_root, difficulty=difficulty, focus=focus)
     proof = bind_reviewer_execution(proof, review_llm)
     if not text or not isinstance(path, Path):
+        route_error = str(resolved.get("route_error") or "").strip()
         return {
             "status": "inconclusive",
             "artifact": {
@@ -1013,6 +1115,8 @@ def review_artifact(
                 "path": "N/A",
                 "title": target or "N/A",
                 "checked_paths": list(resolved.get("checked_paths") or []),
+                "route_authority": str(resolved.get("route_authority") or ""),
+                "route_error": route_error,
             },
             "review": {
                 "artifact_id": _slug(target),
@@ -1031,6 +1135,7 @@ def review_artifact(
             "findings": [],
             "report_markdown": "",
             "limitations": [
+                *([f"Frozen artifact route was not admissible: {route_error}"] if route_error else []),
                 "No local artifact or wiki entity was resolved for review.",
                 "Review LLM evidence is required before this review can be treated as final acceptance.",
             ],
@@ -1049,6 +1154,8 @@ def review_artifact(
         )
     local_score = _score(findings, difficulty=difficulty)
     artifact_id = f"artifact:{_slug(path.stem)}"
+    artifact_sha256 = str(resolved.get("sha256") or hashlib.sha256(path.read_bytes()).hexdigest())
+    artifact_schema = str(resolved.get("schema") or "")
     review_mode = "local_surrogate"
     review_available = False
     score = local_score
@@ -1120,8 +1227,11 @@ def review_artifact(
             "artifact_id": artifact_id,
             "target": target,
             "path": str(path),
+            "schema": artifact_schema,
+            "sha256": artifact_sha256,
             "title": review["title"],
             "checked_paths": list(resolved.get("checked_paths") or []),
+            "route_authority": str(resolved.get("route_authority") or ""),
         },
         "review": review,
         "findings": findings,

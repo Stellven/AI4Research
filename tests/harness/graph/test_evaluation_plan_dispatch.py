@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 import sys
 
@@ -9,6 +10,79 @@ ROOT = (Path(__file__).resolve().parents[3] / 'harness')
 sys.path.insert(0, str(ROOT / "lib"))
 
 import graph_node_dispatcher as gnd  # noqa: E402
+
+
+def _write_artifact_review(path: Path, *, ready: bool) -> None:
+    report_path = path.with_name("scientific_report.json")
+    report_path.write_text('{"schema":"scientific_report.v1"}', encoding="utf-8")
+    report_sha256 = gnd._file_sha256(report_path)
+    payload = {
+        "schema": "artifact_review.v1",
+        "status": "completed" if ready else "inconclusive",
+        "outputs": {
+            "artifact": {
+                "path": str(report_path),
+                "schema": "scientific_report.v1",
+                "sha256": report_sha256,
+                "route_authority": "artifact_routes:scientific_report.v1",
+            },
+            "review": {
+                "review_mode": "review_llm" if ready else "local_surrogate",
+                "review_available": ready,
+                "recommendation": "pass_with_review_required" if ready else "inconclusive",
+            },
+            "final_acceptance_boundary": {
+                "schema": "autosci_review_final_acceptance_boundary.v1",
+                "status": "final_acceptance_ready" if ready else "review_llm_incomplete",
+                "final_acceptance_ready": ready,
+                "blocking_reasons": [] if ready else ["independent review is unavailable"],
+            },
+        },
+    }
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+
+def test_scheduler_rejects_structurally_valid_but_inconclusive_artifact_review(tmp_path: Path) -> None:
+    evidence = tmp_path / "artifact_review.json"
+    _write_artifact_review(evidence, ready=False)
+    node = {"id": "review", "expected_schema": "artifact_review.v1"}
+
+    result = gnd._scheduler_autosci_artifact_admission(node, evidence)
+
+    assert result["required"] is True
+    assert result["ok"] is False
+    assert result["reason"] == "artifact_review_not_finally_admissible"
+    assert "artifact_review status is not completed" in result["reasons"]
+    assert "artifact_review is not final-acceptance ready" in result["reasons"]
+
+
+def test_scheduler_accepts_only_final_ready_artifact_review(tmp_path: Path) -> None:
+    evidence = tmp_path / "artifact_review.json"
+    _write_artifact_review(evidence, ready=True)
+    node = {"id": "review", "expected_schema": "artifact_review.v1"}
+
+    result = gnd._scheduler_autosci_artifact_admission(node, evidence)
+
+    assert result["required"] is True
+    assert result["ok"] is True
+    assert result["reasons"] == []
+
+
+def test_scheduler_rejects_review_when_reviewed_report_hash_has_drifted(tmp_path: Path) -> None:
+    evidence = tmp_path / "artifact_review.json"
+    _write_artifact_review(evidence, ready=True)
+    evidence.with_name("scientific_report.json").write_text(
+        '{"schema":"scientific_report.v1","changed":true}',
+        encoding="utf-8",
+    )
+
+    result = gnd._scheduler_autosci_artifact_admission(
+        {"id": "review", "expected_schema": "artifact_review.v1"},
+        evidence,
+    )
+
+    assert result["ok"] is False
+    assert "artifact_review reviewed-report hash is missing or stale" in result["reasons"]
 
 
 def test_plan_node_evaluation_derives_single_mode_for_code_impl() -> None:

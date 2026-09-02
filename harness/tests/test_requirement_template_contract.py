@@ -33,16 +33,26 @@ def test_compiler_and_reviewer_receive_identical_program_owned_contract(tmp_path
     filled = payload(reviewer.calls[0])["filled_template"]
     assert blank["read_only"] == filled["read_only"]
     assert blank["contract_ref"] == filled["contract_ref"]
-    assert blank["values"] == {"requirements": [], "assumptions": [], "discovery": None, "selection_authority": []}
+    assert blank["values"] == {
+        "requirements": [],
+        "assumptions": [],
+        "discovery": None,
+        "selection_authority": [],
+        "delivery_manifest": None,
+    }
     assert filled["values"] == body()
     fixed = filled["read_only"]
     assert fixed["source_constraints"] == intent()["constraints"]
     assert fixed["evaluation_check_registry"] == load_evaluation_check_registry()
     policy = fixed["contract"]["policies"]["discovery_nonempty_handoff"]
+    assert blank["contract_ref"]["version"] == 3
     assert policy["default"] == 1 and policy["origin"] == "runtime_validity_policy"
     assert "not an invented user count" in policy["review"]
+    assert "never requires candidates to exist before Requirement or Planner admission" in policy["override"]
+    assert "final corpus or report requirement" in policy["review"]
     assert fixed["item_templates"]["discovery"]["minimum_candidates"] == 1
     assert fixed["item_templates"]["requirements"]["checkable"] is True
+    assert fixed["item_templates"]["delivery_manifest_file"]["required"] is True
     assert ir["semantic_contract"]["source_constraints"] == fixed["source_constraints"]
     assert json.loads((tmp_path / "generation-0/filled_template.json").read_text()) == filled
     verdict = json.loads((tmp_path / "generation-0/validation.json").read_text())
@@ -121,6 +131,27 @@ def test_explicit_user_minimum_is_preserved_and_reaches_runtime_filter(tmp_path)
     assert filter_candidates(contract, rows)[1]["status"] == "passed"
 
 
+def test_final_source_lower_bound_can_authorize_future_discovery_minimum(tmp_path):
+    source = intent()
+    source["constraints"].append({"constraint_id": "C4", "category": "limit",
+        "statement": "Use 8–12 total sources in the final report", "expression": {
+            "op": "bounded_by", "args": [{"ref": "workflow.sources.total"}, {"set": [8, 12]}]}})
+    candidate = body()
+    candidate["discovery"]["minimum_candidates"] = 8
+    candidate["discovery"]["source_refs"].append("C4")
+    candidate["selection_authority"].append({"field_path": "/discovery/minimum_candidates",
+        "basis": "explicit_source_selection", "source_refs": ["C4"],
+        "justification": "Eight accepted candidates are a necessary upstream condition for using at least eight final sources."})
+    row = copy.deepcopy(candidate["requirements"][1])
+    row.update(requirement_id="R5", origin="user:C4", statement="Use 8–12 total sources",
+               source_refs=["C4"], acceptance={"kind": "constraint", "required_values": ["8–12 total sources"]})
+    candidate["requirements"].append(row)
+    ir = compile_requirement_ir(source, intent_ir_sha256="a" * 64, work_dir=tmp_path,
+                                model=Model(candidate), reviewer=Model({"accepted": True, "errors": []}))
+    assert ir["semantic_contract"]["discovery"]["minimum_candidates"] == 8
+    assert ir["semantic_contract"]["template_ref"]["version"] == 3
+
+
 def test_default_floor_still_rejects_empty_handoff():
     from plugins.autosci.services.retrieval_contract import filter_candidates
     _, audit = filter_candidates(body()["discovery"], [])
@@ -128,16 +159,98 @@ def test_default_floor_still_rejects_empty_handoff():
     assert "minimum_candidates_not_met" in audit["blocking_reasons"]
 
 
-def test_review_rejection_is_never_suppressed_by_matching_default_wording(tmp_path):
+def test_named_delivery_files_are_preserved_as_table_like_contract(tmp_path):
+    source = intent()
+    source["outcomes"][0]["description"] = "Write report.md and evidence_matrix.csv"
+    candidate = body()
+    candidate["delivery_manifest"] = {
+        "output_root": "Downloads/demo_outputs/landscape",
+        "exact_file_set": True,
+        "files": [
+            {
+                "file_id": "report",
+                "relative_path": "report.md",
+                "media_type": "text/markdown",
+                "description": "Evidence-grounded report",
+                "content_requirements": ["Answer the research request"],
+                "required_fields": [],
+                "source_refs": ["D1"],
+                "required": True,
+            },
+            {
+                "file_id": "matrix",
+                "relative_path": "evidence_matrix.csv",
+                "media_type": "text/csv",
+                "description": "Evidence matrix",
+                "content_requirements": ["One row per source"],
+                "required_fields": ["source_id", "claim"],
+                "source_refs": ["D1"],
+                "required": True,
+            },
+        ],
+    }
+    ir = compile_requirement_ir(
+        source,
+        intent_ir_sha256="a" * 64,
+        work_dir=tmp_path,
+        model=Model(candidate),
+        reviewer=Model({"accepted": True, "errors": []}),
+    )
+    assert ir["semantic_contract"]["delivery_manifest"] == candidate["delivery_manifest"]
+
+
+def test_named_delivery_files_cannot_be_collapsed_to_legacy_single_report(tmp_path):
+    source = intent()
+    source["outcomes"][0]["description"] = "Write report.md and evidence_matrix.csv"
+    model = Model(body())
+    with pytest.raises(RequirementCompilationError, match="NAMED_DELIVERY_FILE_SET_MISMATCH"):
+        compile_requirement_ir(
+            source,
+            intent_ir_sha256="a" * 64,
+            work_dir=tmp_path,
+            model=model,
+            reviewer=Model({"accepted": True, "errors": []}),
+        )
+    assert len(model.calls) == 2
+
+
+@pytest.mark.parametrize("path", ["../report.md", "/tmp/report.md", "C:/tmp/report.md"])
+def test_delivery_manifest_rejects_unsafe_paths(path):
+    template = make_template(intent(), load_evaluation_check_registry())
+    candidate = body()
+    candidate["delivery_manifest"] = {
+        "output_root": "Downloads/demo_outputs/landscape",
+        "exact_file_set": True,
+        "files": [{
+            "file_id": "report",
+            "relative_path": path,
+            "media_type": "text/markdown",
+            "description": "Report",
+            "content_requirements": ["Non-empty"],
+            "required_fields": [],
+            "source_refs": ["D1"],
+            "required": True,
+        }],
+    }
+    filled = fill_template(template, candidate)
+    from requirement_compiler.template_contract import delivery_manifest_defects
+    assert delivery_manifest_defects(filled["values"])
+
+
+def test_review_rejection_is_retained_as_advisory_diagnostic(tmp_path):
     reviewer = Model({"accepted": False, "errors": [{"rule_id": "F02",
         "field_path": "/discovery/minimum_candidates", "evidence_refs": ["G1"],
         "reason": "minimum_candidates=1 is an invented user count"}]})
     model = Model(body())
-    with pytest.raises(RequirementCompilationError, match="invented user count"):
-        compile_requirement_ir(intent(), intent_ir_sha256="a" * 64, work_dir=tmp_path,
-                               model=model, reviewer=reviewer)
-    assert len(model.calls) == len(reviewer.calls) == 2
-    assert payload(model.calls[0])["template"] == payload(model.calls[1])["template"]
+    ir = compile_requirement_ir(
+        intent(), intent_ir_sha256="a" * 64, work_dir=tmp_path,
+        model=model, reviewer=reviewer,
+    )
+    assert ir["semantic_contract"]["discovery"]["minimum_candidates"] == 1
+    assert len(model.calls) == len(reviewer.calls) == 1
+    validation = json.loads((tmp_path / "generation-0/validation.json").read_text())
+    assert validation["accepted"] is True
+    assert any("invented user count" in row for row in validation["warnings"])
     assert payload(reviewer.calls[0])["filled_template"]["read_only"] == payload(model.calls[0])["template"]["read_only"]
 
 

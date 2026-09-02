@@ -33,8 +33,12 @@ except ModuleNotFoundError:  # Ubuntu's jsonschema 4.10.x predates referencing.
 HARNESS_DIR = Path(__file__).resolve().parents[1]
 SCHEMA_DIR = HARNESS_DIR / "schemas" / "compiler"
 SEMANTIC_SCHEMA = SCHEMA_DIR / "intent-ir.semantic.v1.schema.json"
+SEMANTIC_AUTHORING_SCHEMA = SCHEMA_DIR / "intent-ir.semantic.authoring.v1.schema.json"
 INTENT_SCHEMA = SCHEMA_DIR / "intent-ir.v3.schema.json"
 FIDELITY_REVIEW_SCHEMA = SCHEMA_DIR / "intent-fidelity.review.v1.schema.json"
+FIDELITY_REVIEW_AUTHORING_SCHEMA = (
+    SCHEMA_DIR / "intent-fidelity.review.authoring.v1.schema.json"
+)
 VALIDATION_SCHEMA = SCHEMA_DIR / "intent-validation.v1.schema.json"
 FIDELITY_SCHEMA = SCHEMA_DIR / "intent-fidelity.v1.schema.json"
 ACCEPTANCE_SCHEMA = SCHEMA_DIR / "intent-acceptance.v1.schema.json"
@@ -438,6 +442,129 @@ def _collection_items(payload: dict[str, Any], key: str) -> list[Any]:
     return value if isinstance(value, list) else []
 
 
+_SOURCE_EVIDENCE_COLLECTIONS = (
+    "goals",
+    "outcomes",
+    "constraints",
+    "ambiguities",
+    "conflicts",
+)
+
+
+def _exact_quote_offsets(raw_text: str, quote: str) -> list[int]:
+    """Return every exact occurrence, including overlapping occurrences."""
+    offsets: list[int] = []
+    cursor = 0
+    while cursor <= len(raw_text):
+        offset = raw_text.find(quote, cursor)
+        if offset < 0:
+            break
+        offsets.append(offset)
+        cursor = offset + 1
+    return offsets
+
+
+def _bind_exact_source_quotes(
+    raw_text: str,
+    quotes: Any,
+    *,
+    path: str,
+) -> tuple[list[list[int]], list[dict[str, Any]]]:
+    """Bind exact, unique source quotes to deterministic character spans."""
+    if not isinstance(quotes, list) or not quotes:
+        return [], [
+            {
+                "code": "SOURCE_QUOTE_REQUIRED",
+                "path": f"{path}.source_quotes",
+                "message": "At least one exact raw-text source quote is required.",
+                "repairable": True,
+            }
+        ]
+    spans: list[list[int]] = []
+    errors: list[dict[str, Any]] = []
+    for index, quote in enumerate(quotes):
+        quote_path = f"{path}.source_quotes.{index}"
+        if not isinstance(quote, str) or not quote:
+            errors.append(
+                {
+                    "code": "SOURCE_QUOTE_INVALID",
+                    "path": quote_path,
+                    "message": "Source quote must be a non-empty string copied from raw text.",
+                    "repairable": True,
+                }
+            )
+            continue
+        offsets = _exact_quote_offsets(raw_text, quote)
+        if not offsets:
+            errors.append(
+                {
+                    "code": "SOURCE_QUOTE_NOT_FOUND",
+                    "path": quote_path,
+                    "message": "Source quote is not an exact substring of raw text.",
+                    "repairable": True,
+                }
+            )
+            continue
+        if len(offsets) > 1:
+            errors.append(
+                {
+                    "code": "SOURCE_QUOTE_AMBIGUOUS",
+                    "path": quote_path,
+                    "message": (
+                        f"Source quote occurs {len(offsets)} times; provide a longer unique quote."
+                    ),
+                    "repairable": True,
+                }
+            )
+            continue
+        spans.append([offsets[0], offsets[0] + len(quote)])
+    unique_spans = [list(span) for span in dict.fromkeys(tuple(span) for span in spans)]
+    return unique_spans, errors
+
+
+def _bind_semantic_source_quotes(
+    semantic: dict[str, Any], raw_text: str
+) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Replace model-authored spans with spans bound from exact raw-text quotes."""
+    bound = deepcopy(semantic)
+    errors: list[dict[str, Any]] = []
+    for collection in _SOURCE_EVIDENCE_COLLECTIONS:
+        for index, item in enumerate(_collection_items(bound, collection)):
+            if not isinstance(item, dict):
+                continue
+            spans, item_errors = _bind_exact_source_quotes(
+                raw_text,
+                item.pop("source_quotes", None),
+                path=f"{collection}.{index}",
+            )
+            item["source_spans"] = spans
+            errors.extend(item_errors)
+    return bound, errors
+
+
+def _bind_reviewer_source_quotes(
+    issues: list[dict[str, Any]], raw_text: str, *, collection: str
+) -> list[dict[str, Any]]:
+    """Bind reviewer evidence and fail closed instead of accepting model coordinates."""
+    bound: list[dict[str, Any]] = []
+    for index, original in enumerate(issues):
+        issue = deepcopy(original)
+        spans, errors = _bind_exact_source_quotes(
+            raw_text,
+            issue.pop("source_quotes", None),
+            path=f"{collection}.{index}",
+        )
+        if errors:
+            first = errors[0]
+            raise IntentCompilerError(
+                "independent reviewer source evidence binding failed "
+                f"[{first['code']}] at {first['path']}"
+            )
+        issue["source_spans"] = spans
+        bound.append(issue)
+    return bound
+
+
 def _all_semantic_ids(intent_ir: dict[str, Any]) -> list[str]:
     keys = (
         ("goals", "goal_id"),
@@ -658,8 +785,14 @@ def validate_intent(
         "constraint_expression_integrity": [],
         "unknown_resolution_integrity": [],
     }
-    schema_errors = [*(semantic_schema_errors or []), *_schema_errors(intent_ir, INTENT_SCHEMA)]
-    checks["controlled_value_integrity"].extend(schema_errors)
+    for error in semantic_schema_errors or []:
+        target = (
+            "source_span_integrity"
+            if str(error.get("code") or "").startswith("SOURCE_QUOTE_")
+            else "controlled_value_integrity"
+        )
+        checks[target].append(error)
+    checks["controlled_value_integrity"].extend(_schema_errors(intent_ir, INTENT_SCHEMA))
     raw_id = raw_input["raw_intent_id"]
     raw_hash = raw_input["raw"]["sha256"]
     raw_ref_value = intent_ir.get("raw_intent_ref", {})
@@ -811,6 +944,10 @@ You are Solar's Intent Compiler. Return only the semantic body required by the s
 Represent what the user requested without choosing a workflow, DAG, capsule, worker, or implementation.
 Every goal, outcome, constraint, ambiguity, and conflict must cite exact zero-based character spans [start,end]
 from raw.text, with end exclusive. Unknown facts that later work can discover are unknowns, not user questions.
+For every cited item, also return source_quotes containing exact, verbatim substrings copied from raw.text.
+Choose each quote long enough to occur exactly once. source_spans remains required for the provider contract, but
+the deterministic compiler ignores model-authored coordinates and replaces them from source_quotes. Never use a
+shared heading or another generic fragment as evidence for unrelated items.
 Only an ambiguity that changes the deliverable, scope, authorization, or irreversible effect is blocking.
 If workflow discovery, analysis, or design can resolve a choice without changing those boundaries, record an unknown
 with the correct resolution stage instead of a blocking ambiguity. A context reference may be resolved later; an
@@ -823,12 +960,25 @@ The expression language is intentionally small. If it cannot faithfully express 
 quantification, matching, or another semantic relation, preserve the exact user condition as a literal expression
 instead of approximating it with a weaker operator. In particular, implies is a Boolean condition operator; it does
 not prove that every item in one collection has a matching item in another collection.
+The language has no subset-of or universal-membership operator. Therefore an "only these allowed values/purposes"
+whitelist must be preserved as an exact literal expression. Never approximate a whitelist with contains_none over
+a synthetic "outside_allowed_set" reference: that checks only the named right-hand values and does not prove that
+every actual value belongs to the allowed set.
+A target, range, or minimum that the source pairs with an explicit unavailable/degraded-mode continuation must not
+become an unconditional bound. Preserve the normal target and its fallback together in the expression (using exact
+literal conditions when the bounded operators cannot do so), or explicitly record the source-level tension. The
+fallback authorizes later execution with available inputs; it does not require the target corpus before planning.
 An imperative such as "use", "produce", "include", or "do not" is a requirement, not a preference; do not weaken it
 to "should" or category=preference. A source-acquisition requirement such as "use live public sources" constrains
 workflow source inputs or source channels, not words that merely appear in the final artifact. Represent it with a
 symbolic workflow/source data-path ref rather than a deliverable-text ref. A conditional provenance rule such as
 "do not claim X unless X was actually run" means a claim of execution implies retained execution evidence; it does
 not prohibit truthful claims when that evidence exists.
+Treat every named deliverable as a fillable handoff row, not a prose-summary opportunity. Its outcome description
+must retain every explicitly enumerated required column, field, section, status value, count, and content element.
+Never replace an explicit list with placeholders such as "the required fields", "the specified sections", "etc.",
+or "as requested". A downstream step must be able to fill the outcome row without rereading raw.text to recover
+details that this compiler discarded.
 Use contains_none to prohibit any listed value from appearing in a set or collection.
 contains_all, contains_any, and contains_none take exactly two operands: the left operand identifies the
 collection being checked and the right operand must be {"set": [...]} even when it contains one item. Never
@@ -858,12 +1008,24 @@ def compile_candidate(
     previous: dict[str, Any] | None = None, defects: list[dict[str, Any]] | None = None,
     include_schema_errors: bool = False,
 ) -> dict[str, Any] | tuple[dict[str, Any], list[dict[str, Any]]]:
-    semantic = model.generate(
+    authored_semantic = model.generate(
         _compiler_prompt(raw_input, generation=generation, previous=previous, defects=defects or []),
-        SEMANTIC_SCHEMA,
+        SEMANTIC_AUTHORING_SCHEMA,
         work_dir / "compiler_call",
     )
-    semantic_schema_errors = _schema_errors(semantic, SEMANTIC_SCHEMA)
+    authoring_schema_errors = _schema_errors(
+        authored_semantic,
+        SEMANTIC_AUTHORING_SCHEMA,
+    )
+    semantic, source_binding_errors = _bind_semantic_source_quotes(
+        authored_semantic,
+        raw_input["raw"]["text"],
+    )
+    semantic_schema_errors = [
+        *authoring_schema_errors,
+        *source_binding_errors,
+        *_schema_errors(semantic, SEMANTIC_SCHEMA),
+    ]
     semantic_body = semantic if isinstance(semantic, dict) else {}
     raw_id = raw_input["raw_intent_id"]
     suffix = raw_id.removeprefix("raw-intent-").removeprefix("intent-")
@@ -895,15 +1057,32 @@ Report an error only when the IntentIR materially changes or omits a requested d
 constraint, authorization, or meaning. Awkward wording and harmless differences are warnings or passes.
 Inspect every goal, outcome, and constraint independently and report all material defects in this response; do not
 stop after finding one failure class, because the compiler receives only one bounded repair.
+Also evaluate the IntentIR as a whole. A normal-path rule and its explicit fallback may be represented in separate
+constraint rows; do not report an omission merely because the fallback is not duplicated inside the normal row when
+the combined machine-visible constraints preserve both. Preserve source modality exactly: "target", "aim", and
+"prefer" are not strict upper/lower bounds. Do not demand a prohibition above a target range unless the source says
+"must", "maximum", "no more than", or otherwise explicitly establishes a hard cap.
+For each named deliverable, compare every explicitly enumerated required column, field, section, status value,
+count, and content element. A placeholder such as "the required fields", "the specified sections", "etc.", or
+"as requested" is an omission when it replaces source details that downstream steps need.
 Treat constraint.expression as authoritative machine meaning. If its logic differs from the statement or source,
 report a repairable error even when the prose is correct. In particular, verify strict limits, ordering, conditions,
 approval-before-action, and stop/rollback triggers.
 An exact literal expression is valid when the bounded expression language has no operator for the source relation;
 do not demand unsupported quantifiers or per-item matching. Reject an operator formula that falsely approximates
 such a relation, but accept a literal that preserves the source condition without claiming machine precision.
+The language has no subset-of or universal-membership operator. An "only these values/purposes are allowed"
+whitelist must therefore remain an exact literal; contains_none over a synthetic outside/disallowed-set reference
+does not prove that every actual value belongs to the allowed set.
+When the source pairs a target/range/minimum with an explicit unavailable or degraded-mode continuation, reject an
+unconditional bound that drops the fallback. Both the normal target and fallback must remain machine-visible; the
+fallback does not mean that the target corpus must already exist before planning.
 Do not fail because a discoverable fact is unknown before the workflow. Do fail unrequested execution.
 Do not report source-span bounds; the deterministic validator owns that mechanical check.
 Check all six required check kinds exactly once. Every issue must cite raw-input character spans.
+Every issue must also include source_quotes copied exactly from raw.text. Use a quote long enough to occur exactly
+once. source_spans remains required for the provider contract, but deterministic code replaces those coordinates
+from source_quotes before the review can affect admission.
 You may judge but may not rewrite the IntentIR.
 """.strip()
     return json.dumps(
@@ -918,8 +1097,13 @@ def review_fidelity(
 ) -> dict[str, Any]:
     body = model.generate(
         _fidelity_prompt(raw_input, intent_ir),
-        FIDELITY_REVIEW_SCHEMA,
+        FIDELITY_REVIEW_AUTHORING_SCHEMA,
         work_dir / "reviewer_call",
+    )
+    _assert_schema(
+        body,
+        FIDELITY_REVIEW_AUTHORING_SCHEMA,
+        "intent fidelity reviewer authoring body",
     )
     errors = list(body.get("errors") or [])
     warnings = list(body.get("warnings") or [])
@@ -948,6 +1132,27 @@ def review_fidelity(
                 "source_spans": [],
             }
         )
+    errors = _bind_reviewer_source_quotes(
+        errors,
+        raw_input["raw"]["text"],
+        collection="errors",
+    )
+    model_warnings = [
+        issue
+        for issue in warnings
+        if issue.get("code") != "REVIEWER_MECHANICAL_CLAIM_REJECTED"
+    ]
+    bound_warnings = _bind_reviewer_source_quotes(
+        model_warnings,
+        raw_input["raw"]["text"],
+        collection="warnings",
+    )
+    local_warnings = [
+        issue
+        for issue in warnings
+        if issue.get("code") == "REVIEWER_MECHANICAL_CLAIM_REJECTED"
+    ]
+    warnings = [*bound_warnings, *local_warnings]
     expected_checks = {
         "goals_supported_by_source",
         "outcomes_supported_by_source",
@@ -1008,6 +1213,44 @@ def review_fidelity(
     return result
 
 
+def _demote_exhausted_fidelity_findings(fidelity: dict[str, Any]) -> dict[str, Any]:
+    """Retain final LLM findings as diagnostics after the bounded repair.
+
+    The reviewer can propose the one compiler repair, but it is not a second
+    admission authority.  Deterministic validation, explicit ambiguity and
+    explicit conflict handling remain blocking.  Preserve the reviewer's
+    original severity and proposed change so the diagnostic is auditable.
+    """
+
+    if fidelity.get("status") != "fail":
+        return fidelity
+    advisory = deepcopy(fidelity)
+    warnings = list(advisory.get("warnings") or [])
+    warnings.extend(
+        {
+            "code": str(error.get("code") or "ADVISORY_FIDELITY_FINDING"),
+            "path": str(error.get("path") or "intent_fidelity.reviewer_output"),
+            "message": str(error.get("message") or "Intent fidelity reviewer finding."),
+            "source_spans": deepcopy(error.get("source_spans") or []),
+            "advisory": True,
+            "original_severity": "error",
+            "original_repairable": bool(error.get("repairable")),
+            "suggested_change": str(
+                error.get("required_change") or "Review this finding before delivery."
+            ),
+        }
+        for error in advisory.get("errors") or []
+    )
+    for check in advisory.get("checks") or []:
+        if check.get("status") == "fail":
+            check["status"] = "warning"
+    advisory["status"] = "pass_with_warnings"
+    advisory["errors"] = []
+    advisory["warnings"] = warnings
+    _assert_schema(advisory, FIDELITY_SCHEMA, "intent_fidelity")
+    return advisory
+
+
 def _artifact_ref(payload: dict[str, Any], id_key: str) -> dict[str, Any]:
     return {id_key: payload.get(id_key), "sha256": sha256_payload(payload)}
 
@@ -1026,8 +1269,6 @@ def decide_acceptance(
         reasons.append("Required Intent Compiler artifacts are missing.")
     elif validation.get("status") == "fail":
         reasons.append("IntentIR mechanical validation failed.")
-    elif fidelity.get("status") == "fail":
-        reasons.append("IntentIR meaning-preservation review failed.")
     else:
         blocking = [
             item
@@ -1064,8 +1305,11 @@ def decide_acceptance(
             reasons.append("The user must resolve a material ambiguity or conflict.")
         else:
             decision = "accepted"
-            reasons.extend(
-                ["Mechanical validation passed.", "Independent meaning-preservation review passed."]
+            reasons.append("Mechanical validation passed.")
+            reasons.append(
+                "Independent meaning-preservation review was retained as advisory diagnostics."
+                if fidelity.get("status") == "pass_with_warnings"
+                else "Independent meaning-preservation review passed."
             )
     raw_id = raw_input["raw_intent_id"]
     result = {
@@ -1169,6 +1413,18 @@ def run_pipeline(
                 write_json(generation_dir / "intent_fidelity.json", fidelity)
             if not _repairable_errors(validation, fidelity):
                 break
+        if (
+            intent_ir
+            and validation
+            and validation.get("status") == "pass"
+            and fidelity
+            and fidelity.get("status") == "fail"
+        ):
+            fidelity = _demote_exhausted_fidelity_findings(fidelity)
+            write_json(
+                output_dir / f"generation-{intent_ir['generation']}" / "intent_fidelity.json",
+                fidelity,
+            )
         acceptance = decide_acceptance(
             raw_input,
             intent_ir,

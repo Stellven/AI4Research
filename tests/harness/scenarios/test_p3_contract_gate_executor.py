@@ -158,6 +158,60 @@ def test_gate_none_writes_policy_pass_sidecar(sandbox):
     assert md.strip()
 
 
+def test_failed_scientific_artifact_gate_overrides_none_policy_pass(sandbox):
+    node = _node({"kind": "none"}, node_id="REVIEW")
+    node["autosci_scientific_gate"] = {
+        "required": True,
+        "invocation_ok": True,
+        "ok": False,
+        "verdict": "FAIL",
+        "reason": "artifact review status is inconclusive",
+        "json_path": str(sandbox / "sprints" / "review-scientific-gate.json"),
+    }
+
+    result = cge.execute_gate(
+        sandbox / "sprints",
+        SID,
+        node,
+        node["evaluator_gate"],
+        harness_dir=sandbox,
+        artifact_snapshot={
+            "schema": "solar.eval_artifact_snapshot.v1",
+            "path": str(sandbox / "sprints" / "snapshot.json"),
+            "snapshot_digest": "a" * 64,
+        },
+    )
+    payload, md = _eval_sidecars(sandbox, "REVIEW")
+
+    assert result["ok"] is False
+    assert result["verdict"] == "FAIL"
+    assert payload["verdict"] == "FAIL"
+    assert payload["verdict_kind"] == "content"
+    assert payload["generation_mode"] == "deterministic_scientific_gate"
+    assert "required deterministic scientific artifact gate returned FAIL" in payload["summary"]
+    assert "Solar deterministic scientific artifact gate" in md
+
+
+def test_artifact_review_without_scheduler_admission_gate_fails_closed(sandbox):
+    node = _node({"kind": "none"}, node_id="REVIEW-MISSING-GATE")
+    node["evidence_policy"] = {"expected_schema": "artifact_review.v1"}
+
+    result = cge.execute_gate(
+        sandbox / "sprints",
+        SID,
+        node,
+        node["evaluator_gate"],
+        harness_dir=sandbox,
+    )
+    payload, _md = _eval_sidecars(sandbox, "REVIEW-MISSING-GATE")
+
+    assert result["ok"] is False
+    assert result["verdict"] == "FAIL"
+    assert payload["verdict"] == "FAIL"
+    assert payload["verdict_kind"] == "infrastructure"
+    assert payload["generation_mode"] == "deterministic_scientific_gate"
+
+
 def test_gate_waits_for_builder_completion(sandbox):
     """P3 live run 1: on the pool path the handoff appears while the builder
     is still in flight, and the executor fired at status=dispatched — D1

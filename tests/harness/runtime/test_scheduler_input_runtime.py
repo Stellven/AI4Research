@@ -214,7 +214,71 @@ def test_duplicate_private_artifact_types_are_node_scoped(tmp_path: Path) -> Non
         for node in graph["nodes"]
     ]
     assert paths[0] != paths[1]
-    assert all("/private/" in path for path in paths)
+    assert all("/private/" in path.replace("\\", "/") for path in paths)
+
+
+def test_ordered_composition_collection_outputs_share_explicit_private_scope(
+    tmp_path: Path,
+) -> None:
+    artifact_type = "artifact.paper.v1"
+    remote = _node("remote", consumes=["artifact.request.v1"], produces=[artifact_type])
+    local = _node(
+        "local",
+        depends_on=["remote"],
+        consumes=["artifact.request.v1"],
+        produces=[artifact_type],
+    )
+    assess = _node(
+        "assess",
+        depends_on=["remote", "local"],
+        consumes=[artifact_type],
+        produces=["artifact.assessment.v1"],
+    )
+    for node in (remote, local):
+        node["output_routes"] = [
+            {
+                "artifact_type": artifact_type,
+                "route_kind": "sprint_private",
+                "relative_path": "evidence/research_papers",
+                "materialization_kind": "directory",
+                "private_scope": "source_ingestion_assessment",
+            }
+        ]
+    value = {
+        "schema_version": "solar.scheduler_input.v1",
+        "artifact_role": "runtime_execution_authority",
+        "scheduler_input_id": "scheduler-input-collection",
+        "sprint_id": "sprint-collection",
+        "planning_authority": "frozen_execution_plan_v1",
+        "graph": {"graph_id": "graph-collection", "nodes": [remote, local, assess]},
+    }
+    source = tmp_path / "scheduler_input.json"
+    _write(source, value)
+
+    assert scheduler_input.validate(value, require_runtime_authority=True)["ok"] is True
+    graph_path = scheduler_input.prepare_runtime_graph(source, tmp_path / "runtime")
+    graph = graph_scheduler.load_graph(graph_path)
+    nodes = {node["id"]: node for node in graph["nodes"]}
+    remote_path = nodes["remote"]["artifact_routes"]["produces"][artifact_type]
+    local_path = nodes["local"]["artifact_routes"]["produces"][artifact_type]
+    assert remote_path == local_path
+    assert nodes["assess"]["artifact_routes"]["consumes"][artifact_type] == local_path
+
+
+def test_private_scope_is_forbidden_on_workspace_publish_route(tmp_path: Path) -> None:
+    value = _scheduler_input()
+    _attach_workspace_authority(tmp_path, value)
+    value["graph"]["nodes"][0]["output_routes"][0].update(
+        {
+            "route_kind": "workspace_publish",
+            "relative_path": "RESULT.md",
+            "private_scope": "not-applicable",
+        }
+    )
+
+    result = scheduler_input.validate(value, require_runtime_authority=True)
+
+    assert "PRIVATE_SCOPE_ON_WORKSPACE_ROUTE:collect:RESULT.md" in result["errors"]
 
 
 def test_workspace_exact_file_read_is_hash_bound_and_source_immutable(
@@ -242,7 +306,9 @@ def test_workspace_exact_file_read_is_hash_bound_and_source_immutable(
     graph = graph_scheduler.load_graph(graph_path)
     first = graph["nodes"][0]
     assert str(source_file.resolve()) in first["read_scope"]
-    assert first["write_scope"][0].endswith("/workdir/workspace/RESULT.md")
+    assert first["write_scope"][0].replace("\\", "/").endswith(
+        "/workdir/workspace/RESULT.md"
+    )
     assert source_file.read_bytes() == before
 
     source_file.write_text("tampered\n", encoding="utf-8")
@@ -367,6 +433,27 @@ def test_projection_keeps_source_immutable_and_state_separate(tmp_path: Path) ->
             "required_evaluators": 1,
         },
         "evaluation_plan_updated_at": "2026-08-28T11:59:59Z",
+        "eval_artifact_snapshot": {
+            "schema": "solar.eval_artifact_snapshot.v1",
+            "path": str(graph_path.parent / "sprint-test.collect-eval-snapshot.json"),
+            "snapshot_digest": "a" * 64,
+        },
+        "eval_assignments": [
+            {
+                "pane": "operator:evaluator-1",
+                "dispatch_id": "graph-eval-sprint-test-collect-q1",
+                "pm_task_id": "pm-eval-1",
+                "role": "primary",
+                "eval_md_path": str(graph_path.parent / "sprint-test.collect-eval.md"),
+                "eval_json_path": str(graph_path.parent / "sprint-test.collect-eval.json"),
+                "dispatched_at": "2026-08-28T12:00:01Z",
+            }
+        ],
+        "eval_assigned_to": "operator:evaluator-1",
+        "eval_dispatch_id": "graph-eval-sprint-test-collect-q1",
+        "eval_pm_task_id": "pm-eval-1",
+        "eval_dispatched_at": "2026-08-28T12:00:01Z",
+        "eval_dispatch_group_id": "eval-group-1",
         "last_operator_submission_failure": {"graph_dispatch_id": "dispatch-1"},
         "last_dispatch_failure_reason": "stale_submit_ack_without_live_lease",
         "last_dispatch_failure_at": "2026-08-28T11:59:58Z",
@@ -389,11 +476,50 @@ def test_projection_keeps_source_immutable_and_state_separate(tmp_path: Path) ->
     assert reloaded["nodes"][0]["last_dispatch_failure_at"] == "2026-08-28T11:59:58Z"
     assert reloaded["nodes"][0]["evaluation_plan_runtime"]["required_evaluators"] == 1
     assert reloaded["nodes"][0]["evaluation_plan_updated_at"] == "2026-08-28T11:59:59Z"
+    assert reloaded["nodes"][0]["eval_assignments"][0]["pm_task_id"] == "pm-eval-1"
+    assert reloaded["nodes"][0]["eval_assigned_to"] == "operator:evaluator-1"
+    assert reloaded["nodes"][0]["eval_dispatch_id"] == "graph-eval-sprint-test-collect-q1"
+    assert reloaded["nodes"][0]["eval_pm_task_id"] == "pm-eval-1"
+    assert reloaded["nodes"][0]["eval_dispatched_at"] == "2026-08-28T12:00:01Z"
+    assert reloaded["nodes"][0]["eval_dispatch_group_id"] == "eval-group-1"
     assert reloaded["nodes"][0]["last_operator_submission_failure"]["graph_dispatch_id"] == "dispatch-1"
     assert scheduler_input.verify_runtime_projection(reloaded, graph_path=graph_path)["ok"] is True
     static_graph = json.loads(graph_path.read_text(encoding="utf-8"))
     assert "execution_attempt" not in static_graph["nodes"][0]
     assert "evaluation_plan_runtime" not in static_graph["nodes"][0]
+
+
+def test_runtime_projection_save_preserves_frozen_retrieval_and_execution_authority() -> None:
+    graph = {
+        "schema_version": "solar.scheduler_runtime_projection.v1",
+        "nodes": [
+            {
+                "id": "discover",
+                "goal": "Discover traceable literature.",
+                "retrieval_contract": {
+                    "contract_id": "discovery-v1",
+                    "minimum_candidates": 6,
+                },
+                "execution_authority": {
+                    "schema_version": "solar.node_execution_authority.v1",
+                    "sha256": "a" * 64,
+                },
+                "status": "pending",
+            }
+        ],
+    }
+
+    static_graph = graph_scheduler._graph_spec_payload(graph)
+
+    assert static_graph["nodes"][0]["retrieval_contract"] == {
+        "contract_id": "discovery-v1",
+        "minimum_candidates": 6,
+    }
+    assert static_graph["nodes"][0]["execution_authority"] == {
+        "schema_version": "solar.node_execution_authority.v1",
+        "sha256": "a" * 64,
+    }
+    assert "status" not in static_graph["nodes"][0]
 
 
 def test_prepare_runtime_graph_resumes_without_resetting_existing_state(tmp_path: Path) -> None:
@@ -1012,6 +1138,31 @@ def test_runner_scheduler_runtime_dir_aligns_all_runtime_consumers(
     graphs = multi_task_runner.prepare_scheduler_input_args(args)
 
     assert graphs == [str(runtime_root / "sprint-test.task_graph.json")]
+    assert multi_task_runner.SPRINTS_DIR == runtime_root
+    assert graph_scheduler.SPRINTS_DIR == runtime_root
+    assert graph_node_dispatcher.SPRINTS_DIR == runtime_root
+    assert os.environ["HARNESS_SPRINTS_DIR"] == str(runtime_root)
+    assert os.environ["SOLAR_HARNESS_SPRINTS_DIR"] == str(runtime_root)
+
+
+def test_runner_explicit_projection_graph_restores_its_runtime_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source = tmp_path / "scheduler_input.json"
+    _write(source, _scheduler_input())
+    runtime_root = (tmp_path / "published-runtime").resolve()
+    graph_path = scheduler_input.prepare_runtime_graph(source, runtime_root)
+    stale_root = tmp_path / "global-sprints"
+    monkeypatch.setattr(multi_task_runner, "SPRINTS_DIR", stale_root)
+    monkeypatch.setattr(graph_scheduler, "SPRINTS_DIR", stale_root)
+    monkeypatch.setattr(graph_node_dispatcher, "SPRINTS_DIR", stale_root)
+    monkeypatch.setenv("HARNESS_SPRINTS_DIR", str(stale_root))
+    monkeypatch.setenv("SOLAR_HARNESS_SPRINTS_DIR", str(stale_root))
+    args = types.SimpleNamespace(scheduler_input=[], graph=[str(graph_path)])
+
+    graphs = multi_task_runner.prepare_scheduler_input_args(args)
+
+    assert graphs == [str(graph_path)]
     assert multi_task_runner.SPRINTS_DIR == runtime_root
     assert graph_scheduler.SPRINTS_DIR == runtime_root
     assert graph_node_dispatcher.SPRINTS_DIR == runtime_root

@@ -1765,7 +1765,7 @@ def test_r16_compile_preserves_exact_model_owned_discovery_requirements(
     assert "[R10]" not in discovery["objective"]
 
 
-def test_r16_single_repair_removes_downstream_discovery_ownership_and_passes(
+def test_r16_subjective_fidelity_finding_does_not_trigger_plan_repair(
     tmp_path: Path,
 ) -> None:
     requirement_ir = _r16_research_requirement_ir()
@@ -1835,9 +1835,9 @@ def test_r16_single_repair_removes_downstream_discovery_ownership_and_passes(
         for row in result["plan_ir"]["nodes"]
         if row["node_id"] == "discover_current_public_evidence"
     )
-    assert planner_model.calls.count(planner.PLAN_BODY_SCHEMA.name) == 2
-    assert result["plan_ir"]["generation"] == 1
-    assert discovery["requirement_ids"] == ["R4", "R5", "R6", "R7", "R9", "R14"]
+    assert planner_model.calls.count(planner.PLAN_BODY_SCHEMA.name) == 1
+    assert result["plan_ir"]["generation"] == 0
+    assert discovery["requirement_ids"]
     assert result["plan_validation"]["status"] == "pass"
     assert result["plan_fidelity"]["status"] == "pass"
     assert result["plan_acceptance"]["decision"] == "accepted"
@@ -1887,6 +1887,45 @@ def test_discovery_scope_does_not_duplicate_report_owned_requirement() -> None:
     assert discovery["requirement_ids"] == []
     assert discovery["objective"] == "Discover evidence."
     assert preserved["nodes"][1]["requirement_ids"] == ["R5"]
+
+
+def test_discovery_process_ownership_uses_registered_verifier_not_coarse_role() -> None:
+    requirement_ir = {
+        "schema_version": "solar.requirement_ir.v2",
+        "requirement_ir_id": "req-discovery-process-owner",
+        "requirements": [
+            {
+                "requirement_id": "R1",
+                "statement": "Discover admissible literature.",
+                "acceptance": {"kind": "process", "required_values": ["sources"]},
+                "check": "check.scientific.literature_discovery.v1",
+            },
+            {
+                "requirement_id": "R2",
+                "statement": "Ingest the selected papers.",
+                "acceptance": {"kind": "process", "required_values": ["papers"]},
+                "check": "check.scientific.paper_ingestion.v1",
+            },
+            {
+                "requirement_id": "R3",
+                "statement": "Deliver the final report.",
+                "acceptance": {"kind": "artifact", "required_values": ["report"]},
+                "check": "check.scientific.scientific_report.v1",
+            },
+        ],
+        "semantic_contract": {
+            "requirement_roles": {
+                "R1": "process",
+                "R2": "process",
+                "R3": "delivery",
+            }
+        },
+    }
+    discovery_node = {"requirement_ids": ["R1", "R2", "R3"]}
+
+    assert planner._discovery_non_scope_requirement_ids(
+        requirement_ir, discovery_node
+    ) == ["R2", "R3"]
 
 
 def test_planner_and_fidelity_prompts_keep_protocol_resolution_downstream() -> None:
@@ -2143,6 +2182,56 @@ def test_collection_capsule_requires_directory_materialization() -> None:
     }
 
 
+def test_delivery_manifest_requires_exact_publication_directory_route() -> None:
+    requirement_ir = _requirement_ir()
+    requirement_ir["semantic_contract"] = {
+        "schema_version": "solar.requirement_semantics.v1",
+        "requirement_roles": {"REQ-001": "delivery", "REQ-002": "process"},
+        "discovery": None,
+        "delivery_manifest": {
+            "output_root": "Downloads/demo_outputs/kv_cache_landscape",
+            "exact_file_set": True,
+            "files": [{
+                "file_id": "report",
+                "relative_path": "report.md",
+                "media_type": "text/markdown",
+                "description": "Report",
+                "content_requirements": ["Non-empty"],
+                "required_fields": [],
+                "source_refs": ["REQ-001"],
+                "required": True,
+            }],
+        },
+    }
+    decision = _decision(requirement_ir)
+    body = _plan_body()
+    publication = body["nodes"][0]["produces"][0]
+    publication["artifact_type"] = "schema:schemas/evidence/publication_bundle.v1.schema.json"
+    publication["materialization"] = {
+        "kind": "file",
+        "path": "publication_bundle.json",
+        "route": "sprint_private",
+    }
+    mismatched = planner.validate_plan_ir(
+        requirement_ir, decision, _wrapped_plan(requirement_ir, decision, body), _catalog()
+    )
+    assert "DELIVERY_MANIFEST_MATERIALIZATION_MISMATCH" in {
+        row["code"] for row in mismatched["errors"]
+    }
+
+    publication["materialization"] = {
+        "kind": "directory",
+        "path": "Downloads/demo_outputs/kv_cache_landscape",
+        "route": "workspace_publish",
+    }
+    matched = planner.validate_plan_ir(
+        requirement_ir, decision, _wrapped_plan(requirement_ir, decision, body), _catalog()
+    )
+    assert "DELIVERY_MANIFEST_MATERIALIZATION_MISMATCH" not in {
+        row["code"] for row in matched["errors"]
+    }
+
+
 def test_consumed_artifact_requires_real_upstream_dependency() -> None:
     requirement_ir = _requirement_ir()
     decision = _decision(requirement_ir)
@@ -2184,6 +2273,165 @@ def test_consumed_artifact_requires_real_upstream_dependency() -> None:
     assert "ARTIFACT_DEPENDENCY_MISSING" in {
         row["code"] for row in validation["errors"]
     }
+
+
+def test_same_typed_transform_uses_nearest_upstream_artifact_state() -> None:
+    requirement_ir = _requirement_ir()
+    decision = _decision(requirement_ir, "exact_reuse")
+    body = _plan_body()
+    transform = copy.deepcopy(body["nodes"][0])
+    transform.update(
+        {
+            "node_id": "refine_patch",
+            "objective": "Refine the upstream patch into a new reviewed patch state.",
+            "depends_on": ["implement"],
+            "consumes": ["artifact.patch_diff"],
+            "produces": [
+                {
+                    "artifact_type": "artifact.patch_diff",
+                    "verifier_ids": ["check.patch.v1"],
+                    "materialization": {
+                        "kind": "file",
+                        "path": "refined.diff",
+                        "route": "sprint_private",
+                    },
+                }
+            ],
+            "requirement_ids": [],
+        }
+    )
+    consumer = copy.deepcopy(transform)
+    consumer.update(
+        {
+            "node_id": "review_patch",
+            "objective": "Review the closest refined patch state.",
+            "depends_on": ["refine_patch"],
+            "produces": [
+                {
+                    "artifact_type": "artifact.eval_md",
+                    "verifier_ids": ["check.tests.v1"],
+                    "materialization": {
+                        "kind": "file",
+                        "path": "review.md",
+                        "route": "sprint_private",
+                    },
+                }
+            ],
+        }
+    )
+    body["nodes"].extend([transform, consumer])
+    plan_ir = _wrapped_plan(requirement_ir, decision, body)
+
+    validation = planner.validate_plan_ir(
+        requirement_ir,
+        decision,
+        plan_ir,
+        _catalog(),
+    )
+
+    handoff_codes = {
+        row["code"]
+        for row in validation["errors"]
+        if row["code"].startswith("ARTIFACT_")
+    }
+    assert "ARTIFACT_PRODUCER_DUPLICATE" not in handoff_codes
+    assert "ARTIFACT_DEPENDENCY_MISSING" not in handoff_codes
+    assert "ARTIFACT_PRODUCER_AMBIGUOUS" not in handoff_codes
+
+    selection = {
+        "nodes": [
+            {
+                "node_id": node["node_id"],
+                "selected_capsule_id": "cap.test",
+                "dispatch_task_type": "tests",
+                "fallback_capsule_ids": [],
+                "rationale": "Projection-only test binding.",
+            }
+            for node in plan_ir["nodes"]
+        ]
+    }
+    graph = planner._generated_task_graph_proposal(
+        requirement_ir,
+        plan_ir,
+        selection,
+        sprint_id="sprint-same-typed-state",
+    )
+    nodes = {node["id"]: node for node in graph["nodes"]}
+    assert nodes["refine_patch"]["read_scope"] == [
+        "private/implement/implementation.diff"
+    ]
+    assert nodes["review_patch"]["read_scope"] == [
+        "private/refine_patch/refined.diff"
+    ]
+
+
+def test_incomparable_same_typed_producers_remain_ambiguous() -> None:
+    requirement_ir = _requirement_ir()
+    decision = _decision(requirement_ir, "exact_reuse")
+    body = _plan_body()
+
+    def branch(node_id: str, path: str) -> dict:
+        node = copy.deepcopy(body["nodes"][0])
+        node.update(
+            {
+                "node_id": node_id,
+                "objective": f"Produce the {node_id} patch branch for comparison.",
+                "depends_on": ["implement"],
+                "consumes": ["artifact.patch_diff"],
+                "produces": [
+                    {
+                        "artifact_type": "artifact.patch_diff",
+                        "verifier_ids": ["check.patch.v1"],
+                        "materialization": {
+                            "kind": "file",
+                            "path": path,
+                            "route": "sprint_private",
+                        },
+                    }
+                ],
+                "requirement_ids": [],
+            }
+        )
+        return node
+
+    left = branch("left_patch", "left.diff")
+    right = branch("right_patch", "right.diff")
+    consumer = copy.deepcopy(left)
+    consumer.update(
+        {
+            "node_id": "merge_review",
+            "objective": "Review a single authoritative patch after branch consolidation.",
+            "depends_on": ["left_patch", "right_patch"],
+            "produces": [
+                {
+                    "artifact_type": "artifact.eval_md",
+                    "verifier_ids": ["check.tests.v1"],
+                    "materialization": {
+                        "kind": "file",
+                        "path": "merge-review.md",
+                        "route": "sprint_private",
+                    },
+                }
+            ],
+        }
+    )
+    body["nodes"].extend([left, right, consumer])
+    plan_ir = _wrapped_plan(requirement_ir, decision, body)
+
+    validation = planner.validate_plan_ir(
+        requirement_ir,
+        decision,
+        plan_ir,
+        _catalog(),
+    )
+    ambiguity = [
+        row
+        for row in validation["errors"]
+        if row["code"] == "ARTIFACT_PRODUCER_AMBIGUOUS"
+    ]
+
+    assert len(ambiguity) == 1
+    assert ambiguity[0]["producer_node_ids"] == ["left_patch", "right_patch"]
 
 
 def test_pipeline_repairs_once_then_accepts_and_hash_chain_verifies(tmp_path: Path) -> None:
@@ -2286,9 +2534,8 @@ def test_pipeline_combines_mechanical_and_semantic_defects_before_one_repair(
         for prompt in planner_model.prompts
         if '"repair_instruction"' in prompt
     )
-    assert {row["code"] for row in repair_prompt["defects"]} >= {
-        "LOGICAL_OPERATOR_UNKNOWN",
-        "UNNECESSARY_LOGICAL_NODE",
+    assert {row["code"] for row in repair_prompt["defects"]} == {
+        "LOGICAL_OPERATOR_UNKNOWN"
     }
     assert result["plan_ir"]["generation"] == 1
     assert result["plan_validation"]["status"] == "pass"
@@ -3479,7 +3726,7 @@ def test_r15_generation_zero_bundles_handoff_and_other_plan_defects(tmp_path: Pa
     plan_ir = _r15_artifact_handoff_plan(requirement_ir, decision)
     plan_ir["nodes"][1]["produces"].append(
         {
-            "artifact_type": "artifact.report",
+            "artifact_type": "artifact.verification",
             "verifier_ids": ["check.tests.v1"],
             "materialization": {
                 "kind": "file",
@@ -3513,7 +3760,7 @@ def test_r15_one_repair_receives_missing_source_and_second_defect_together(
     generation_zero = _r15_artifact_handoff_plan(requirement_ir, decision)["nodes"]
     generation_zero[1]["produces"].append(
         {
-            "artifact_type": "artifact.report",
+            "artifact_type": "artifact.verification",
             "verifier_ids": ["check.tests.v1"],
             "materialization": {
                 "kind": "file",
@@ -3790,6 +4037,63 @@ def test_scheduler_workspace_source_freezing_wraps_missing_file_and_hashes_prese
     ]
 
 
+def test_controller_source_inventory_fills_owner_and_discovery_workspace_reads() -> None:
+    source_rows = [
+        {
+            "relative_path": "demo_inputs/papers/a.pdf",
+            "sha256": "a" * 64,
+            "size_bytes": 1,
+            "requirement_ids": ["R-source"],
+        },
+        {
+            "relative_path": "demo_inputs/papers/b.pdf",
+            "sha256": "b" * 64,
+            "size_bytes": 1,
+            "requirement_ids": ["R-source"],
+        },
+    ]
+    body = {
+        "nodes": [
+            {
+                "node_id": "discover",
+                "logical_operator": "ScientificLiteratureDiscoverer",
+                "requirement_ids": ["R-discovery"],
+                "workspace_reads": [],
+            },
+            {
+                "node_id": "ingest",
+                "logical_operator": "ScientificPaperIngestor",
+                "requirement_ids": ["R-source"],
+                "workspace_reads": [],
+            },
+            {
+                "node_id": "report",
+                "logical_operator": "ScientificReportDrafter",
+                "requirement_ids": ["R-report"],
+                "workspace_reads": [],
+            },
+        ]
+    }
+    planning_inputs = {
+        "workspace_authority": {
+            "declared_source_inventory": {
+                "schema_version": "solar.workspace_source_inventory.v1",
+                "files": source_rows,
+            }
+        }
+    }
+
+    bound = planner._bind_declared_workspace_sources(body, planning_inputs)
+    expected = [
+        {"kind": "file", "path": "demo_inputs/papers/a.pdf"},
+        {"kind": "file", "path": "demo_inputs/papers/b.pdf"},
+    ]
+
+    assert bound["nodes"][0]["workspace_reads"] == expected
+    assert bound["nodes"][1]["workspace_reads"] == expected
+    assert bound["nodes"][2]["workspace_reads"] == []
+
+
 
 def test_code_change_still_admits_patch_implementation() -> None:
     requirement_ir = _requirement_ir()
@@ -3983,12 +4287,14 @@ def test_capsule_fit_review_allows_only_one_bounded_selection_repair(tmp_path: P
     )
 
     assert binding["accepted"] is True
-    assert binding["repair_attempted"] is True
-    assert binding["selection"]["generation"] == 1
-    assert planner_model.calls.count(planner.CAPSULE_SELECTION_BODY_SCHEMA.name) == 2
+    assert binding["repair_attempted"] is False
+    assert binding["selection"]["generation"] == 0
+    assert binding["fit_review"]["status"] == "pass_with_warnings"
+    assert binding["fit_review"]["errors"] == []
+    assert planner_model.calls.count(planner.CAPSULE_SELECTION_BODY_SCHEMA.name) == 1
 
 
-def test_fit_review_failure_without_error_row_becomes_typed_bounded_failure(
+def test_fit_review_failure_without_error_row_becomes_advisory_warning(
     tmp_path: Path,
 ) -> None:
     requirement_ir = _requirement_ir()
@@ -4019,17 +4325,14 @@ def test_fit_review_failure_without_error_row_becomes_typed_bounded_failure(
         ScriptedModel(composition_fit_reviews=[failed_review, failed_review]),
     )
 
-    assert binding["accepted"] is False
-    assert binding["repair_attempted"] is True
-    assert binding["fit_review"]["status"] == "fail"
-    assert binding["fit_review"]["errors"] == [
-        {
-            "code": "COMPOSITION_FIT_FAILURE_UNTYPED",
-            "node_id": "design_reproducibility_experiment",
-            "message": "The chain omits an essential semantic operation.",
-            "repairable": True,
-        }
-    ]
+    assert binding["accepted"] is True
+    assert binding["repair_attempted"] is False
+    assert binding["fit_review"]["status"] == "pass_with_warnings"
+    assert binding["fit_review"]["errors"] == []
+    assert any(
+        "COMPOSITION_FIT_FAILURE_UNTYPED" in warning
+        for warning in binding["fit_review"]["warnings"]
+    )
 
 
 def test_composition_fit_prompt_allows_explicit_unresolved_reporting(
@@ -4456,6 +4759,105 @@ def test_composition_expansion_places_requirement_on_step_that_emits_its_verifie
     assert graph["nodes"][1]["requirement_ids"] == ["R-METHOD"]
 
 
+def test_composition_repeated_collection_outputs_are_ordered_in_parent_private_scope() -> None:
+    paper_type = "schema:schemas/evidence/research_paper.v1.schema.json"
+    assessment_type = "schema:schemas/evidence/research_source_assessment.v1.schema.json"
+    requirement_ir = _requirement_ir()
+    plan_ir = {
+        "nodes": [
+            {
+                "node_id": "source_ingestion_assessment",
+                "logical_operator": "ScientificSourceAssessor",
+                "objective": "Accumulate remote and local paper evidence, then assess it.",
+                "depends_on": [],
+                "consumes": ["schema:request-envelope.schema.json"],
+                "produces": [
+                    {
+                        "artifact_type": paper_type,
+                        "verifier_ids": [],
+                        "materialization": {
+                            "kind": "directory",
+                            "path": "evidence/research_papers",
+                            "route": "sprint_private",
+                        },
+                    },
+                    {
+                        "artifact_type": assessment_type,
+                        "verifier_ids": [],
+                        "materialization": {
+                            "kind": "file",
+                            "path": "evidence/source_assessment.json",
+                            "route": "sprint_private",
+                        },
+                    },
+                ],
+                "workspace_reads": [],
+                "requirement_ids": [],
+                "operator_requirements": {"effects": ["read", "write", "execute"]},
+                "gate_requirement": "",
+            }
+        ]
+    }
+    composition_catalog = {
+        "nodes": [
+            {
+                "node_id": "source_ingestion_assessment",
+                "search": {
+                    "candidates": [
+                        {
+                            "candidate_id": "composition-001",
+                            "steps": [
+                                {"capsule_id": "cap.remote", "consumes": [], "produces": [paper_type]},
+                                {"capsule_id": "cap.local", "consumes": [], "produces": [paper_type]},
+                                {"capsule_id": "cap.assess", "consumes": [paper_type], "produces": [assessment_type]},
+                            ],
+                        }
+                    ]
+                },
+            }
+        ]
+    }
+    selection = {
+        "nodes": [
+            {
+                "node_id": "source_ingestion_assessment",
+                "selected_candidate_id": "composition-001",
+                "rationale": "Accumulate both source channels before assessment.",
+                "step_bindings": [
+                    {"capsule_id": "cap.remote", "dispatch_task_type": "remote-ingest"},
+                    {"capsule_id": "cap.local", "dispatch_task_type": "local-ingest"},
+                    {"capsule_id": "cap.assess", "dispatch_task_type": "assess"},
+                ],
+            }
+        ]
+    }
+    catalog = {
+        "capsules": [
+            {"capsule_id": "cap.remote", "description": "Remote ingest."},
+            {"capsule_id": "cap.local", "description": "Local ingest."},
+            {"capsule_id": "cap.assess", "description": "Assess sources."},
+        ]
+    }
+
+    graph = planner._generated_composition_task_graph_proposal(
+        requirement_ir,
+        plan_ir,
+        composition_catalog,
+        selection,
+        catalog,
+        sprint_id="sprint-collection",
+    )
+
+    remote, local, assess = graph["nodes"]
+    assert remote["id"] in local["depends_on"]
+    assert {remote["id"], local["id"]}.issubset(set(assess["depends_on"]))
+    remote_route = planner._scheduler_output_routes(remote, [paper_type])[0]
+    local_route = planner._scheduler_output_routes(local, [paper_type])[0]
+    assert remote_route["private_scope"] == "source_ingestion_assessment"
+    assert local_route["private_scope"] == "source_ingestion_assessment"
+    assert remote_route["relative_path"] == local_route["relative_path"]
+
+
 def test_composition_catalog_rejects_chains_that_ignore_declared_node_inputs() -> None:
     requirement_ir = _requirement_ir()
     plan_body = _composition_plan_body()
@@ -4484,6 +4886,67 @@ def test_composition_catalog_rejects_chains_that_ignore_declared_node_inputs() -
             for artifact_type in step["consumes"]
         }
         assert "artifact.benchmark_log" in consumed
+
+
+def test_composition_catalog_admits_same_typed_effectful_transform() -> None:
+    requirement_ir = _requirement_ir()
+    decision = _decision(requirement_ir)
+    paper_type = "schema:schemas/evidence/research_paper.v1.schema.json"
+    plan_body = _plan_body()
+    node = plan_body["nodes"][0]
+    node.update(
+        {
+            "node_id": "paper_analysis",
+            "logical_operator": "ScientificPaperAnalyzer",
+            "objective": "Analyze the normalized paper and retain source-anchored findings.",
+            "depends_on": [],
+            "consumes": [paper_type],
+            "produces": [
+                {
+                    "artifact_type": paper_type,
+                    "verifier_ids": ["check.scientific.research_paper.v1"],
+                    "materialization": {
+                        "kind": "file",
+                        "path": "paper-analysis.json",
+                        "route": "sprint_private",
+                    },
+                }
+            ],
+            "workspace_reads": [],
+            "requirement_ids": [],
+            "operator_requirements": {
+                "capabilities": ["paper-analysis"],
+                "network": "forbidden",
+                "execution_trust": "any",
+                "minimum_context_tokens": 0,
+                "effects": ["read", "write", "execute"],
+            },
+            "gate_requirement": "source_anchored_analysis",
+            "retrieval_contract_ref": None,
+        }
+    )
+    plan_ir = _wrapped_plan(requirement_ir, decision, plan_body)
+
+    composition_catalog = planner.build_plan_composition_catalog(
+        requirement_ir,
+        _planning_context(requirement_ir),
+        plan_ir,
+        planner.build_planning_catalog_snapshot(),
+    )
+    proof = composition_catalog["nodes"][0]
+    admitted = {
+        candidate["candidate_id"]: candidate
+        for candidate in proof["search"]["candidates"]
+        if candidate["candidate_id"] in proof["admitted_candidate_ids"]
+    }
+
+    assert proof["status"] == "candidates_available"
+    assert admitted
+    assert any(
+        [step["capsule_id"] for step in candidate["steps"]]
+        == ["cap.research-paper-analyze"]
+        for candidate in admitted.values()
+    )
 
 
 def test_composition_selection_rejects_unproven_candidate_and_tampered_proof(

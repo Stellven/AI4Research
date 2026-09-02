@@ -4,13 +4,14 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any
 
 from jsonschema import Draft202012Validator
 
 ROOT = Path(__file__).resolve().parents[2]
-CONTRACT_PATH = ROOT / "schemas/compiler/requirement-semantic-contract.v2.json"
+CONTRACT_PATH = ROOT / "schemas/compiler/requirement-semantic-contract.v3.json"
 
 
 def _digest(value: Any) -> str:
@@ -37,14 +38,20 @@ def _blank(schema: dict[str, Any]) -> Any:
 
 def make_template(intent: dict[str, Any], registry: dict[str, Any]) -> dict[str, Any]:
     contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
-    if contract.get("contract_id") != "solar.requirement_semantic_contract" or contract.get("version") != 2:
+    if contract.get("contract_id") != "solar.requirement_semantic_contract" or contract.get("version") != 3:
         raise ValueError("UNSUPPORTED_REQUIREMENT_CONTRACT")
     output_schema = _schema(contract["compiler_output_schema"])
     review_schema = _schema(contract["reviewer_output_schema"])
     Draft202012Validator.check_schema(output_schema)
     Draft202012Validator.check_schema(review_schema)
     properties = output_schema["properties"]
-    if set(properties) != {"requirements", "assumptions", "discovery", "selection_authority"}:
+    if set(properties) != {
+        "requirements",
+        "assumptions",
+        "discovery",
+        "selection_authority",
+        "delivery_manifest",
+    }:
         raise ValueError("REQUIREMENT_EDITABLE_SURFACE_MISMATCH")
     # Freeze allowed identities into the schema actually sent to the provider.
     source_ids = sorted({row[key] for collection, key in (
@@ -83,6 +90,9 @@ def make_template(intent: dict[str, Any], registry: dict[str, Any]) -> dict[str,
         raise ValueError("REQUIREMENT_COUNT_POLICY_SCHEMA_MISMATCH")
     discovery_template = _blank(discovery_schema)
     discovery_template["minimum_candidates"] = policy["default"]
+    delivery_schema = next(
+        row for row in properties["delivery_manifest"]["anyOf"] if row.get("type") == "object"
+    )
     fixed = {
         "contract": contract,
         "compiler_output_schema": output_schema,
@@ -94,6 +104,7 @@ def make_template(intent: dict[str, Any], registry: dict[str, Any]) -> dict[str,
             "assumptions": _blank(properties["assumptions"]["items"]),
             "discovery": discovery_template,
             "selection_authority": _blank(properties["selection_authority"]["items"]),
+            "delivery_manifest_file": _blank(delivery_schema["properties"]["files"]["items"]),
         },
     }
     return {
@@ -143,6 +154,54 @@ def selection_authority_defects(values: dict[str, Any]) -> list[str]:
     for row in authorizations:
         if not required.get(row["field_path"], set()).issubset(row["source_refs"]):
             errors.append("SELECTION_AUTHORITY_SOURCE_MISMATCH: " + row["field_path"])
+    return errors
+
+
+def delivery_manifest_defects(values: dict[str, Any]) -> list[str]:
+    """Validate deterministic path, identity, and serialization invariants."""
+
+    manifest = values.get("delivery_manifest")
+    if manifest is None:
+        return []
+    errors: list[str] = []
+
+    def safe_relative(raw: Any, label: str) -> str:
+        original = str(raw or "").replace("\\", "/")
+        value = original.strip("/")
+        path = Path(value)
+        if (
+            not value
+            or original.startswith("/")
+            or re.match(r"^[A-Za-z]:", original)
+            or Path(str(raw or "")).is_absolute()
+            or any(part in {"", ".", ".."} for part in path.parts)
+        ):
+            errors.append(f"DELIVERY_PATH_UNSAFE: {label}")
+        return value
+
+    safe_relative(manifest.get("output_root"), "/delivery_manifest/output_root")
+    rows = manifest.get("files") or []
+    paths = [safe_relative(row.get("relative_path"), f"/delivery_manifest/files/{index}/relative_path")
+             for index, row in enumerate(rows)]
+    file_ids = [str(row.get("file_id") or "") for row in rows]
+    if len(paths) != len(set(paths)):
+        errors.append("DELIVERY_FILE_PATH_DUPLICATE")
+    if len(file_ids) != len(set(file_ids)):
+        errors.append("DELIVERY_FILE_ID_DUPLICATE")
+    suffixes = {
+        "text/markdown": {".md", ".markdown"},
+        "text/csv": {".csv"},
+        "application/json": {".json"},
+        "text/html": {".html", ".htm"},
+        "text/plain": {".txt"},
+    }
+    for index, row in enumerate(rows):
+        suffix = Path(paths[index]).suffix.lower()
+        media_type = str(row.get("media_type") or "")
+        if suffix not in suffixes.get(media_type, set()):
+            errors.append(f"DELIVERY_MEDIA_TYPE_EXTENSION_MISMATCH: /delivery_manifest/files/{index}")
+        if row.get("required_fields") and media_type not in {"text/csv", "application/json"}:
+            errors.append(f"DELIVERY_REQUIRED_FIELDS_UNSUPPORTED: /delivery_manifest/files/{index}")
     return errors
 
 

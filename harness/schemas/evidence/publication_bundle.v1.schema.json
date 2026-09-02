@@ -33,7 +33,8 @@
       "properties": {
         "type": {"type": "string", "minLength": 1},
         "path": {"type": "string", "minLength": 1},
-        "sha256": {"type": "string", "pattern": "^[A-Fa-f0-9]{64}$"}
+        "sha256": {"type": "string", "pattern": "^[A-Fa-f0-9]{64}$"},
+        "manifest_relative_path": {"type": "string", "minLength": 1}
       }
     },
     "provenance": {
@@ -53,9 +54,38 @@
       "properties": {
         "bundle_id": {"type": "string", "minLength": 1},
         "publication_type": {"type": "string", "enum": ["paper", "poster", "rebuttal", "slides", "supplement", "mixed"]},
-        "files": {"type": "array", "items": {"$ref": "#/$defs/artifact"}},
+        "files": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/artifact"}},
         "source_report_id": {"type": "string", "minLength": 1},
-        "evidence_ids": {"type": "array", "items": {"type": "string", "minLength": 1}}
+        "evidence_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "delivery_manifest": {
+          "type": "object",
+          "required": ["output_root", "exact_file_set", "files"],
+          "additionalProperties": false,
+          "properties": {
+            "output_root": {"type": "string", "minLength": 1},
+            "exact_file_set": {"type": "boolean", "const": true},
+            "files": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "required": ["file_id", "relative_path", "media_type", "description", "content_requirements", "required_fields", "source_refs", "required"],
+                "additionalProperties": false,
+                "properties": {
+                  "file_id": {"type": "string", "minLength": 1},
+                  "relative_path": {"type": "string", "minLength": 1},
+                  "media_type": {"enum": ["text/markdown", "text/csv", "application/json", "text/html", "text/plain"]},
+                  "description": {"type": "string", "minLength": 1},
+                  "content_requirements": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+                  "required_fields": {"type": "array", "items": {"type": "string", "minLength": 1}},
+                  "source_refs": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+                  "required": {"type": "boolean", "const": true}
+                }
+              }
+            }
+          }
+        },
+        "delivery_manifest_sha256": {"type": "string", "pattern": "^[A-Fa-f0-9]{64}$"}
       }
     }
   }

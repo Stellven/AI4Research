@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import hashlib
 import json
 from pathlib import Path
 import sys
@@ -40,6 +41,184 @@ def test_operator_pool_can_be_enabled_explicitly(monkeypatch) -> None:
 def test_graph_dispatch_lease_defaults_to_three_minutes() -> None:
     assert gnd.DEFAULT_GRAPH_LEASE_TTL_SECONDS == 180
     assert gs.DEFAULT_GRAPH_LEASE_TTL_SECONDS == 180
+
+
+def test_frozen_handoff_route_satisfies_operator_closeout(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    sprints = tmp_path / "sprints"
+    sprints.mkdir()
+    monkeypatch.setattr(gnd, "SPRINTS_DIR", sprints)
+    work_dir = tmp_path / "runtime" / "workdir"
+    routed_handoff = work_dir / "private" / "design" / "01-artifact.handoff_md.json"
+    routed_handoff.parent.mkdir(parents=True)
+    routed_handoff.write_text('{"status":"completed"}\n', encoding="utf-8")
+    node = {
+        "id": "design",
+        "artifact_routes": {
+            "produces": {"artifact.handoff_md": str(routed_handoff)},
+        },
+        "write_scope": [str(routed_handoff)],
+    }
+    graph = {"runtime_work_dir": str(work_dir), "nodes": [node]}
+
+    assert gnd._existing_node_handoff("sprint-frozen", node, graph) == routed_handoff
+
+
+def test_unscoped_handoff_route_cannot_satisfy_operator_closeout(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    sprints = tmp_path / "sprints"
+    sprints.mkdir()
+    monkeypatch.setattr(gnd, "SPRINTS_DIR", sprints)
+    routed_handoff = tmp_path / "outside" / "handoff.json"
+    routed_handoff.parent.mkdir()
+    routed_handoff.write_text("{}\n", encoding="utf-8")
+    node = {
+        "id": "design",
+        "artifact_routes": {
+            "produces": {"artifact.handoff_md": str(routed_handoff)},
+        },
+        "write_scope": [],
+    }
+
+    assert gnd._existing_node_handoff(
+        "sprint-frozen", node, {"runtime_work_dir": str(tmp_path / "workdir")}
+    ) is None
+
+
+def test_completed_operator_with_frozen_handoff_route_passes_terminal_closeout(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    sprints = tmp_path / "sprints"
+    sprints.mkdir()
+    monkeypatch.setattr(gnd, "SPRINTS_DIR", sprints)
+    work_dir = tmp_path / "runtime" / "workdir"
+    routed_handoff = work_dir / "private" / "design" / "01-artifact.handoff_md.json"
+    routed_handoff.parent.mkdir(parents=True)
+    routed_handoff.write_text('{"status":"completed"}\n', encoding="utf-8")
+    node = {
+        "id": "design",
+        "operator_id": "frozen-builder",
+        "pm_task_id": "task-design",
+        "artifact_routes": {
+            "produces": {"artifact.handoff_md": str(routed_handoff)},
+        },
+        "write_scope": [str(routed_handoff)],
+    }
+    graph = {"runtime_work_dir": str(work_dir), "nodes": [node]}
+    monkeypatch.setattr(
+        gnd,
+        "_latest_operator_result_for",
+        lambda *_args, **_kwargs: {"status": "completed", "exit_code": 0},
+    )
+
+    assert gnd._operator_terminal_result_closeout(
+        "sprint-frozen", "design", node, graph
+    ) is None
+
+
+def test_eval_snapshot_accepts_exact_hash_bound_workspace_source(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    sprints = tmp_path / "runtime"
+    sprints.mkdir()
+    monkeypatch.setattr(gnd, "SPRINTS_DIR", sprints)
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    source = workspace / "inputs" / "paper.pdf"
+    source.parent.mkdir()
+    source.write_bytes(b"real local paper bytes")
+    digest = hashlib.sha256(source.read_bytes()).hexdigest()
+    work_dir = sprints / "sprint-source" / "workdir"
+    work_dir.mkdir(parents=True)
+    node = {
+        "id": "discovery",
+        "read_scope": [str(source)],
+        "write_scope": [],
+        "workspace_reads": [
+            {
+                "kind": "file",
+                "relative_path": "inputs/paper.pdf",
+                "sha256": digest,
+            }
+        ],
+    }
+    graph = {
+        "schema_version": "solar.scheduler_runtime_projection.v1",
+        "sprint_id": "sprint-source",
+        "runtime_work_dir": str(work_dir),
+        "nodes": [node],
+    }
+    monkeypatch.setattr(
+        gnd,
+        "_scheduler_frozen_workspace",
+        lambda _sid, _graph: (workspace, {"reason": "verified_test_authority"}),
+    )
+
+    snapshot = gnd._capture_eval_artifact_snapshot(
+        "sprint-source", node, graph, persist=False
+    )
+
+    assert snapshot["ok"] is True
+    assert snapshot["violations"] == []
+    assert snapshot["rows"][0]["authority"] == "controller_frozen_workspace_source"
+    assert snapshot["rows"][0]["sha256"] == digest
+
+
+def test_frozen_workspace_verifier_uses_authority_store_not_runtime_dir(
+    tmp_path: Path, monkeypatch,
+) -> None:
+    sid = "sprint-source"
+    runtime_dir = tmp_path / "planning" / "runtime"
+    runtime_dir.mkdir(parents=True)
+    monkeypatch.setattr(gnd, "SPRINTS_DIR", runtime_dir)
+    controller_store = tmp_path / "controller" / "sprints"
+    controller_store.mkdir(parents=True)
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    authority_path = controller_store / f"{sid}.workspace_authority.json"
+    authority_path.write_text('{"frozen":true}\n', encoding="utf-8")
+    authority_sha = hashlib.sha256(authority_path.read_bytes()).hexdigest()
+    observed: dict[str, object] = {}
+
+    import scheduler_input
+
+    monkeypatch.setattr(
+        scheduler_input,
+        "verify_runtime_projection",
+        lambda *_args, **_kwargs: {"ok": True},
+    )
+
+    def verify_authority(path, *, sprints_dir, harness_dir, require_active_binding):
+        observed.update(
+            path=Path(path),
+            sprints_dir=Path(sprints_dir),
+            harness_dir=Path(harness_dir),
+            require_active_binding=require_active_binding,
+        )
+        return {"workspace_root": str(workspace)}
+
+    monkeypatch.setattr(
+        gnd,
+        "_workspace_binding",
+        SimpleNamespace(verify_sprint_workspace_authority=verify_authority),
+    )
+    graph = {
+        "schema_version": "solar.scheduler_runtime_projection.v1",
+        "workspace_authority_ref": {
+            "path": str(authority_path),
+            "sha256": authority_sha,
+            "workspace_root": str(workspace.resolve()),
+        },
+    }
+
+    resolved, evidence = gnd._scheduler_frozen_workspace(sid, graph)
+
+    assert resolved == workspace.resolve()
+    assert evidence["reason"] == "frozen_workspace_authority"
+    assert observed["sprints_dir"] == controller_store.resolve()
+    assert observed["require_active_binding"] is False
 
 
 def test_builder_pool_probe_allows_health_checks_to_finish(monkeypatch) -> None:

@@ -179,6 +179,21 @@ def _response_schema(node_id: str) -> dict[str, Any]:
                 "additionalProperties": False,
             }
             required.append("preservation")
+    elif node_id == "publication_produce":
+        properties["files"] = {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+                "type": "object",
+                "properties": {
+                    "relative_path": {"type": "string", "minLength": 1},
+                    "content": {"type": "string", "minLength": 1},
+                },
+                "required": ["relative_path", "content"],
+                "additionalProperties": False,
+            },
+        }
+        required.append("files")
     elif node_id in {"independent_review", "report_revision_review"}:
         properties["findings"] = {
             "type": "array",

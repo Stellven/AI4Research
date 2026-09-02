@@ -733,7 +733,10 @@ def publish_workspace_outputs(
                 temporary = Path(temporary_name)
                 try:
                     shutil.copy2(source, temporary, follow_symlinks=False)
-                    with temporary.open("rb") as handle:
+                    # Windows rejects fsync on a read-only descriptor.  Open
+                    # the completed staging copy read/write so the same
+                    # durability barrier works on both Windows and POSIX.
+                    with temporary.open("r+b") as handle:
                         os.fsync(handle.fileno())
                     digest = _sha256_file(temporary)
                     if digest != expected_sha:
@@ -760,7 +763,7 @@ def publish_workspace_outputs(
                 backup = Path(backup_name)
                 try:
                     shutil.copy2(destination, backup, follow_symlinks=False)
-                    with backup.open("rb") as handle:
+                    with backup.open("r+b") as handle:
                         os.fsync(handle.fileno())
                 except Exception:
                     backup.unlink(missing_ok=True)

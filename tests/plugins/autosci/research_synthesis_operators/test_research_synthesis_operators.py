@@ -570,6 +570,32 @@ def test_wrong_node_identity_fails_schema_valid_result(tmp_path: Path, monkeypat
     _validate_result(result)
 
 
+def test_composed_scheduler_node_routes_by_frozen_implementation_identity(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    request = _request(
+        tmp_path,
+        "seed_fetch",
+        payload={"seed_inputs": [{"seed_id": "topic", "seed_kind": "topic", "value": "x"}]},
+    )
+    scheduled_node_id = "source_acquisition__7fd24db4_c01"
+    request.update(
+        {
+            "node_id": scheduled_node_id,
+            "scheduled_node_id": scheduled_node_id,
+            "implementation_node_id": "seed_fetch",
+        }
+    )
+
+    result = execute_operator(request, services={})
+
+    assert result["status"] == "completed", result
+    assert result["node_id"] == scheduled_node_id
+    _validate_result(result)
+
+
 def test_hash_matches_artifact_and_secret_is_redacted(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.chdir(tmp_path)
     result = execute_operator(

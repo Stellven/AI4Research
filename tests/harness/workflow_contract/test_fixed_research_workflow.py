@@ -747,7 +747,7 @@ def test_report_revision_two_call_evidence_is_aggregated_and_fully_accounted(
 
 
 def test_all_codex_stage_schemas_are_closed_and_node_bound() -> None:
-    for node_id in ("evidence_synthesis", "report_draft", "independent_review", "report_revision"):
+    for node_id in ("evidence_synthesis", "report_draft", "independent_review", "report_revision", "publication_produce"):
         schema = _response_schema(node_id)
         assert schema["additionalProperties"] is False
         assert schema["properties"]["node_id"] == {"type": "string", "const": node_id}

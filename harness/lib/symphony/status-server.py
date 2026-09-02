@@ -1125,6 +1125,9 @@ _MAX_INTAKE_ATTACHMENTS_TOTAL_BYTES = 10 * 1024 * 1024
 _MAX_INTAKE_JSON_BODY_BYTES = 16 * 1024 * 1024
 _MAX_INTENT_MODEL_CALLS = 4  # compile + review, then one bounded compile + review repair
 _MAX_REQUIREMENT_MODEL_CALLS = 4  # separate LLM requirement compile/review + bounded repair
+_INTAKE_JOB_POLL_AFTER_MS = 1000
+_INTAKE_JOB_ACTIVE_STATES = {"queued", "running"}
+_INTAKE_JOB_LOCK = threading.Lock()
 
 
 def _intake_timeout_seconds(env: dict[str, str]) -> int:
@@ -1461,6 +1464,228 @@ def _intake_payload(data: dict) -> dict:
         "research_profile": resolved_profile,
         "request_routing": routing,
     }
+
+
+def _intake_request_id(data: dict) -> str:
+    request_id = re.sub(
+        r"[^A-Za-z0-9_.:-]",
+        "-",
+        str(data.get("request_id") or "").strip(),
+    )[:96]
+    if request_id:
+        return request_id
+    return f"intake-{int(time.time() * 1000)}-{secrets.token_hex(4)}"
+
+
+def _intake_job_path(request_id: str) -> Path:
+    digest = hashlib.sha256(request_id.encode("utf-8")).hexdigest()
+    return HARNESS_DIR / "run" / "intake-jobs" / f"{digest}.json"
+
+
+def _intake_job_fingerprint(data: dict) -> str:
+    canonical = json.dumps(
+        data,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        default=str,
+    ).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
+
+
+def _write_intake_job(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp_path = path.with_name(
+        f".{path.name}.{os.getpid()}.{threading.get_ident()}.{secrets.token_hex(4)}.tmp"
+    )
+    try:
+        temp_path.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        os.replace(temp_path, path)
+    finally:
+        try:
+            temp_path.unlink()
+        except FileNotFoundError:
+            pass
+
+
+def _read_intake_job(path: Path) -> dict:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
+def _public_intake_job(job: dict) -> dict:
+    job_status = str(job.get("status") or "unknown")
+    terminal = job_status not in _INTAKE_JOB_ACTIVE_STATES
+    common = {
+        "request_id": str(job.get("request_id") or ""),
+        "job_status": job_status,
+        "terminal": terminal,
+        "phase": str(job.get("phase") or job_status),
+        "created_at": str(job.get("created_at") or ""),
+        "updated_at": str(job.get("updated_at") or ""),
+        "poll_after_ms": _INTAKE_JOB_POLL_AFTER_MS,
+    }
+    result = job.get("result")
+    if terminal and isinstance(result, dict):
+        return {**result, **common}
+    return {
+        "ok": job_status in _INTAKE_JOB_ACTIVE_STATES,
+        "status": "accepted" if job_status == "queued" else job_status,
+        **common,
+    }
+
+
+def _persistable_intake_result(result: dict) -> dict:
+    # The former synchronous response could stream a short diagnostic tail to
+    # the caller without retaining it. Async jobs are durable, so persist only
+    # the structured outcome and stable error code, not raw CLI output or local
+    # command/exception details.
+    return {
+        key: value
+        for key, value in result.items()
+        if key not in {"stdout_tail", "command", "detail"}
+    }
+
+
+def _run_intake_job(path: Path, initial: dict, data: dict) -> None:
+    now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    running = {
+        **initial,
+        "status": "running",
+        "phase": "intake_pipeline",
+        "started_at": now,
+        "updated_at": now,
+    }
+    try:
+        _write_intake_job(path, running)
+        result = _intake_payload(data)
+    except Exception:
+        result = {
+            "ok": False,
+            "status": "error",
+            "error": "intake_job_failed",
+            "request_id": initial["request_id"],
+        }
+    finished_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    terminal_status = "succeeded" if result.get("ok") else "failed"
+    terminal = {
+        **running,
+        "status": terminal_status,
+        "phase": "complete" if terminal_status == "succeeded" else "failed",
+        "updated_at": finished_at,
+        "finished_at": finished_at,
+        "result": _persistable_intake_result(result),
+    }
+    try:
+        _write_intake_job(path, terminal)
+    except OSError:
+        # The subprocess result is still authoritative. A persistence failure
+        # must not cause a second intake or mutate the research pipeline.
+        return
+
+
+def _start_intake_job(data: dict) -> tuple[dict, int]:
+    request_data = dict(data)
+    request_id = _intake_request_id(request_data)
+    request_data["request_id"] = request_id
+    task = str(request_data.get("task") or request_data.get("request") or "").strip()
+    if not task and not request_data.get("attachments"):
+        return {
+            "ok": False,
+            "status": "error",
+            "error": "missing_task",
+            "request_id": request_id,
+        }, 400
+    if len(task) > 12000:
+        return {
+            "ok": False,
+            "status": "error",
+            "error": "task_too_long",
+            "max_chars": 12000,
+            "request_id": request_id,
+        }, 400
+
+    fingerprint = _intake_job_fingerprint(request_data)
+    path = _intake_job_path(request_id)
+    with _INTAKE_JOB_LOCK:
+        existing = _read_intake_job(path)
+        if existing:
+            if (
+                str(existing.get("request_id") or "") != request_id
+                or str(existing.get("request_fingerprint") or "") != fingerprint
+            ):
+                return {
+                    "ok": False,
+                    "status": "error",
+                    "error": "intake_request_id_conflict",
+                    "request_id": request_id,
+                }, 409
+            return _public_intake_job(existing), (
+                202 if str(existing.get("status") or "") in _INTAKE_JOB_ACTIVE_STATES else 200
+            )
+
+        created_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        initial = {
+            "schema_version": "solar.intake-job.v1",
+            "request_id": request_id,
+            "request_fingerprint": fingerprint,
+            "status": "queued",
+            "phase": "queued",
+            "created_at": created_at,
+            "updated_at": created_at,
+            "server_pid": os.getpid(),
+        }
+        try:
+            _write_intake_job(path, initial)
+            worker = threading.Thread(
+                target=_run_intake_job,
+                args=(path, initial, request_data),
+                name=f"solar-intake-{request_id[:32]}",
+                daemon=True,
+            )
+            worker.start()
+        except (OSError, RuntimeError):
+            failed_at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+            result = {
+                "ok": False,
+                "status": "error",
+                "error": "intake_job_launch_failed",
+                "request_id": request_id,
+            }
+            failed = {
+                **initial,
+                "status": "failed",
+                "phase": "failed",
+                "updated_at": failed_at,
+                "finished_at": failed_at,
+                "result": result,
+            }
+            try:
+                _write_intake_job(path, failed)
+            except OSError:
+                pass
+            return _public_intake_job(failed), 500
+    return _public_intake_job(initial), 202
+
+
+def _intake_job_payload(request_id: str) -> tuple[dict, int]:
+    if not re.fullmatch(r"[A-Za-z0-9_.:-]{1,96}", request_id):
+        return {"ok": False, "error": "invalid_request_id"}, 400
+    job = _read_intake_job(_intake_job_path(request_id))
+    if not job or str(job.get("request_id") or "") != request_id:
+        return {
+            "ok": False,
+            "status": "not_found",
+            "error": "intake_request_not_found",
+            "request_id": request_id,
+        }, 404
+    return _public_intake_job(job), 200
 
 
 def _compact_number(value: int) -> str:
@@ -14676,8 +14901,8 @@ class StatusHandler(BaseHTTPRequestHandler):
         try:
             data = self._read_json_body()
             if path == "/intake":
-                payload = _intake_payload(data)
-                self._send_json(payload, status=200 if payload.get("ok") else 400)
+                payload, status_code = _start_intake_job(data)
+                self._send_json(payload, status=status_code)
             elif path == "/settings":
                 payload, code = _settings_write_payload(data)
                 self._send_json(payload, status=code)
@@ -14760,6 +14985,11 @@ class StatusHandler(BaseHTTPRequestHandler):
 
         elif path == "/healthz":
             self._send_text("ok")
+
+        elif re.fullmatch(r"/intake/[^/]+", path):
+            request_id = urllib.parse.unquote(path.rsplit("/", 1)[1])
+            payload, status_code = _intake_job_payload(request_id)
+            self._send_json(payload, status=status_code)
 
         elif path == "/runtime-info":
             # Lightweight runtime identity for the desktop shell / health checks.

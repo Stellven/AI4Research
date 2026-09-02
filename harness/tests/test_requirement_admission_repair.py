@@ -43,7 +43,7 @@ def test_provider_gets_same_instantiated_schema_as_validator(tmp_path, monkeypat
         assert not Draft202012Validator(check).is_valid("check.claim_evidence_resolved.v1")
         observed.append(schema)
         write_json(Path(command[command.index("--output-last-message") + 1]), body())
-        return subprocess.CompletedProcess(command, 0, "", "")
+        return subprocess.CompletedProcess(command, 0, '{"type":"turn.completed"}\n', "")
 
     monkeypatch.setattr(subprocess, "run", run)
     compile_requirement_ir(intent(), intent_ir_sha256="a"*64, work_dir=tmp_path,
@@ -62,26 +62,33 @@ def test_frozen_id_enums_reject_invented_identifiers(field, value):
         fill_template(template, candidate)
 
 
-def test_structure_then_semantic_failure_each_get_one_repair(tmp_path):
+def test_structure_gets_one_repair_and_semantic_review_is_advisory(tmp_path):
     invalid = body()
     invalid["requirements"][0]["check"] = "check.claim_evidence_resolved.v1"
     model = Sequence([invalid, body(), body()])
     reviewer = Sequence([rejection(), {"accepted": True, "errors": []}])
     ir = compile_requirement_ir(intent(), intent_ir_sha256="a"*64, work_dir=tmp_path, model=model, reviewer=reviewer)
-    assert len(model.calls) == 3 and len(reviewer.calls) == 2
+    assert len(model.calls) == 2 and len(reviewer.calls) == 1
     assert ir["semantic_contract"]["runtime_policies"]["evidence_honesty"]["origin"] == "runtime_validity_policy"
-    assert "Unsupported source filter" in model.calls[2][0]
-    assert json.loads((tmp_path / "generation-2/validation.json").read_text())["model_calls"] == 5
+    validation = json.loads((tmp_path / "generation-1/validation.json").read_text())
+    assert validation["accepted"] is True
+    assert any("Unsupported source filter" in row for row in validation["warnings"])
+    assert validation["model_calls"] == 3
 
 
-def test_semantic_failure_then_structural_failure_still_bounded(tmp_path):
+def test_semantic_review_does_not_start_another_compiler_generation(tmp_path):
     invalid = body()
     invalid["requirements"][0]["check"] = "unknown"
     model = Sequence([body(), invalid, body()])
     reviewer = Sequence([rejection(), rejection("still unsupported")])
-    with pytest.raises(RequirementCompilationError, match="still unsupported"):
-        compile_requirement_ir(intent(), intent_ir_sha256="a"*64, work_dir=tmp_path, model=model, reviewer=reviewer)
-    assert len(model.calls) == 3 and len(reviewer.calls) == 2
+    ir = compile_requirement_ir(
+        intent(), intent_ir_sha256="a" * 64, work_dir=tmp_path, model=model, reviewer=reviewer
+    )
+    assert ir["requirements"]
+    assert len(model.calls) == 1 and len(reviewer.calls) == 1
+    validation = json.loads((tmp_path / "generation-0/validation.json").read_text())
+    assert validation["accepted"] is True
+    assert any("Unsupported source filter" in row for row in validation["warnings"])
 
 
 def test_deadline_exhaustion_does_not_call_another_model(tmp_path, monkeypatch):

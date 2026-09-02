@@ -136,9 +136,29 @@ def test_autosci_contract_task_graph_selects_autosci_physical_workers() -> None:
     # evaluation is performed by the research runtime's bounded evaluator.
     assert solar_control_nodes == {"experiment_approval_gate", "final_evaluation"}
     assert selected["paper_ingest"] == "autosci-paper-ingest-worker"
-    assert selected["paper_analyze"] == "autosci-paper-analyze-worker"
+    assert selected["paper_analyze"] == "autosci-paper-analyze-native-worker"
     assert selected["idea_generate"] == "autosci-idea-worker"
     assert selected["claim_verify"] == "autosci-claim-verify-worker"
+
+
+def test_paper_analysis_capsule_selects_typed_registry_worker() -> None:
+    graph = build_autosci_task_graph(
+        sprint_id="sprint-test-native-paper-analysis",
+        title="Native paper analysis",
+        request_text=AUTOSCI_REQUEST,
+        harness_dir=ROOT,
+    )
+    node = next(item for item in graph["nodes"] if item["id"] == "paper_analyze")
+
+    plan = compile_execution_plan_for_node(
+        node,
+        request_type="research",
+        lane_hint="research",
+        registry_path=ROOT / "config" / "capability-capsules.registry.yaml",
+        operators_path=ROOT / "config" / "physical-operators.json",
+    )
+
+    assert plan["physical_plan"]["selected_operator_id"] == "autosci-paper-analyze-native-worker"
 
 
 def test_real_data_request_is_compiled_into_governed_live_source_acceptance() -> None:

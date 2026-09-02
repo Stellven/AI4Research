@@ -6180,7 +6180,7 @@ PLIST
     fi
     _graph_dispatch_subcmd="${1:-help}"; shift || true
     case "$_graph_dispatch_subcmd" in
-      dispatch-ready|drain-queue|dispatch-evals|node-verdict|resume-human-review|approve-fixed-experiment)
+      dispatch-ready|drain-queue|dispatch-evals|node-verdict|resume-human-review|escalate-terminal-failure|approve-fixed-experiment)
         python3 "$_graph_dispatch_py" "$_graph_dispatch_subcmd" "$@"
         ;;
       help|--help|-h|"")
@@ -6191,6 +6191,7 @@ PLIST
         echo "  $0 graph-dispatch dispatch-evals --graph sprint.task_graph.json [--dry-run]"
         echo "  $0 graph-dispatch node-verdict --graph sprint.task_graph.json --node S1 --verdict pass|fail"
         echo "  $0 graph-dispatch resume-human-review --graph sprint.task_graph.json --node S1 --generation N --actor NAME --reason TEXT"
+        echo "  $0 graph-dispatch escalate-terminal-failure --graph sprint.task_graph.json --node S1 --generation N --actor NAME --reason TEXT"
         echo "  $0 graph-dispatch approve-fixed-experiment --graph sprint.task_graph.json --generation N --actor NAME --statement TEXT --plan-sha256 SHA --scope-json JSON --capability NAME"
         echo "  $0 graph-dispatch drain-queue    --sprint SID [--dry-run] [--max-items N]"
         ;;

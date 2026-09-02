@@ -2292,7 +2292,10 @@ def _write_result(
     with open(_windows_long_path(ledger_path), "a", encoding="utf-8") as f:
         f.write(json.dumps(evidence, sort_keys=True) + "\n")
     result = {
-        "ok": True,
+        # A schema-valid failure artifact is still a failed operator outcome.
+        # Keep the evidence for audit, but do not let the command boundary turn
+        # it into an exit-0 Scheduler success.
+        "ok": evidence["status"] != "failed",
         "action": action,
         "status": evidence["status"],
         "schema": evidence["schema"],
@@ -8880,6 +8883,7 @@ def _review_final_acceptance_boundary(inputs: dict[str, Any], raw: dict[str, Any
     review_llm = review.get("review_llm") if isinstance(review.get("review_llm"), dict) else {}
     review_mode = str(review.get("review_mode") or "").strip()
     llm_status = str(review_llm.get("status") or "").strip()
+    recommendation = str(review.get("recommendation") or review_llm.get("recommendation") or "inconclusive")
     evidence_ids = _review_evidence_ids(review, review_llm)
     proof = review.get("proof_contract") if isinstance(review.get("proof_contract"), dict) else {}
     proof_blockers = [str(item) for item in proof.get("blockers") or [] if str(item).strip()]
@@ -8898,6 +8902,8 @@ def _review_final_acceptance_boundary(inputs: dict[str, Any], raw: dict[str, Any
         invalid_reasons.append("persisted review proof is missing, stale, or unsupported")
     if independence.get("status") != "independent_provider" or independence.get("execution_bound") is not True:
         invalid_reasons.append("reviewer execution is not bound to an independent provider")
+    if recommendation != "pass_with_review_required":
+        invalid_reasons.append(f"review recommendation is `{recommendation}`, not passing")
     final_acceptance_ready = not invalid_reasons
     return {
         "schema": "autosci_review_final_acceptance_boundary.v1",
@@ -8914,7 +8920,7 @@ def _review_final_acceptance_boundary(inputs: dict[str, Any], raw: dict[str, Any
         "request_sha256": str(review_llm.get("request_sha256") or ""),
         "response_sha256": str(review_llm.get("response_sha256") or ""),
         "score": review.get("score", review_llm.get("score")),
-        "recommendation": str(review.get("recommendation") or review_llm.get("recommendation") or "inconclusive"),
+        "recommendation": recommendation,
         "evidence_ids": evidence_ids,
         "proof_verdict": str(proof.get("verdict") or "missing"),
         "proof_blockers": proof_blockers,
@@ -25105,7 +25111,7 @@ def cmd_run(args: argparse.Namespace) -> int:
                 extra["patch_candidates_path"] = artifact.get("path")
     result = _write_result(args.action, envelope, evidence, extra_result_fields=extra)
     print(json.dumps(result, indent=2, sort_keys=True))
-    return 0
+    return 0 if result["ok"] else 2
 
 
 def cmd_smoke(args: argparse.Namespace) -> int:

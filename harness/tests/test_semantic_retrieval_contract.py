@@ -55,7 +55,13 @@ def body():
                   "justification": "Fixture explicitly requests this source selection."} for path, ref in (
         ("/discovery/inclusion_criteria/0", "C1"), ("/discovery/exclusion_criteria/0", "C3"),
         ("/discovery/coverage/0/required", "C1"))]
-    return {"requirements": rows, "assumptions": [], "discovery": retrieval(), "selection_authority": authority}
+    return {
+        "requirements": rows,
+        "assumptions": [],
+        "discovery": retrieval(),
+        "selection_authority": authority,
+        "delivery_manifest": None,
+    }
 
 
 class Model:
@@ -121,14 +127,18 @@ def test_no_silent_deterministic_fallback():
         compile_requirement_ir(intent(), intent_ir_sha256="a" * 64)
 
 
-def test_semantic_reviewer_failure_is_bounded_and_fail_closed(tmp_path):
+def test_semantic_reviewer_failure_is_recorded_as_advisory_diagnostic(tmp_path):
     model, reviewer = Model(body()), Model({"accepted": False, "errors": [{
         "rule_id": "F02", "field_path": "/requirements/2/priority", "evidence_refs": ["C2"],
         "reason": "POLARITY_WRONG"}]})
-    with pytest.raises(RequirementCompilationError, match="POLARITY_WRONG"):
-        compile_requirement_ir(intent(), intent_ir_sha256="a" * 64, work_dir=tmp_path, model=model, reviewer=reviewer)
-    assert len(model.calls) == len(reviewer.calls) == 2
-    assert "POLARITY_WRONG" in model.calls[1][0]
+    ir = compile_requirement_ir(
+        intent(), intent_ir_sha256="a" * 64, work_dir=tmp_path, model=model, reviewer=reviewer
+    )
+    assert ir["requirements"]
+    assert len(model.calls) == len(reviewer.calls) == 1
+    validation = json.loads((tmp_path / "generation-0/validation.json").read_text())
+    assert validation["accepted"] is True
+    assert any("POLARITY_WRONG" in row for row in validation["warnings"])
 
 
 def test_source_ast_tamper_is_rejected(tmp_path):

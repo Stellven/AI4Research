@@ -647,7 +647,7 @@
     },
     "ScientificPublicationProducer": {
       "operator_type": "ScientificPublicationProducer",
-      "description": "AutoSci publication compile bundle and submission-readiness evidence generation.",
+      "description": "Materialize the exact RequirementIR delivery manifest from an accepted scientific report, preserving per-file formats, hashes, evidence lineage, and review status.",
       "primary_role": "lab-builder",
       "required_capabilities": {
         "scientific_evidence": 3,
@@ -1506,7 +1506,7 @@
       "operator_type": "ScientificPaperAnalyzer",
       "candidates": [
         {
-          "actor_id": "autosci-paper-analyze-worker",
+          "actor_id": "autosci-paper-analyze-native-worker",
           "priority": 1,
           "condition": "plugin_autosci_available"
         }

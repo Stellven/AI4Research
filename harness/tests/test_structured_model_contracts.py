@@ -27,7 +27,9 @@ ROOT = Path(__file__).resolve().parents[2]
 SCHEMAS = ROOT / "harness/schemas"
 CALL_SCHEMAS = [
     "compiler/intent-ir.semantic.v1.schema.json",
+    "compiler/intent-ir.semantic.authoring.v1.schema.json",
     "compiler/intent-fidelity.review.v1.schema.json",
+    "compiler/intent-fidelity.review.authoring.v1.schema.json",
     "compiler/requirement-semantics.v1.schema.json",
     "compiler/requirement-semantics.v2.schema.json",
     "compiler/requirement-semantic-review.v1.schema.json",
@@ -193,6 +195,33 @@ def test_last_planner_failure_and_optional_resource_roundtrip():
     assert decoded["resources"]["gpu_required"] is False
 
 
+def test_plan_authoring_node_covers_canonical_required_fields():
+    authoring_schema = json.loads(
+        (SCHEMAS / "planning/plan-ir.semantic.structured.v2.schema.json").read_text()
+    )
+    canonical_schema = json.loads(
+        (SCHEMAS / "planning/plan-ir.semantic.v2.schema.json").read_text()
+    )
+    authoring = authoring_schema["$defs"]["node"]
+    canonical = canonical_schema["$defs"]["node"]
+    canonical_required = set(canonical["required"])
+    assert canonical_required <= set(authoring["required"])
+    for field in canonical_required:
+        assert authoring["properties"][field] == canonical["properties"][field]
+    assert (
+        authoring_schema["$defs"]["artifact_output"]
+        == canonical_schema["$defs"]["artifact_output"]
+    )
+    verifier_description = authoring_schema["$defs"]["artifact_output"]["properties"][
+        "verifier_ids"
+    ]["description"]
+    requirement_description = authoring["properties"]["requirement_ids"]["description"]
+    assert "sibling artifact_type" in verifier_description
+    assert "Do not copy an upstream requirement's verifier" in verifier_description
+    assert "verifier-compatible producer" in requirement_description
+    assert "dependency carries the evidence" in requirement_description
+
+
 @pytest.mark.parametrize("value", [{"answer": "", "cpu": None}, {"answer": None}, {"answer": "ok", "cpu": -1}, {"answer": "ok", "extra": 1}])
 def test_projection_never_weakens_source_acceptance(value):
     with pytest.raises(OutputContractError):
@@ -261,7 +290,7 @@ def test_planner_generate_call_inventory_does_not_drift():
                 assert "plan-ir.semantic.structured.v2.schema.json" in ast.unparse(schema_arg)
 
 
-@pytest.mark.parametrize("node", ["evidence_synthesis", "report_draft", "report_revision", "independent_review", "report_revision_review"])
+@pytest.mark.parametrize("node", ["evidence_synthesis", "report_draft", "report_revision", "publication_produce", "independent_review", "report_revision_review"])
 @pytest.mark.parametrize("profile", ["openai", "anthropic", "gemini"])
 def test_research_writer_reviewer_schemas_share_projection(node, profile):
     from harness.plugins.autosci.services.codex_research import _response_schema

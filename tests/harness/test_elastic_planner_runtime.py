@@ -68,6 +68,75 @@ def _operator_result(sprint_id: str, requirement: Path, output_root: Path, statu
     )
 
 
+def test_workspace_authority_freezes_only_explicit_source_pack_files(tmp_path: Path) -> None:
+    sprint_id = "sprint-source-inventory"
+    sprints = tmp_path / "sprints"
+    workspace = tmp_path / "workspace"
+    binding_harness = tmp_path / "harness"
+    (workspace / "demo_inputs" / "papers").mkdir(parents=True)
+    (workspace / "demo_outputs").mkdir()
+    first = workspace / "demo_inputs" / "papers" / "first.pdf"
+    second = workspace / "demo_inputs" / "papers" / "second.md"
+    ignored = workspace / "demo_outputs" / "report.md"
+    first.write_bytes(b"pdf-one")
+    second.write_text("paper two", encoding="utf-8")
+    ignored.write_text("old output", encoding="utf-8")
+    requirement = {
+        "schema_version": "solar.requirement_ir.v2",
+        "requirement_ir_id": "requirement-source-inventory",
+        "requirements": [
+            {
+                "requirement_id": "R-source",
+                "statement": "First inspect ./demo_inputs/papers/ and ingest every valid source.",
+                "acceptance": {"kind": "process", "required_values": []},
+                "check": "check.source_packs_verified",
+            },
+            {
+                "requirement_id": "R-output",
+                "statement": "Write the report under ./demo_outputs/.",
+                "acceptance": {"kind": "delivery", "required_values": []},
+                "check": "check.artifact_outcome_completeness.v1",
+            },
+        ],
+    }
+    _write(
+        sprints / f"{sprint_id}.raw_intent.json",
+        {"context": {"repo": str(workspace), "cwd": str(workspace)}, "raw": {"text": "research"}},
+    )
+    _write(sprints / f"{sprint_id}.intent_ir.json", {"schema_version": "solar.intent_ir.v3"})
+    _write(sprints / f"{sprint_id}.requirement_ir.json", requirement)
+    binding_harness.mkdir()
+    workspace_binding.bind_active_workspace(binding_harness, workspace, source="test")
+
+    authority_path = workspace_binding.freeze_sprint_workspace_authority(
+        sprints,
+        sprint_id,
+        harness_dir=binding_harness,
+    )
+    authority = workspace_binding.verify_sprint_workspace_authority(
+        authority_path,
+        sprints_dir=sprints,
+        harness_dir=binding_harness,
+    )
+
+    inventory = authority["declared_source_inventory"]
+    assert inventory["schema_version"] == "solar.workspace_source_inventory.v1"
+    assert [row["relative_path"] for row in inventory["files"]] == [
+        "demo_inputs/papers/first.pdf",
+        "demo_inputs/papers/second.md",
+    ]
+    assert all(row["requirement_ids"] == ["R-source"] for row in inventory["files"])
+    assert ignored.name not in {Path(row["relative_path"]).name for row in inventory["files"]}
+
+    first.write_bytes(b"changed")
+    with pytest.raises(ValueError, match="workspace source inventory (size|hash) mismatch"):
+        workspace_binding.verify_sprint_workspace_authority(
+            authority_path,
+            sprints_dir=sprints,
+            harness_dir=binding_harness,
+        )
+
+
 def test_owner_requires_exact_canonical_requirement_ir_path(tmp_path: Path) -> None:
     sprint_id = "sprint-canonical-requirement"
     sprints = tmp_path / "sprints"

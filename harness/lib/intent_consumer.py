@@ -434,6 +434,7 @@ def submit_typed_planner(
     requirement_ir_path: Path,
     *,
     workspace_root: str,
+    workspace_authority_path: Path | None = None,
     dry_run: bool = False,
 ) -> dict[str, Any]:
     output_root = SPRINTS_DIR / sprint_id / "planning"
@@ -451,6 +452,8 @@ def submit_typed_planner(
         "--workspace-root",
         workspace_root,
     ]
+    if workspace_authority_path is not None:
+        command.extend(["--workspace-authority", str(workspace_authority_path)])
     if dry_run:
         return {
             "status": "dry_run",
@@ -1129,6 +1132,33 @@ def consume_one(
             write_json(base / "consumer.json", payload)
             return payload
 
+        import workspace_binding
+
+        binding_harness_dir = Path(
+            os.environ.get("SOLAR_WORKSPACE_BINDING_HARNESS_DIR") or HARNESS_DIR
+        )
+        try:
+            workspace_authority_path = workspace_binding.freeze_sprint_workspace_authority(
+                SPRINTS_DIR,
+                sid,
+                harness_dir=binding_harness_dir,
+                captured_cwd=(raw.get("context") or {}).get("cwd")
+                if isinstance(raw.get("context"), dict)
+                else None,
+            )
+        except ValueError as exc:
+            payload = {
+                "ok": False,
+                "status": "workspace_authority_invalid",
+                "intent_id": intent_id,
+                "sprint_id": sid,
+                "updated_at": now_iso(),
+                "planner_handoff": handoff,
+                "workspace_authority_error": str(exc),
+            }
+            write_json(base / "consumer.json", payload)
+            return payload
+
         if handoff.get("requested"):
             handoff = {
                 **handoff,
@@ -1136,6 +1166,7 @@ def consume_one(
                     sid,
                     requirement_ir_path,
                     workspace_root=workspace_root,
+                    workspace_authority_path=workspace_authority_path,
                 ),
             }
         else:
@@ -1155,6 +1186,7 @@ def consume_one(
                 "raw_intent": str(SPRINTS_DIR / f"{sid}.raw_intent.json"),
                 "intent_ir": str(SPRINTS_DIR / f"{sid}.intent_ir.json"),
                 "requirement_ir": str(requirement_ir_path),
+                "workspace_authority": str(workspace_authority_path),
                 "planning_output_root": str(SPRINTS_DIR / sid / "planning"),
             },
         }

@@ -3826,28 +3826,27 @@ PY
 }
 
 dispatch_typed_scheduler_once() {
-  local sid="$1" result scheduler_input run_contract runtime_dir out rc
+  local sid="$1" result scheduler_input run_contract runtime_dir runtime_projection out rc
   local -a _typed_paths
   result="$(typed_planner_result_path "$sid")"
   [[ -s "$result" ]] || return 1
   readarray -t _typed_paths < <(python3 - "$result" <<'PY'
 import json, sys
 d=json.load(open(sys.argv[1], encoding="utf-8"))
-for key in ("scheduler_input", "run_contract", "scheduler_runtime_dir"):
+for key in ("scheduler_input", "run_contract", "scheduler_runtime_dir", "runtime_projection"):
     print(d.get(key) or "")
 PY
 )
   scheduler_input="${_typed_paths[0]:-}"
   run_contract="${_typed_paths[1]:-}"
   runtime_dir="${_typed_paths[2]:-}"
-  [[ -s "$scheduler_input" && -s "$run_contract" && -d "$runtime_dir" ]] || return 1
+  runtime_projection="${_typed_paths[3]:-}"
+  [[ -s "$scheduler_input" && -s "$run_contract" && -d "$runtime_dir" && -s "$runtime_projection" ]] || return 1
   set +e
   out=$(HARNESS_DIR="$HARNESS_DIR" SOLAR_HARNESS_DIR="$HARNESS_DIR" \
     SOLAR_HARNESS_SPRINTS_DIR="$runtime_dir" \
     python3 "$HARNESS_DIR/lib/multi_task_runner.py" start \
-      --scheduler-input "$scheduler_input" \
-      --run-contract "$run_contract" \
-      --scheduler-runtime-dir "$runtime_dir" \
+      --graph "$runtime_projection" \
       --once --no-clear 2>&1)
   rc=$?
   set -e

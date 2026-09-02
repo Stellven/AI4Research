@@ -191,6 +191,73 @@ def test_scheduler_projection_transports_frozen_authority_and_envelope_tampering
         authority.from_envelope(envelope)
 
 
+def test_graph_evaluator_uses_frozen_evaluation_authority_not_builder_authority(tmp_path, monkeypatch):
+    node = {
+        "id": "publish",
+        "capsule_binding": {"capsule_ids": ["cap.publish"]},
+        "physical_candidates": [{"operator_id": "builder-op", "rank": 1}],
+    }
+    definitions = {
+        "capsules": {"cap.publish": {"status": "stable", "manifest": {}}},
+        "operators": {"builder-op": {"model": "fixture"}},
+    }
+    node["execution_authority"] = authority.freeze_node(node, definitions)
+    node["evaluation_binding"] = {
+        "deterministic_gate_ids": ["gate.fixture"],
+        "semantic_evaluator_ids": ["check.fixture.v1"],
+    }
+    node["evaluation_plan"] = {
+        "review_mode": "single",
+        "required_evaluators": 1,
+        "evaluator_classes": ["check.fixture.v1"],
+        "evidence_requirements": ["handoff_md"],
+    }
+    graph = {
+        "schema_version": "solar.scheduler_runtime_projection.v1",
+        "planning_authority": "frozen_execution_plan_v1",
+        "sprint_id": "sprint-eval-authority",
+        "nodes": [node],
+    }
+    graph_path = tmp_path / "runtime" / "sprint-eval-authority.task_graph.json"
+    graph_path.parent.mkdir(parents=True)
+    graph_path.write_text(json.dumps(graph), encoding="utf-8")
+    monkeypatch.setattr(scheduler, "verify_runtime_projection", lambda *_args, **_kwargs: {"ok": True})
+    frozen_node = graph["nodes"][0]
+    prefix = graph_path.parent / f"{graph['sprint_id']}.{frozen_node['id']}-eval"
+    envelope = {
+        "task_type": "graph_eval",
+        "requested_role": "evaluator",
+        "logical_operator": "Verifier",
+        "capability_capsule_id": "cap.requirement-compiler-verification",
+        "sprint_id": graph["sprint_id"],
+        "node_id": frozen_node["id"],
+        "operator_id": "eval-op",
+        "graph_path": str(graph_path),
+        "evaluation_binding": copy.deepcopy(frozen_node["evaluation_binding"]),
+        "evaluation_plan": copy.deepcopy(frozen_node["evaluation_plan"]),
+        "evaluated_execution_authority_sha256": frozen_node["execution_authority"]["sha256"],
+        "expected_artifacts": [str(prefix) + ".md", str(prefix) + ".json"],
+    }
+    evaluator = {
+        "role": "evaluator",
+        "roles": ["evaluator"],
+        "persona": "evaluator",
+        "task_classes": ["graph_eval", "verification"],
+    }
+
+    assert authority.from_envelope(envelope) is None
+    assert authority.from_envelope(envelope, current_operator=evaluator) is None
+    with pytest.raises(ValueError, match="OPERATOR_CLASS_MISMATCH"):
+        authority.from_envelope(
+            envelope,
+            current_operator={"role": "builder", "task_classes": ["implementation"]},
+        )
+    escaped = copy.deepcopy(envelope)
+    escaped["expected_artifacts"][1] = str(tmp_path / "outside.json")
+    with pytest.raises(ValueError, match="ARTIFACT_SCOPE_MISMATCH"):
+        authority.from_envelope(escaped, current_operator=evaluator)
+
+
 @pytest.mark.parametrize("repair_succeeds", [True, False])
 def test_binding_failure_replans_dag_once_preserving_requirements(tmp_path, monkeypatch, repair_succeeds):
     # Exercise the actual planning loop; isolate models/schema gates already covered separately.

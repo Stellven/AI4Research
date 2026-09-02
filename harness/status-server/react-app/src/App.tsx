@@ -5105,7 +5105,7 @@ function HomeLanding({
   onCreated,
 }: {
   sprints: SprintSummary[];
-  onCreated: (sprintId: string) => Promise<void>;
+  onCreated: (sprintId: string, requestId?: string) => Promise<void>;
 }) {
   const crew = useCrew();
   const [task, setTask] = useState("");
@@ -5125,7 +5125,7 @@ function HomeLanding({
       }
       setTask("");
       setFiles([]);
-      await onCreated(response.sprint_id);
+      await onCreated(response.sprint_id, response.request_id || "");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to start work");
     } finally {

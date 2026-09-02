@@ -5,6 +5,7 @@ import importlib.util
 import json
 import subprocess
 import sys
+import threading
 from pathlib import Path
 
 import pytest
@@ -49,11 +50,11 @@ def test_intake_prefers_harness_local_cli_over_ambient_path(
 def test_intake_timeout_covers_the_bounded_compiler_repair_budget() -> None:
     status_server = _load_status_server()
 
-    assert status_server._intake_timeout_seconds({}) == 180
+    assert status_server._intake_timeout_seconds({}) == 1740
     assert status_server._intake_timeout_seconds({
         "SOLAR_INTENT_COMPILER_PROVIDER": "codex",
         "SOLAR_INTENT_MODEL_TIMEOUT_SEC": "300",
-    }) == 1260
+    }) == 2220
     assert status_server._intake_timeout_seconds({
         "SOLAR_INTENT_COMPILER_PROVIDER": "codex",
         "SOLAR_INTAKE_TIMEOUT_SEC": "90",
@@ -117,6 +118,160 @@ def test_intake_launch_failure_is_structured(
     assert result["error"] == "intake_cli_launch_failed"
     assert result["request_id"].startswith("intake-")
     assert "OSError" in result["detail"]
+
+
+def test_async_intake_returns_immediately_and_persists_terminal_result(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    status_server = _load_status_server()
+    harness = tmp_path / "harness"
+    harness.mkdir()
+    status_server.HARNESS_DIR = harness
+    release = threading.Event()
+    entered = threading.Event()
+
+    def fake_intake(data: dict) -> dict:
+        entered.set()
+        assert release.wait(timeout=5)
+        return {
+            "ok": True,
+            "status": "ok",
+            "request_id": data["request_id"],
+            "sprint_id": "sprint-async",
+        }
+
+    monkeypatch.setattr(status_server, "_intake_payload", fake_intake)
+
+    accepted, code = status_server._start_intake_job(
+        {"task": "test prompt", "request_id": "webapp-intake-async"}
+    )
+
+    assert code == 202
+    assert accepted["ok"] is True
+    assert accepted["terminal"] is False
+    assert accepted["request_id"] == "webapp-intake-async"
+    assert entered.wait(timeout=5)
+    running, running_code = status_server._intake_job_payload("webapp-intake-async")
+    assert running_code == 200
+    assert running["job_status"] == "running"
+    assert running["terminal"] is False
+
+    release.set()
+    terminal = {}
+    for _ in range(100):
+        terminal, _terminal_code = status_server._intake_job_payload(
+            "webapp-intake-async"
+        )
+        if terminal.get("terminal"):
+            break
+        threading.Event().wait(0.01)
+
+    assert terminal["job_status"] == "succeeded"
+    assert terminal["ok"] is True
+    assert terminal["sprint_id"] == "sprint-async"
+    assert terminal["request_id"] == "webapp-intake-async"
+
+
+def test_async_intake_request_id_is_idempotent_and_conflict_safe(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    status_server = _load_status_server()
+    harness = tmp_path / "harness"
+    harness.mkdir()
+    status_server.HARNESS_DIR = harness
+    calls = 0
+
+    def fake_intake(data: dict) -> dict:
+        nonlocal calls
+        calls += 1
+        return {
+            "ok": True,
+            "status": "ok",
+            "request_id": data["request_id"],
+            "sprint_id": "sprint-once",
+        }
+
+    monkeypatch.setattr(status_server, "_intake_payload", fake_intake)
+    request = {"task": "same prompt", "request_id": "webapp-intake-once"}
+
+    first, first_code = status_server._start_intake_job(request)
+    assert first_code == 202
+    for _ in range(100):
+        repeated, repeated_code = status_server._start_intake_job(request)
+        if repeated.get("terminal"):
+            break
+        threading.Event().wait(0.01)
+
+    assert repeated_code == 200
+    assert repeated["sprint_id"] == "sprint-once"
+    assert calls == 1
+
+    conflict, conflict_code = status_server._start_intake_job(
+        {"task": "different prompt", "request_id": "webapp-intake-once"}
+    )
+    assert conflict_code == 409
+    assert conflict["error"] == "intake_request_id_conflict"
+    assert calls == 1
+
+
+def test_async_intake_status_rejects_invalid_or_unknown_request_id(
+    tmp_path: Path,
+) -> None:
+    status_server = _load_status_server()
+    harness = tmp_path / "harness"
+    harness.mkdir()
+    status_server.HARNESS_DIR = harness
+
+    invalid, invalid_code = status_server._intake_job_payload("../escape")
+    missing, missing_code = status_server._intake_job_payload("missing-request")
+
+    assert invalid_code == 400
+    assert invalid["error"] == "invalid_request_id"
+    assert missing_code == 404
+    assert missing["error"] == "intake_request_not_found"
+
+
+def test_async_intake_terminal_receipt_drops_raw_diagnostics(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    status_server = _load_status_server()
+    harness = tmp_path / "harness"
+    harness.mkdir()
+    status_server.HARNESS_DIR = harness
+    monkeypatch.setattr(
+        status_server,
+        "_intake_payload",
+        lambda data: {
+            "ok": False,
+            "status": "error",
+            "error": "intake_cli_failed",
+            "request_id": data["request_id"],
+            "stdout_tail": "provider output must not be retained",
+            "command": "/private/runtime/solar-harness intake",
+            "detail": "private local diagnostic",
+        },
+    )
+
+    accepted, code = status_server._start_intake_job(
+        {"task": "test prompt", "request_id": "webapp-intake-redacted"}
+    )
+    assert code == 202
+    assert accepted["terminal"] is False
+
+    terminal = {}
+    for _ in range(100):
+        terminal, _terminal_code = status_server._intake_job_payload(
+            "webapp-intake-redacted"
+        )
+        if terminal.get("terminal"):
+            break
+        threading.Event().wait(0.01)
+
+    assert terminal["job_status"] == "failed"
+    assert terminal["error"] == "intake_cli_failed"
+    assert "stdout_tail" not in terminal
+    assert "command" not in terminal
+    assert "detail" not in terminal
 
 
 def test_intent_clarification_is_returned_without_creating_a_sprint(

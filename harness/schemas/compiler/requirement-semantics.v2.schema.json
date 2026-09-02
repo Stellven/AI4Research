@@ -7,9 +7,85 @@
     "requirements",
     "assumptions",
     "discovery",
-    "selection_authority"
+    "selection_authority",
+    "delivery_manifest"
   ],
   "properties": {
+    "delivery_manifest": {
+      "description": "Table-like contract for an explicit user-requested file set. Null when the user did not name file deliverables. This describes future output and does not claim that files already exist.",
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["output_root", "exact_file_set", "files"],
+          "properties": {
+            "output_root": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Exact user-requested output directory, represented as a safe relative path."
+            },
+            "exact_file_set": {
+              "type": "boolean",
+              "const": true,
+              "description": "The producer must emit every listed required file and no undeclared deliverable file."
+            },
+            "files": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "file_id",
+                  "relative_path",
+                  "media_type",
+                  "description",
+                  "content_requirements",
+                  "required_fields",
+                  "source_refs",
+                  "required"
+                ],
+                "properties": {
+                  "file_id": {"type": "string", "minLength": 1},
+                  "relative_path": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Exact safe path beneath output_root. Preserve user-specified filenames and extensions."
+                  },
+                  "media_type": {
+                    "enum": [
+                      "text/markdown",
+                      "text/csv",
+                      "application/json",
+                      "text/html",
+                      "text/plain"
+                    ]
+                  },
+                  "description": {"type": "string", "minLength": 1},
+                  "content_requirements": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {"type": "string", "minLength": 1}
+                  },
+                  "required_fields": {
+                    "type": "array",
+                    "items": {"type": "string", "minLength": 1},
+                    "description": "Exact machine-checkable CSV columns or JSON field names explicitly requested by the user; otherwise empty."
+                  },
+                  "source_refs": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {"type": "string", "minLength": 1}
+                  },
+                  "required": {"type": "boolean", "const": true}
+                }
+              }
+            }
+          }
+        },
+        {"type": "null"}
+      ]
+    },
     "selection_authority": {
       "type": "array",
       "description": "Explicit user authority for each hard retrieval restriction; empty when retrieval uses topic queries and best-effort coverage only. Report topic coverage is not source-selection authority.",

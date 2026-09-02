@@ -31,7 +31,7 @@ LLM outputs or public-provider behavior are deterministic.
 
 ## Schemas (relative to harness)
 
-- `schemas/compiler/requirement-semantic-contract.v2.json`: current shared
+- `schemas/compiler/requirement-semantic-contract.v3.json`: current shared
   semantic definition, ownership, field descriptions and count/evidence policies.
 - `schemas/compiler/requirement-semantics.v2.schema.json`: current LLM values body.
 - `schemas/compiler/requirement-semantic-review.v2.schema.json`: structured fidelity
@@ -69,11 +69,15 @@ Program-owned count/evidence policies are copied separately into
 `semantic_contract.runtime_policies`, not synthesized as user requirements.
 Missing evidence must remain visible; disclosure does not establish task success.
 
-The shared count policy distinguishes a runtime handoff floor from a user-authored
-source-count requirement. With no explicit user count, `minimum_candidates=1` is
-required for nonempty discovery handoff, not an invented user requirement and not
-proof of report sufficiency. A higher value needs Intent support. Both models see
-this same rule; no reviewer error-string whitelist or automatic acceptance is used.
+The shared count policy distinguishes a future runtime handoff floor from a claim
+about sources already available before planning. With no explicit user count,
+`minimum_candidates=1` is required for nonempty discovery handoff, not an invented
+user requirement and not proof of report sufficiency. An explicit final source or
+evidence-corpus lower bound may authorize the same accepted-candidate lower bound
+when those sources must enter through this discovery/ingestion path. This is a
+necessary upstream execution condition, not proof that the final artifact uses the
+required number of valid sources. Both models see this same rule; no reviewer
+error-string whitelist or automatic acceptance is used.
 The source_constraints copy contains ALL original constraints, while only actual
 source-selection constraints may become discovery predicates. Corpus coverage is
 aggregate coverage, not a per-paper requirement to discuss every technique.

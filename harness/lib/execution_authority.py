@@ -102,7 +102,100 @@ def check_operator(authority: dict[str, Any], operator_id: str,
         raise ValueError(f"FROZEN_OPERATOR_DEFINITION_CHANGED:{operator_id}")
 
 
-def from_envelope(envelope: dict[str, Any]) -> dict[str, Any] | None:
+def _validate_graph_evaluation_envelope(
+    envelope: dict[str, Any],
+    node: dict[str, Any],
+    *,
+    graph_path: Path,
+    current_operator: dict[str, Any] | None = None,
+) -> None:
+    """Validate the phase-specific authority carried by a graph evaluator.
+
+    An evaluator reviews a frozen node but does not execute that node's
+    capability.  Its physical operator therefore cannot be admitted through
+    the node's builder ``execution_authority``.  The frozen evaluation binding
+    and plan are the semantic authority; the live evaluator registry remains
+    the physical pool authority for rubric-backed ``check.*`` bindings.
+    """
+    if envelope.get("execution_authority"):
+        raise ValueError("GRAPH_EVAL_EXECUTION_AUTHORITY_FORBIDDEN")
+    if str(envelope.get("requested_role") or "").strip().lower() != "evaluator":
+        raise ValueError("GRAPH_EVAL_ROLE_MISMATCH")
+    if str(envelope.get("logical_operator") or "").strip() != "Verifier":
+        raise ValueError("GRAPH_EVAL_LOGICAL_OPERATOR_MISMATCH")
+    if str(envelope.get("capability_capsule_id") or "").strip() != "cap.requirement-compiler-verification":
+        raise ValueError("GRAPH_EVAL_CAPSULE_MISMATCH")
+
+    evaluation_binding = node.get("evaluation_binding")
+    evaluation_plan = node.get("evaluation_plan")
+    if not isinstance(evaluation_binding, dict) or not isinstance(evaluation_plan, dict):
+        raise ValueError("GRAPH_EVAL_FROZEN_BINDING_MISSING")
+    if envelope.get("evaluation_binding") != evaluation_binding:
+        raise ValueError("GRAPH_EVAL_BINDING_MISMATCH")
+    if envelope.get("evaluation_plan") != evaluation_plan:
+        raise ValueError("GRAPH_EVAL_PLAN_MISMATCH")
+    expected_execution_sha = str((node.get("execution_authority") or {}).get("sha256") or "")
+    if str(envelope.get("evaluated_execution_authority_sha256") or "") != expected_execution_sha:
+        raise ValueError("GRAPH_EVAL_EVALUATED_AUTHORITY_MISMATCH")
+
+    evaluator_ids = [
+        str(value or "").strip()
+        for value in evaluation_binding.get("semantic_evaluator_ids") or []
+        if str(value or "").strip()
+    ]
+    if not evaluator_ids:
+        raise ValueError("GRAPH_EVAL_SEMANTIC_BINDING_MISSING")
+    operator_id = str(envelope.get("operator_id") or "").strip()
+    physical_ids = [value for value in evaluator_ids if not value.startswith("check.")]
+    if physical_ids and operator_id not in physical_ids:
+        raise ValueError("GRAPH_EVAL_OPERATOR_NOT_ADMITTED")
+
+    if current_operator is not None:
+        roles = {
+            str(value or "").strip().lower()
+            for value in current_operator.get("roles") or []
+            if str(value or "").strip()
+        }
+        for field in ("role", "persona"):
+            value = str(current_operator.get(field) or "").strip().lower()
+            if value:
+                roles.add(value)
+        task_classes = {
+            str(value or "").strip().lower()
+            for value in current_operator.get("task_classes") or []
+            if str(value or "").strip()
+        }
+        if "evaluator" not in roles or "graph_eval" not in task_classes:
+            raise ValueError("GRAPH_EVAL_OPERATOR_CLASS_MISMATCH")
+
+    expected_artifacts = envelope.get("expected_artifacts")
+    if not isinstance(expected_artifacts, list) or len(expected_artifacts) != 2:
+        raise ValueError("GRAPH_EVAL_ARTIFACT_PAIR_INVALID")
+    expected_parent = graph_path.resolve().parent
+    stems: set[str] = set()
+    suffixes: set[str] = set()
+    prefix = f"{envelope.get('sprint_id')}.{envelope.get('node_id')}-eval"
+    for value in expected_artifacts:
+        path = Path(str(value or ""))
+        try:
+            resolved = path.resolve()
+        except OSError as exc:
+            raise ValueError("GRAPH_EVAL_ARTIFACT_PAIR_INVALID") from exc
+        if resolved.parent != expected_parent:
+            raise ValueError("GRAPH_EVAL_ARTIFACT_SCOPE_MISMATCH")
+        suffixes.add(resolved.suffix)
+        stems.add(resolved.stem)
+        if not (resolved.name.startswith(prefix) and resolved.suffix in {".md", ".json"}):
+            raise ValueError("GRAPH_EVAL_ARTIFACT_PAIR_INVALID")
+    if suffixes != {".md", ".json"} or len(stems) != 1:
+        raise ValueError("GRAPH_EVAL_ARTIFACT_PAIR_INVALID")
+
+
+def from_envelope(
+    envelope: dict[str, Any],
+    *,
+    current_operator: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
     """An envelope's self-declared hash is not authority: verify its frozen graph."""
     graph_path = envelope.get("graph_path")
     supplied = envelope.get("execution_authority")
@@ -122,6 +215,14 @@ def from_envelope(envelope: dict[str, Any]) -> dict[str, Any] | None:
     node = next((row for row in graph["nodes"] if row["id"] == envelope.get("node_id")), None)
     if node is None or graph.get("sprint_id") != envelope.get("sprint_id"):
         raise ValueError("EXECUTION_AUTHORITY_NODE_MISMATCH")
+    if str(envelope.get("task_type") or "").strip().lower() == "graph_eval":
+        _validate_graph_evaluation_envelope(
+            envelope,
+            node,
+            graph_path=Path(graph_path),
+            current_operator=current_operator,
+        )
+        return None
     expected = node.get("execution_authority")
     if expected is None:  # Explicit compatibility for immutable historical runs.
         if supplied:

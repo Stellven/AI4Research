@@ -165,7 +165,9 @@ def run(envelope_path: Path) -> int:
         ]
         timeout = max(1, int(os.environ.get("SOLAR_ELASTIC_PLANNER_OPERATOR_TIMEOUT_SEC", "600") or "600"))
         env = os.environ.copy()
-        env.setdefault("SOLAR_PLANNER_MAX_REPAIRS", "2")
+        # One deterministic-diagnostic repair is the production ceiling. LLM
+        # reviewer findings are advisory and never consume this budget.
+        env.setdefault("SOLAR_PLANNER_MAX_REPAIRS", "1")
         if not str(env.get(MODEL_CALL_DEADLINE_ENV) or "").strip():
             margin = min(DEADLINE_MARGIN_SEC, max(1, timeout // 10))
             env[MODEL_CALL_DEADLINE_ENV] = (

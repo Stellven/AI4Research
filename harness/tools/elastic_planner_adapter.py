@@ -68,6 +68,7 @@ def run_adapter(
     output_root: Path,
     sprint_id: str,
     workspace_root: str,
+    workspace_authority_path: Path | None = None,
     planner_model: Any | None = None,
     reviewer_model: Any | None = None,
 ) -> dict[str, Any]:
@@ -75,6 +76,16 @@ def run_adapter(
     if requirement_ir.get("schema_version") != "solar.requirement_ir.v2":
         raise ValueError("typed Planner adapter requires solar.requirement_ir.v2")
     test_policy = _trusted_test_policy()
+
+    upstream_artifacts: dict[str, dict[str, Any]] = {}
+    if workspace_authority_path is not None:
+        authority_path = workspace_authority_path.expanduser().resolve()
+        authority = _read_object(authority_path)
+        if str(authority.get("path") or "") != str(authority_path):
+            raise ValueError("workspace authority path does not bind its own canonical file")
+        if str(authority.get("sprint_id") or "") != sprint_id:
+            raise ValueError("workspace authority belongs to another sprint")
+        upstream_artifacts["workspace_authority"] = authority
 
     result = run_elastic_planning_request(
         requirement_ir,
@@ -84,6 +95,7 @@ def run_adapter(
         sprint_id=sprint_id,
         workspace_root=workspace_root,
         test_policy=test_policy,
+        upstream_artifacts=upstream_artifacts,
     )
     status = str(result.get("status") or "failed")
     verification_errors = list(result.get("verification_errors") or [])
@@ -106,6 +118,13 @@ def run_adapter(
             scheduler_input_path,
             runtime_dir,
             run_contract_path=run_contract_path,
+            # PlanIR and capability contracts use ``requirement_ir.v1`` as the
+            # stable artifact identity.  Preserve the controller-owned source
+            # document as an exact, hash-bound runtime input even though the
+            # current document schema is solar.requirement_ir.v2.
+            artifact_bindings={
+                "requirement_ir.v1": str(requirement_ir_path.expanduser().resolve())
+            },
         )
         projection_verdict = verify_runtime_projection(
             _read_object(projection_path),
@@ -145,6 +164,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--output-root", type=Path, required=True)
     parser.add_argument("--sprint-id", required=True)
     parser.add_argument("--workspace-root", default="workspace")
+    parser.add_argument("--workspace-authority", type=Path)
     return parser
 
 
@@ -156,6 +176,7 @@ def main(argv: list[str] | None = None) -> int:
             output_root=args.output_root,
             sprint_id=args.sprint_id,
             workspace_root=args.workspace_root,
+            workspace_authority_path=args.workspace_authority,
         )
     except Exception as exc:
         summary = {

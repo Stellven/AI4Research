@@ -64,7 +64,7 @@ OPERATOR_SPECS: dict[str, OperatorSpec] = {
         "material_ingest", "autosci-evidence-material-ingest", "research_paper.v1", "research_material.v1.json", operators.ingest_source
     ),
     "paper_analyze": _spec(
-        "paper_analyze", "autosci-evidence-paper-analyze", "research_paper.v1", "research_paper_analysis.v1.json", operators.analyze_content
+        "paper_analyze", "autosci-evidence-paper-analyze", "research_paper.v1", "research_paper_analysis.v1.json", operators.analyze_papers
     ),
     "content_analyze": _spec(
         "content_analyze", "autosci-evidence-content-analyze", "research_paper.v1", "research_content_analysis.v1.json", operators.analyze_content
@@ -140,8 +140,13 @@ def execute_operator(
     services: dict[str, Any] | None = None,
     workspace_root: Path | None = None,
 ) -> dict[str, Any]:
-    spec = get_operator_spec(str(node_request.get("node_id") or ""))
-    if spec.node_id == "discovery_ingest":
+    implementation_node_id = str(
+        node_request.get("implementation_node_id")
+        or node_request.get("node_id")
+        or ""
+    )
+    spec = get_operator_spec(implementation_node_id)
+    if spec.node_id in {"discovery_ingest", "paper_analyze"}:
         return execute_batch_spec(
             spec,
             node_request,
@@ -176,11 +181,11 @@ def _execute_named(
     services: dict[str, Any] | None = None,
     workspace_root: Path | None = None,
 ) -> dict[str, Any]:
-    if str(node_request.get("node_id") or "") != node_id:
-        request = dict(node_request)
-        request.setdefault("node_id", node_id)
-        node_request = request
-    return execute_spec(get_operator_spec(node_id), node_request, services=services, workspace_root=workspace_root)
+    request = dict(node_request)
+    request.setdefault("scheduled_node_id", str(request.get("node_id") or node_id))
+    request["implementation_node_id"] = node_id
+    node_request = request
+    return execute_operator(node_request, services=services, workspace_root=workspace_root)
 
 
 def execute_literature_discover(node_request, *, services=None, workspace_root=None):
@@ -201,7 +206,10 @@ def execute_paper_ingest(node_request, *, services=None, workspace_root=None):
 
 def execute_discovery_ingest(node_request, *, services=None, workspace_root=None):
     request = dict(node_request)
-    request["node_id"] = "discovery_ingest"
+    request.setdefault(
+        "scheduled_node_id", str(request.get("node_id") or "discovery_ingest")
+    )
+    request["implementation_node_id"] = "discovery_ingest"
     return execute_operator(request, services=services, workspace_root=workspace_root)
 
 

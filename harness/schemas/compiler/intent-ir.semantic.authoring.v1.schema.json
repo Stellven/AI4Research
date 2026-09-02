@@ -1,40 +1,21 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://solar.local/schemas/intent-ir.semantic.v1.schema.json",
-  "title": "IntentIR semantic body authored by a model",
+  "$id": "https://solar.local/schemas/intent-ir.semantic.authoring.v1.schema.json",
+  "title": "IntentIR semantic authoring body with deterministic source evidence",
   "type": "object",
   "additionalProperties": false,
   "required": ["goals", "outcomes", "constraints", "ambiguities", "conflicts", "unknowns"],
   "properties": {
-    "goals": {
-      "type": "array",
-      "minItems": 1,
-      "items": {"$ref": "#/$defs/goal"}
-    },
-    "outcomes": {
-      "type": "array",
-      "minItems": 1,
-      "items": {"$ref": "#/$defs/outcome"}
-    },
-    "constraints": {
-      "type": "array",
-      "items": {"$ref": "#/$defs/constraint"}
-    },
-    "ambiguities": {
-      "type": "array",
-      "items": {"$ref": "#/$defs/ambiguity"}
-    },
-    "conflicts": {
-      "type": "array",
-      "items": {"$ref": "#/$defs/conflict"}
-    },
-    "unknowns": {
-      "type": "array",
-      "items": {"$ref": "#/$defs/unknown"}
-    }
+    "goals": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/goal"}},
+    "outcomes": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/outcome"}},
+    "constraints": {"type": "array", "items": {"$ref": "#/$defs/constraint"}},
+    "ambiguities": {"type": "array", "items": {"$ref": "#/$defs/ambiguity"}},
+    "conflicts": {"type": "array", "items": {"$ref": "#/$defs/conflict"}},
+    "unknowns": {"type": "array", "items": {"$ref": "#/$defs/unknown"}}
   },
   "$defs": {
     "source_spans": {
+      "description": "Provider-authored coordinates are advisory and replaced deterministically from source_quotes.",
       "type": "array",
       "minItems": 1,
       "items": {
@@ -48,6 +29,13 @@
         "maxItems": 2
       }
     },
+    "source_quotes": {
+      "description": "Exact verbatim substrings of raw.text, each long enough to occur exactly once.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
     "derived_from": {
       "type": "array",
       "minItems": 1,
@@ -57,17 +45,18 @@
     "goal": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["goal_id", "statement", "source_spans"],
+      "required": ["goal_id", "statement", "source_spans", "source_quotes"],
       "properties": {
         "goal_id": {"type": "string", "pattern": "^G[1-9][0-9]*$"},
         "statement": {"type": "string", "minLength": 1},
-        "source_spans": {"$ref": "#/$defs/source_spans"}
+        "source_spans": {"$ref": "#/$defs/source_spans"},
+        "source_quotes": {"$ref": "#/$defs/source_quotes"}
       }
     },
     "outcome": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["outcome_id", "class", "description", "source_spans"],
+      "required": ["outcome_id", "class", "description", "source_spans", "source_quotes"],
       "properties": {
         "outcome_id": {"type": "string", "pattern": "^D[1-9][0-9]*$"},
         "class": {"enum": ["information", "artifact", "action"]},
@@ -76,7 +65,8 @@
           "type": "string",
           "minLength": 1
         },
-        "source_spans": {"$ref": "#/$defs/source_spans"}
+        "source_spans": {"$ref": "#/$defs/source_spans"},
+        "source_quotes": {"$ref": "#/$defs/source_quotes"}
       }
     },
     "expression": {
@@ -141,35 +131,38 @@
     "constraint": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["constraint_id", "category", "statement", "expression", "source_spans"],
+      "required": ["constraint_id", "category", "statement", "expression", "source_spans", "source_quotes"],
       "properties": {
         "constraint_id": {"type": "string", "pattern": "^C[1-9][0-9]*$"},
         "category": {"enum": ["scope", "content", "limit", "prohibition", "preference", "format", "temporal"]},
         "statement": {"type": "string", "minLength": 1},
         "expression": {"$ref": "#/$defs/expression"},
-        "source_spans": {"$ref": "#/$defs/source_spans"}
+        "source_spans": {"$ref": "#/$defs/source_spans"},
+        "source_quotes": {"$ref": "#/$defs/source_quotes"}
       }
     },
     "ambiguity": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["ambiguity_id", "question", "blocking", "source_spans"],
+      "required": ["ambiguity_id", "question", "blocking", "source_spans", "source_quotes"],
       "properties": {
         "ambiguity_id": {"type": "string", "pattern": "^A[1-9][0-9]*$"},
         "question": {"type": "string", "minLength": 1},
         "blocking": {"type": "boolean"},
-        "source_spans": {"$ref": "#/$defs/source_spans"}
+        "source_spans": {"$ref": "#/$defs/source_spans"},
+        "source_quotes": {"$ref": "#/$defs/source_quotes"}
       }
     },
     "conflict": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["conflict_id", "description", "resolution", "source_spans", "derived_from"],
+      "required": ["conflict_id", "description", "resolution", "source_spans", "source_quotes", "derived_from"],
       "properties": {
         "conflict_id": {"type": "string", "pattern": "^X[1-9][0-9]*$"},
         "description": {"type": "string", "minLength": 1},
         "resolution": {"enum": ["clarify", "reject"]},
         "source_spans": {"$ref": "#/$defs/source_spans"},
+        "source_quotes": {"$ref": "#/$defs/source_quotes"},
         "derived_from": {"$ref": "#/$defs/derived_from"}
       }
     },

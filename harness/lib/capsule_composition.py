@@ -366,8 +366,16 @@ def search_composition_candidates(
     max_candidates: int = 20,
     allowed_effects: list[str] | None = None,
     required_trust_by_output: dict[str, list[str]] | None = None,
+    allow_existing_targets: bool = False,
 ) -> dict[str, Any]:
-    """Enumerate bounded exact-type compositions over multi-input hyperedges."""
+    """Enumerate bounded exact-type compositions over multi-input hyperedges.
+
+    Artifact types describe representation compatibility, not artifact-instance
+    identity.  A target that has the same type as an available input therefore
+    still has to be produced by the selected composition unless the caller
+    explicitly requests alias/passthrough semantics with
+    ``allow_existing_targets=True``.
+    """
     artifact_registry = artifact_registry or load_artifact_type_registry()
     conversion_registry = conversion_registry or load_conversion_registry()
     if not (1 <= max_depth <= 32 and 1 <= max_states <= 10000 and 1 <= max_candidates <= 200):
@@ -484,30 +492,41 @@ def search_composition_candidates(
             frozenset[str],
             tuple[dict[str, Any], ...],
             frozenset[str],
+            frozenset[str],
             frozenset[tuple[str, str]],
         ]
     ] = deque(
-        [(initial, tuple(), frozenset(), initial_lineage)]
+        [(initial, tuple(), frozenset(), frozenset(), initial_lineage)]
     )
     # Artifact availability alone is not a sufficient state identity: two
     # different capsule paths may produce the same types and remain legitimate
     # semantic alternatives. Preserve distinct bounded edge-set signatures,
     # while still collapsing order-only permutations of independent steps.
     visited: set[
-        tuple[frozenset[str], frozenset[str], frozenset[tuple[str, str]]]
-    ] = {(initial, frozenset(), initial_lineage)}
+        tuple[
+            frozenset[str],
+            frozenset[str],
+            frozenset[str],
+            frozenset[tuple[str, str]],
+        ]
+    ] = {(initial, frozenset(), frozenset(), initial_lineage)}
     candidates: list[dict[str, Any]] = []
     explored = 0
     bound_exhausted = False
     reachable_union = set(initial)
+    produced_union: set[str] = set()
     while queue and len(candidates) < max_candidates:
         if explored >= max_states:
             bound_exhausted = True
             break
-        artifacts, steps, used_edges, lineage_state = queue.popleft()
+        artifacts, steps, used_edges, produced_types, lineage_state = queue.popleft()
         explored += 1
         reachable_union.update(artifacts)
-        if targets.issubset(artifacts):
+        produced_union.update(produced_types)
+        targets_satisfied = targets.issubset(
+            artifacts if allow_existing_targets else produced_types
+        )
+        if targets_satisfied:
             lineage_by_type = dict(lineage_state)
             target_tokens_by_family: dict[str, set[str]] = {}
             for artifact_type in targets:
@@ -521,7 +540,7 @@ def search_composition_candidates(
                 {
                     "candidate_id": f"composition-{len(candidates) + 1:03d}",
                     "steps": list(steps),
-                    "produced_types": sorted(artifacts - initial),
+                    "produced_types": sorted(produced_types),
                     "step_count": len(steps),
                     "aggregate_effects": sorted(
                         {
@@ -568,11 +587,17 @@ def search_composition_candidates(
             if lineage_conflict:
                 continue
             next_artifacts = frozenset(set(artifacts) | set(edge["produces"]))
-            if next_artifacts == artifacts:
-                continue
+            next_produced_types = frozenset(
+                set(produced_types) | set(edge["produces"])
+            )
             next_used_edges = used_edges | {edge_id}
             next_lineage_state = frozenset(next_lineage.items())
-            state_signature = (next_artifacts, next_used_edges, next_lineage_state)
+            state_signature = (
+                next_artifacts,
+                next_used_edges,
+                next_produced_types,
+                next_lineage_state,
+            )
             if state_signature in visited:
                 continue
             visited.add(state_signature)
@@ -589,11 +614,13 @@ def search_composition_candidates(
                     next_artifacts,
                     steps + (step,),
                     next_used_edges,
+                    next_produced_types,
                     next_lineage_state,
                 )
             )
 
-    unreachable = sorted(targets - reachable_union)
+    satisfied_union = reachable_union if allow_existing_targets else produced_union
+    unreachable = sorted(targets - satisfied_union)
     blocking_frontiers: list[dict[str, Any]] = []
     if not candidates and not bound_exhausted:
         closure = set(initial)
@@ -645,6 +672,9 @@ def search_composition_candidates(
         "conversion_registry_ref": {"sha256": _sha256(conversion_registry)},
         "available_inputs": sorted(set(available_inputs)),
         "target_outputs": sorted(targets),
+        "target_satisfaction": {
+            "mode": "existing_or_produced" if allow_existing_targets else "produced_by_composition"
+        },
         "effect_policy": {"allowed_effects": sorted(admitted_effects)},
         "execution_trust_policy": {
             "required_by_output": [

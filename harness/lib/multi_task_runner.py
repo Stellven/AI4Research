@@ -3344,10 +3344,28 @@ def _activate_scheduler_runtime_root(runtime_dir: str | Path) -> Path:
 
 
 def prepare_scheduler_input_args(args: argparse.Namespace) -> list[str]:
-    """Validate frozen SchedulerInput files and append compatibility projections."""
+    """Bind one frozen scheduler runtime without reinterpreting its plan.
+
+    ``--scheduler-input`` materializes a projection and therefore already
+    knows its runtime root.  ``--graph`` is also a supported frozen-runtime
+    entrypoint, but historically left every sidecar consumer on the process'
+    import-time sprints root.  For one explicit SchedulerInput projection, the
+    graph's parent directory is the already-published runtime root; activate it
+    before dispatch/reconcile so operator callbacks and scheduler ticks read
+    and write the same handoff/eval artifacts.
+    """
     inputs = list(getattr(args, "scheduler_input", []) or [])
     if not inputs:
-        return list(getattr(args, "graph", []) or [])
+        graphs = list(getattr(args, "graph", []) or [])
+        if len(graphs) == 1:
+            graph_path = Path(graphs[0]).expanduser()
+            try:
+                graph = json.loads(graph_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                graph = {}
+            if graph.get("schema_version") == "solar.scheduler_runtime_projection.v1":
+                _activate_scheduler_runtime_root(graph_path.parent)
+        return graphs
     import scheduler_input
 
     output_dir = _activate_scheduler_runtime_root(

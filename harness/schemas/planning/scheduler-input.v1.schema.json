@@ -278,6 +278,12 @@
                   "file",
                   "directory"
                 ]
+              },
+              "private_scope": {
+                "description": "Optional logical owner for a sprint-private materialization. Generated composition support steps use their PlanIR parent node ID so ordered collection-producing stages accumulate in one private directory. It is forbidden on workspace_publish routes.",
+                "type": "string",
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9_.-]+$"
               }
             }
           }

@@ -77,6 +77,80 @@ def _normalized_candidates(values: Any) -> list[dict[str, Any]]:
     return candidates
 
 
+def _local_source_candidates(
+    context: OperatorContext,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """Convert exact scheduler-bound local files into traceable candidates."""
+
+    candidates: list[dict[str, Any]] = []
+    limitations: list[str] = []
+    seen_hashes: set[str] = set()
+    for row in context.payload.get("local_sources") or []:
+        if not isinstance(row, dict):
+            continue
+        raw_path = str(row.get("path") or "").strip()
+        if not raw_path:
+            continue
+        path = validate_scoped_path(
+            raw_path,
+            context.read_scope,
+            workspace_root=context.workspace_root,
+            must_exist=True,
+            allow_external_exact=True,
+        )
+        if not path.is_file():
+            raise _product_error(f"Local source is not a regular file: {raw_path}")
+        digest = sha256_bytes(path.read_bytes())
+        expected_hash = str(row.get("sha256") or "").lower()
+        if not expected_hash or expected_hash != digest:
+            raise _product_error(f"Local source hash mismatch: {raw_path}")
+        if digest in seen_hashes:
+            limitations.append(
+                f"Excluded identical local source content: {path.name} ({digest[:16]})."
+            )
+            continue
+        seen_hashes.add(digest)
+        candidates.append(
+            {
+                "candidate_id": f"local-{digest[:16]}",
+                "title": path.stem,
+                "source_channels": ["local"],
+                "source_ref": str(path),
+                "content_sha256": digest,
+                "ranking_score": 1.0,
+                "ranking_rationale": "Controller-frozen local seed explicitly required by the accepted source contract.",
+                "dedup_status": "new",
+                "fetch_status": "fetched",
+            }
+        )
+    return candidates, limitations
+
+
+def _merge_discovery_candidates(
+    local_candidates: list[dict[str, Any]],
+    provider_candidates: list[dict[str, Any]],
+    *,
+    limit: int,
+) -> list[dict[str, Any]]:
+    merged: list[dict[str, Any]] = []
+    identities: set[str] = set()
+    for candidate in [*local_candidates, *provider_candidates]:
+        identity = str(
+            candidate.get("content_sha256")
+            or candidate.get("source_ref")
+            or candidate.get("url")
+            or candidate.get("candidate_id")
+            or ""
+        ).strip()
+        if not identity or identity in identities:
+            continue
+        identities.add(identity)
+        merged.append(candidate)
+        if len(merged) >= limit:
+            break
+    return merged
+
+
 def _study_protocol(
     payload: dict[str, Any],
     raw: dict[str, Any],
@@ -152,6 +226,8 @@ def literature_discovery(context: OperatorContext, spec: OperatorSpec) -> dict[s
         wiki_root = context.workspace_root / ".autosci-no-wiki-input"
     production_backend = context.services.get("discover_sources")
     backend = context.services.get("discover_literature") or discover_literature
+    local_candidates, local_limitations = _local_source_candidates(context)
+    candidate_limit = max(1, min(int(payload.get("limit") or 10), 200))
     try:
         if callable(production_backend):
             production_payload = dict(payload)
@@ -188,6 +264,50 @@ def literature_discovery(context: OperatorContext, spec: OperatorSpec) -> dict[s
                 max_retry_wait_seconds=payload.get("max_retry_wait_seconds"),
             )
     except Exception as exc:
+        if local_candidates:
+            candidates = local_candidates[:candidate_limit]
+            protocol = _study_protocol(
+                payload,
+                {},
+                query=query or "unresolved",
+                mode=mode,
+                candidates=candidates,
+            )
+            evidence = evidence_document(
+                context,
+                spec,
+                {
+                    "query": query or "unresolved",
+                    "candidates": candidates,
+                    "mode": mode,
+                    "study_protocol": protocol,
+                },
+                status="completed",
+                limitations=[
+                    *local_limitations,
+                    f"Discovery provider failed; continued with {len(candidates)} controller-frozen local seed(s): {type(exc).__name__}: {exc}",
+                    *[
+                        f"Study protocol field remains unresolved: {field}."
+                        for field in protocol["unresolved_fields"]
+                    ],
+                ],
+                artifacts=[
+                    {
+                        "type": "local_seed",
+                        "path": str(candidate["source_ref"]),
+                        "sha256": str(candidate["content_sha256"]),
+                    }
+                    for candidate in candidates
+                ],
+            )
+            return {
+                "evidence": evidence,
+                "outcome_class": SUCCESS,
+                "summary": (
+                    f"Preserved {len(candidates)} local literature seed(s); "
+                    "external discovery was recorded as unavailable."
+                ),
+            }
         protocol = _study_protocol(
             payload,
             {},
@@ -219,8 +339,19 @@ def literature_discovery(context: OperatorContext, spec: OperatorSpec) -> dict[s
             "summary": "Literature provider failed before candidates were returned.",
             "error": str(exc),
         }
-    candidates = _normalized_candidates(raw.get("candidates"))
-    status = str(raw.get("status") or ("completed" if candidates else "inconclusive"))
+    provider_candidates = _normalized_candidates(raw.get("candidates"))
+    candidates = _merge_discovery_candidates(
+        local_candidates,
+        provider_candidates,
+        limit=candidate_limit,
+    )
+    provider_status = str(raw.get("status") or ("completed" if provider_candidates else "inconclusive"))
+    # Providers may report an environment failure as a structured
+    # ``inconclusive`` result instead of raising.  The accepted workflow's
+    # degraded-mode contract still has usable controller-frozen local seeds,
+    # so that provider status must not erase the successful local handoff.
+    local_fallback_used = provider_status == "inconclusive" and bool(local_candidates)
+    status = "completed" if local_fallback_used else provider_status
     outputs = {
         key: raw[key]
         for key in ("query", "mode", "limit", "anchors", "negative_ids", "venue", "year", "source_fan_in", "source_provider_boundary")
@@ -235,7 +366,12 @@ def literature_discovery(context: OperatorContext, spec: OperatorSpec) -> dict[s
         mode=str(outputs.get("mode") or mode),
         candidates=candidates,
     )
-    limitations = list(raw.get("limitations") or [])
+    limitations = [*local_limitations, *list(raw.get("limitations") or [])]
+    if local_fallback_used:
+        limitations.append(
+            f"External discovery was inconclusive; continued with {len(local_candidates[:candidate_limit])} "
+            "controller-frozen local seed(s)."
+        )
     limitations.extend(
         f"Study protocol field remains unresolved: {field}."
         for field in outputs["study_protocol"]["unresolved_fields"]
@@ -246,7 +382,17 @@ def literature_discovery(context: OperatorContext, spec: OperatorSpec) -> dict[s
         outputs,
         status=status if status in {"completed", "failed", "inconclusive"} else "inconclusive",
         limitations=limitations,
-        artifacts=list(raw.get("artifacts") or []),
+        artifacts=[
+            *list(raw.get("artifacts") or []),
+            *[
+                {
+                    "type": "local_seed",
+                    "path": str(candidate["source_ref"]),
+                    "sha256": str(candidate["content_sha256"]),
+                }
+                for candidate in local_candidates[:candidate_limit]
+            ],
+        ],
     )
     if status == "completed" and candidates:
         return {
@@ -276,7 +422,11 @@ def _source_path(context: OperatorContext) -> tuple[str, Path | None]:
     if re.match(r"^https?://", source, re.IGNORECASE):
         return source, None
     return source, validate_scoped_path(
-        source, context.read_scope, workspace_root=context.workspace_root, must_exist=True
+        source,
+        context.read_scope,
+        workspace_root=context.workspace_root,
+        must_exist=True,
+        allow_external_exact=True,
     )
 
 
@@ -694,6 +844,8 @@ def _papers_from(context: OperatorContext) -> list[dict[str, Any]]:
         "research_paper.v1",
         payload_keys=("paper_evidence", "research_paper"),
     )
+    if not documents:
+        raise _product_error("Required typed input missing; expected one of: research_paper.v1")
     papers = [
         paper
         for document in documents
@@ -727,8 +879,8 @@ def _source_sentences(text: str, *, minimum_length: int) -> list[str]:
     return [item.strip() for item in _SENTENCE.split(unwrapped) if len(item.strip()) >= minimum_length]
 
 
-def analyze_content(context: OperatorContext, spec: OperatorSpec) -> dict[str, Any]:
-    paper = dict(_paper_from(context))
+def _analyze_paper_document(paper: dict[str, Any]) -> tuple[dict[str, Any], int]:
+    paper = dict(paper)
     sections = _section_texts(paper)
     if not sections:
         raise _product_error("Paper/content analysis requires at least one non-empty source section")
@@ -749,6 +901,11 @@ def analyze_content(context: OperatorContext, spec: OperatorSpec) -> dict[str, A
         "evidence_ids": [item["source_anchor"] for item in highlights],
         "analysis_mode": "bounded_local_source_analysis",
     }
+    return paper, len(sections)
+
+
+def analyze_content(context: OperatorContext, spec: OperatorSpec) -> dict[str, Any]:
+    paper, section_count = _analyze_paper_document(_paper_from(context))
     evidence = evidence_document(
         context,
         spec,
@@ -758,7 +915,34 @@ def analyze_content(context: OperatorContext, spec: OperatorSpec) -> dict[str, A
     return {
         "evidence": evidence,
         "outcome_class": SUCCESS,
-        "summary": f"Analyzed {len(sections)} non-empty source section(s).",
+        "summary": f"Analyzed {section_count} non-empty source section(s).",
+    }
+
+
+def analyze_papers(context: OperatorContext, spec: OperatorSpec) -> dict[str, Any]:
+    """Analyze every frozen research-paper document as a separate typed artifact."""
+
+    evidence_items: list[dict[str, Any]] = []
+    for paper in _papers_from(context):
+        analyzed, section_count = _analyze_paper_document(paper)
+        evidence_items.append(
+            {
+                "evidence": evidence_document(
+                    context,
+                    spec,
+                    {"paper": analyzed},
+                    limitations=[
+                        "Analysis is extractive and source-grounded; it does not independently verify paper claims."
+                    ],
+                ),
+                "summary": f"Analyzed {section_count} non-empty source section(s).",
+            }
+        )
+    return {
+        "evidence_items": evidence_items,
+        "limitations": [
+            f"Analyzed {len(evidence_items)} frozen research-paper artifact(s) independently."
+        ],
     }
 
 

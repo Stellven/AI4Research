@@ -47,7 +47,7 @@ PHYSICAL_EXECUTION_TRUST_CLASSES = {
 SCIENTIFIC_PHYSICAL_BY_LOGICAL_OPERATOR = {
     "ScientificLiteratureDiscoverer": "autosci-literature-discover-worker",
     "ScientificPaperIngestor": "autosci-paper-ingest-worker",
-    "ScientificPaperAnalyzer": "autosci-paper-analyze-worker",
+    "ScientificPaperAnalyzer": "autosci-paper-analyze-native-worker",
     "ScientificMemoryUpdater": "autosci-memory-update-worker",
     "ScientificGraphUpdater": "autosci-graph-update-worker",
     "ScientificClaimExtractor": "autosci-claim-extract-worker",

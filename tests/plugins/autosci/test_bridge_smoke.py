@@ -68,6 +68,35 @@ def test_smoke_writes_result_and_evidence_jsonl(tmp_path: Path) -> None:
     assert "AutoSciRunner" not in json.dumps(result)
 
 
+def test_failed_evidence_is_preserved_but_returns_nonzero(tmp_path: Path) -> None:
+    envelope = tmp_path / "failed-analyze-envelope.json"
+    missing = tmp_path / "missing-paper.md"
+    envelope.write_text(
+        json.dumps(
+            {
+                "task_id": "task-failed-analysis",
+                "sprint_id": "sprint-failed-analysis",
+                "node_id": "paper_analysis",
+                "mode": "fixture",
+                "output_dir": "artifacts/failed-analysis",
+                "inputs": {"paper_path": str(missing)},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    proc = run_bridge(
+        ["run", "--action", "analyze_paper", "--envelope", str(envelope)],
+        tmp_path,
+    )
+
+    assert proc.returncode == 2
+    result = json.loads(proc.stdout)
+    assert result["ok"] is False
+    assert result["status"] == "failed"
+    assert (tmp_path / result["evidence_path"]).is_file()
+
+
 def test_evidence_payload_writer_supports_long_windows_paths(tmp_path: Path) -> None:
     long_segment = "nested-" + ("battery-grid-storage-" * 8)
     envelope = tmp_path / "envelope.long-path.json"

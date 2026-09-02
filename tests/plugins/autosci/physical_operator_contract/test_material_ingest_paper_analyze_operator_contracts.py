@@ -201,6 +201,46 @@ def test_paper_analyze_worker_consumes_real_research_paper_artifact_and_adds_sou
     ]
 
 
+def test_paper_analyze_worker_analyzes_every_frozen_paper_as_a_separate_artifact(
+    tmp_path: Path,
+) -> None:
+    material_envelope, first_body = _material_ingest(tmp_path)
+    first_ref = material_envelope["artifacts"][0]
+    second_body = json.loads(json.dumps(first_body))
+    second_body["outputs"]["paper"]["paper_id"] = "paper-sample-paper-002"
+    second_body["outputs"]["paper"]["title"] = "Second Sample Paper"
+    second_path = tmp_path / "out" / "material_ingest" / "research_material.002.v1.json"
+    second_path.write_text(
+        json.dumps(second_body, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    second_ref = {
+        "artifact_id": "evidence.material_ingest.002",
+        "path": "out/material_ingest/research_material.002.v1.json",
+        "schema": "research_paper.v1",
+        "sha256": hashlib.sha256(second_path.read_bytes()).hexdigest(),
+    }
+    analyze_request = _request(
+        "paper_analyze",
+        refs=[first_ref, second_ref],
+        read_scope=["out/material_ingest"],
+        write_scope=["out/paper_analyze"],
+    )
+
+    envelope = _run(tmp_path, analyze_request)
+
+    assert envelope["status"] == "completed", envelope["error"]
+    assert [item["path"] for item in envelope["artifacts"]] == [
+        "out/paper_analyze/research_paper_analysis.001.v1.json",
+        "out/paper_analyze/research_paper_analysis.002.v1.json",
+    ]
+    analyzed_ids = {
+        _artifact_body(tmp_path, artifact)["outputs"]["paper"]["paper_id"]
+        for artifact in envelope["artifacts"]
+    }
+    assert analyzed_ids == {"paper-sample-paper", "paper-sample-paper-002"}
+
+
 def test_material_ingest_worker_missing_material_path_fails_closed_before_artifact_authoring(tmp_path: Path) -> None:
     request = _request("material_ingest", payload={"paper_id": "paper-missing-source"})
 

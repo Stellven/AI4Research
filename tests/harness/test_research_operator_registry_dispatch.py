@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import json
 import os
 import subprocess
@@ -61,6 +62,104 @@ def test_report_registry_payload_preserves_experiment_evidence() -> None:
         "experiment_plan",
         "experiment_result",
     }
+
+
+def test_report_registry_payload_admits_capsule_required_discovery_protocol() -> None:
+    adapter = _load_adapter()
+    discovery = {
+        "schema": "literature_discovery.v1",
+        "outputs": {
+            "candidates": [{"candidate_id": "paper-1"}],
+            "study_protocol": {"protocol_status": "partially_resolved"},
+        },
+    }
+
+    payload = adapter._payload_for_documents("report_plan", [discovery])
+
+    assert payload == {"literature_discovery": discovery}
+
+
+def test_paper_analyze_registry_payload_preserves_all_frozen_papers() -> None:
+    adapter = _load_adapter()
+    documents = [
+        {"schema": "research_paper.v1", "outputs": {"paper": {"paper_id": "p1"}}},
+        {"schema": "research_paper.v1", "outputs": {"paper": {"paper_id": "p2"}}},
+    ]
+
+    payload = adapter._payload_for_documents("paper_analyze", documents)
+
+    assert [item["outputs"]["paper"]["paper_id"] for item in payload["paper_evidence"]] == [
+        "p1",
+        "p2",
+    ]
+
+
+def test_publication_registry_payload_preserves_requirement_report_and_review() -> None:
+    adapter = _load_adapter()
+    requirement = {"schema_version": "solar.requirement_ir.v2", "semantic_contract": {}}
+    report = {"schema": "scientific_report.v1", "outputs": {"report": {}}}
+    review = {"schema": "artifact_review.v1", "outputs": {"review": {}}}
+
+    payload = adapter._payload_for_documents(
+        "publication_produce", [requirement, report, review]
+    )
+
+    assert payload == {
+        "requirement_ir": requirement,
+        "report": report,
+        "artifact_review": review,
+    }
+
+
+def test_existing_publication_worker_is_permanently_bound_to_native_manifest_action() -> None:
+    operators = json.loads(
+        (HARNESS / "config" / "physical-operators.json").read_text(encoding="utf-8")
+    )["operators"]
+    worker = operators["autosci-publication-compile-worker"]
+
+    assert worker["backend"] == "research_operator_registry"
+    assert worker["runtime_binding"] == {
+        "registry": "plugins.autosci.operators.scientific_lifecycle.registry",
+        "node_id": "publication_produce",
+        "implementation_operator_id": "autosci-publication-production-physical",
+    }
+    assert set(worker["resource_requirements"]["required_artifact_types"]) == {
+        "requirement_ir.v1",
+        "schema:schemas/evidence/scientific_report.v1.schema.json",
+        "schema:schemas/evidence/artifact_review.v1.schema.json",
+    }
+
+
+def test_registry_adapter_resolves_only_hash_bound_workspace_sources(tmp_path: Path) -> None:
+    adapter = _load_adapter()
+    workspace = tmp_path / "workspace"
+    source = workspace / "demo_inputs" / "paper.pdf"
+    source.parent.mkdir(parents=True)
+    source.write_bytes(b"paper")
+    digest = hashlib.sha256(source.read_bytes()).hexdigest()
+    graph = {"workspace_authority_ref": {"workspace_root": str(workspace)}}
+    node = {
+        "workspace_reads": [
+            {
+                "kind": "file",
+                "relative_path": "demo_inputs/paper.pdf",
+                "sha256": digest,
+            }
+        ],
+        "read_scope": [str(source.resolve())],
+    }
+
+    assert adapter._verified_workspace_sources(graph, node) == [
+        {
+            "path": str(source.resolve()),
+            "relative_path": "demo_inputs/paper.pdf",
+            "sha256": digest,
+        }
+    ]
+
+    source.write_bytes(b"tampered")
+    with pytest.raises(adapter.RegistryAdapterError, match="hash does not match"):
+        adapter._verified_workspace_sources(graph, node)
 
 
 def test_unified_registry_resolves_shared_node_by_frozen_implementation_id() -> None:
@@ -396,6 +495,7 @@ def test_all_current_providerless_registry_operators_are_locally_dispatchable(mo
         "autosci-claim-extract-worker",
         "autosci-literature-discover-worker",
         "autosci-method-extract-worker",
+        "autosci-paper-analyze-native-worker",
         "dataset_prepare_worker",
         "discovery_ingest_worker",
         "source_assess_worker",
@@ -406,9 +506,10 @@ def test_all_current_providerless_registry_operators_are_locally_dispatchable(mo
         "claim_verify_worker",
         "experiment_monitor_worker",
         "experiment_approval_gate_worker",
-        "autosci-report-plan-worker",
-        "autosci-report-worker",
-    }
+            "autosci-report-plan-worker",
+            "autosci-report-worker",
+            "autosci-publication-compile-worker",
+        }
     for operator_id, operator in registry_operators.items():
         assert not operator.get("provider") and not operator.get("vendor")
         assert not operator.get("key_ref")

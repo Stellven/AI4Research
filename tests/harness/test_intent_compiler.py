@@ -31,6 +31,29 @@ def _intent() -> dict:
     return payload
 
 
+def _authoring_semantic(payload: dict) -> dict:
+    """Add exact unique quotes to a semantic body returned by a fake model."""
+    authored = copy.deepcopy(payload)
+    raw_text = compiler.normalize_input(_raw())["raw"]["text"]
+    for collection in ("goals", "outcomes", "constraints", "ambiguities", "conflicts"):
+        for item in authored.get(collection, []):
+            quotes = []
+            for start, end in item.get("source_spans", []):
+                left, right = start, end
+                quote = raw_text[left:right]
+                while raw_text.count(quote) != 1:
+                    if left > 0:
+                        left -= 1
+                    elif right < len(raw_text):
+                        right += 1
+                    else:
+                        raise AssertionError("test fixture cannot produce a unique source quote")
+                    quote = raw_text[left:right]
+                quotes.append(quote)
+            item["source_quotes"] = quotes
+    return authored
+
+
 def _validation(intent: dict, status: str = "pass") -> dict:
     return {
         "schema_version": "solar.intent_validation.v1",
@@ -468,11 +491,63 @@ def test_validator_accepts_literal_distinct_cardinality_condition() -> None:
     assert result["errors"] == []
 
 
+def test_expression_contract_requires_literal_for_unrepresentable_whitelist() -> None:
+    authoring = json.loads(compiler.SEMANTIC_AUTHORING_SCHEMA.read_text(encoding="utf-8"))
+    canonical = json.loads(compiler.SEMANTIC_SCHEMA.read_text(encoding="utf-8"))
+    for schema in (authoring, canonical):
+        expression = schema["$defs"]["expression"]
+        assert "no subset-of or universal-membership operator" in expression["description"]
+        assert "Never approximate a whitelist with contains_none" in expression["description"]
+        assert "preserve the normal target and fallback together" in expression["description"]
+        assert "must exist before planning" in expression["description"]
+        operator = next(
+            row for row in expression["oneOf"] if "op" in row.get("required", [])
+        )
+        assert "must not encode a whitelist" in operator["properties"]["op"]["description"]
+    compiler_instruction = json.loads(
+        compiler._compiler_prompt(
+            compiler.normalize_input(_raw()), generation=0, previous=None, defects=[]
+        )
+    )["instruction"]
+    normalized_instruction = " ".join(compiler_instruction.split())
+    assert "whitelist must be preserved as an exact literal expression" in normalized_instruction
+    assert "must not become an unconditional bound" in normalized_instruction
+    assert "does not require the target corpus before planning" in normalized_instruction
+    reviewer_instruction = " ".join(
+        json.loads(
+            compiler._fidelity_prompt(compiler.normalize_input(_raw()), _intent())
+        )["instruction"].split()
+    )
+    assert "A normal-path rule and its explicit fallback may be represented in separate constraint rows" in reviewer_instruction
+    assert '"target", "aim", and "prefer" are not strict upper/lower bounds' in reviewer_instruction
+
+
+def test_intent_authoring_contract_preserves_enumerated_deliverable_details() -> None:
+    raw = compiler.normalize_input(_raw())
+    compiler_prompt = json.loads(
+        compiler._compiler_prompt(raw, generation=0, previous=None, defects=[])
+    )["instruction"]
+    reviewer_prompt = json.loads(
+        compiler._fidelity_prompt(raw, _intent())
+    )["instruction"]
+    authoring = json.loads(compiler.SEMANTIC_AUTHORING_SCHEMA.read_text(encoding="utf-8"))
+    canonical = json.loads(compiler.SEMANTIC_SCHEMA.read_text(encoding="utf-8"))
+
+    assert 'Never replace an explicit list with placeholders such as "the required fields"' in compiler_prompt
+    assert 'A placeholder such as "the required fields"' in reviewer_prompt
+    authoring_description = authoring["$defs"]["outcome"]["properties"]["description"]["description"]
+    canonical_description = canonical["$defs"]["outcome"]["properties"]["description"]["description"]
+    assert "Preserve every source-enumerated required column" in authoring_description
+    assert authoring_description == canonical_description
+
+
 def test_pipeline_bundles_reference_and_fidelity_defects_into_its_single_repair(
     tmp_path: Path,
 ) -> None:
     semantic_keys = ("goals", "outcomes", "constraints", "ambiguities", "conflicts", "unknowns")
-    initial = {key: copy.deepcopy(_intent()[key]) for key in semantic_keys}
+    initial = _authoring_semantic(
+        {key: copy.deepcopy(_intent()[key]) for key in semantic_keys}
+    )
     repaired = copy.deepcopy(initial)
     initial["constraints"][0]["expression"] = {
         "op": "all_of",
@@ -513,6 +588,7 @@ def test_pipeline_bundles_reference_and_fidelity_defects_into_its_single_repair(
                 "path": "constraints.0",
                 "message": "The constraint narrows the requested scope.",
                 "source_spans": [[0, 10]],
+                "source_quotes": [compiler.normalize_input(_raw())["raw"]["text"][:10]],
                 "repairable": True,
                 "required_change": "Preserve the requested scope.",
             }
@@ -561,11 +637,147 @@ def test_pipeline_bundles_reference_and_fidelity_defects_into_its_single_repair(
     } == {"UNKNOWN_EXPRESSION_REFERENCE", "OVER_RESTRICTIVE_SCOPE"}
 
 
+def test_pipeline_keeps_second_subjective_review_as_advisory_after_single_repair(
+    tmp_path: Path,
+) -> None:
+    semantic_keys = ("goals", "outcomes", "constraints", "ambiguities", "conflicts", "unknowns")
+    candidate = _authoring_semantic(
+        {key: copy.deepcopy(_intent()[key]) for key in semantic_keys}
+    )
+    quote = compiler.normalize_input(_raw())["raw"]["text"][:10]
+
+    class CompilerModel:
+        provider = "codex"
+        model = "test-compiler"
+
+        def __init__(self):
+            self.calls = 0
+
+        def generate(self, _prompt, _schema_path, _work_dir):
+            self.calls += 1
+            return copy.deepcopy(candidate)
+
+    class ReviewerModel:
+        provider = "codex"
+        model = "test-reviewer"
+
+        def generate(self, _prompt, _schema_path, _work_dir):
+            kinds = [
+                "goals_supported_by_source",
+                "outcomes_supported_by_source",
+                "constraints_supported_by_source",
+                "no_material_omissions",
+                "no_unrequested_execution",
+                "ambiguity_unknown_classification",
+            ]
+            return {
+                "checks": [
+                    {
+                        "kind": kind,
+                        "status": "fail" if kind == "no_material_omissions" else "pass",
+                    }
+                    for kind in kinds
+                ],
+                "decisions": [],
+                "errors": [
+                    {
+                        "code": "SUBJECTIVE_SECOND_REVIEW_FINDING",
+                        "path": "constraints.0",
+                        "message": "The reviewer requests another semantic refinement.",
+                        "source_spans": [[0, 10]],
+                        "source_quotes": [quote],
+                        "repairable": True,
+                        "required_change": "Refine the constraint again.",
+                    }
+                ],
+                "warnings": [],
+            }
+
+    compiler_model = CompilerModel()
+    result = compiler.run_pipeline(
+        _raw(), tmp_path / "run", compiler_model, ReviewerModel()
+    )
+
+    fidelity = result["intent_fidelity"]
+    assert compiler_model.calls == 2
+    assert result["intent_acceptance"]["decision"] == "accepted"
+    assert result["intent_acceptance"]["requirement_compiler_handoff_allowed"] is True
+    assert fidelity["status"] == "pass_with_warnings"
+    assert fidelity["errors"] == []
+    assert fidelity["warnings"][0]["original_severity"] == "error"
+    assert fidelity["warnings"][0]["suggested_change"] == "Refine the constraint again."
+    assert next(
+        check for check in fidelity["checks"] if check["kind"] == "no_material_omissions"
+    )["status"] == "warning"
+
+
+def test_pipeline_uses_existing_single_repair_for_ambiguous_source_quote(
+    tmp_path: Path,
+) -> None:
+    semantic_keys = ("goals", "outcomes", "constraints", "ambiguities", "conflicts", "unknowns")
+    repaired = _authoring_semantic(
+        {key: copy.deepcopy(_intent()[key]) for key in semantic_keys}
+    )
+    ambiguous = copy.deepcopy(repaired)
+    ambiguous["goals"][0]["source_quotes"] = ["a"]
+
+    class CompilerModel:
+        provider = "codex"
+        model = "test-compiler"
+
+        def __init__(self):
+            self.calls = 0
+
+        def generate(self, _prompt, _schema_path, _work_dir):
+            self.calls += 1
+            return copy.deepcopy(ambiguous if self.calls == 1 else repaired)
+
+    class ReviewerModel:
+        provider = "codex"
+        model = "test-reviewer"
+
+        def generate(self, _prompt, _schema_path, _work_dir):
+            kinds = [
+                "goals_supported_by_source",
+                "outcomes_supported_by_source",
+                "constraints_supported_by_source",
+                "no_material_omissions",
+                "no_unrequested_execution",
+                "ambiguity_unknown_classification",
+            ]
+            return {
+                "checks": [{"kind": kind, "status": "pass"} for kind in kinds],
+                "decisions": [],
+                "errors": [],
+                "warnings": [],
+            }
+
+    compiler_model = CompilerModel()
+    result = compiler.run_pipeline(
+        _raw(),
+        tmp_path / "run",
+        compiler_model,
+        ReviewerModel(),
+    )
+    generation_zero = json.loads(
+        (tmp_path / "run" / "generation-0" / "intent_validation.json").read_text()
+    )
+
+    assert compiler_model.calls == 2
+    assert result["intent_acceptance"]["decision"] == "accepted"
+    assert result["intent_acceptance"]["repair"]["attempted"] is True
+    assert "SOURCE_QUOTE_AMBIGUOUS" in {
+        error["code"] for error in generation_zero["errors"]
+    }
+
+
 def test_compiler_owned_identity_wins_and_model_overwrite_gets_one_repair(
     tmp_path: Path,
 ) -> None:
     semantic_keys = ("goals", "outcomes", "constraints", "ambiguities", "conflicts", "unknowns")
-    valid = {key: copy.deepcopy(_intent()[key]) for key in semantic_keys}
+    valid = _authoring_semantic(
+        {key: copy.deepcopy(_intent()[key]) for key in semantic_keys}
+    )
     forged = {
         **copy.deepcopy(valid),
         "generation": 99,
@@ -855,6 +1067,7 @@ def test_reviewer_cannot_override_deterministic_span_validation(tmp_path: Path) 
                         "path": "intent_ir.constraints[0].source_spans",
                         "message": "The valid span is out of bounds.",
                         "source_spans": [[0, 10]],
+                        "source_quotes": [compiler.normalize_input(_raw())["raw"]["text"][:10]],
                     }
                 ],
             }
@@ -869,6 +1082,104 @@ def test_reviewer_cannot_override_deterministic_span_validation(tmp_path: Path) 
     assert [row["code"] for row in result["warnings"]] == [
         "REVIEWER_MECHANICAL_CLAIM_REJECTED"
     ]
+
+
+def test_semantic_source_quotes_deterministically_replace_model_coordinates() -> None:
+    raw_text = "prefix unique source requirement suffix"
+    semantic = {
+        "goals": [
+            {
+                "goal_id": "G1",
+                "statement": "Preserve the requirement.",
+                "source_spans": [[999, 1]],
+                "source_quotes": ["unique source requirement"],
+            }
+        ],
+        "outcomes": [],
+        "constraints": [],
+        "ambiguities": [],
+        "conflicts": [],
+        "unknowns": [],
+    }
+
+    bound, errors = compiler._bind_semantic_source_quotes(semantic, raw_text)
+
+    start = raw_text.index("unique source requirement")
+    assert errors == []
+    assert bound["goals"][0]["source_spans"] == [
+        [start, start + len("unique source requirement")]
+    ]
+    assert "source_quotes" not in bound["goals"][0]
+
+
+def test_semantic_source_quote_binding_rejects_ambiguous_quote() -> None:
+    semantic = {
+        "goals": [
+            {
+                "goal_id": "G1",
+                "statement": "Preserve one occurrence.",
+                "source_spans": [[0, 4]],
+                "source_quotes": ["same"],
+            }
+        ],
+        "outcomes": [],
+        "constraints": [],
+        "ambiguities": [],
+        "conflicts": [],
+        "unknowns": [],
+    }
+
+    bound, errors = compiler._bind_semantic_source_quotes(semantic, "same and same")
+
+    assert bound["goals"][0]["source_spans"] == []
+    assert [error["code"] for error in errors] == ["SOURCE_QUOTE_AMBIGUOUS"]
+    assert errors[0]["repairable"] is True
+
+
+def test_reviewer_source_quotes_replace_reversed_model_span(tmp_path: Path) -> None:
+    class Reviewer:
+        provider = "codex"
+        model = "test-reviewer"
+
+        def generate(self, _prompt, _schema_path, _work_dir):
+            kinds = [
+                "goals_supported_by_source",
+                "outcomes_supported_by_source",
+                "constraints_supported_by_source",
+                "no_material_omissions",
+                "no_unrequested_execution",
+                "ambiguity_unknown_classification",
+            ]
+            quote = compiler.normalize_input(_raw())["raw"]["text"][8:53]
+            return {
+                "checks": [
+                    {
+                        "kind": kind,
+                        "status": "fail" if kind == "constraints_supported_by_source" else "pass",
+                    }
+                    for kind in kinds
+                ],
+                "decisions": [],
+                "errors": [
+                    {
+                        "code": "CONSTRAINT_EXPRESSION_OMISSION",
+                        "path": "/constraints/0/expression",
+                        "message": "The expression omits a required condition.",
+                        "source_spans": [[1230, 290]],
+                        "source_quotes": [quote],
+                        "repairable": True,
+                        "required_change": "Preserve the complete condition.",
+                    }
+                ],
+                "warnings": [],
+            }
+
+    raw = compiler.normalize_input(_raw())
+    result = compiler.review_fidelity(raw, _intent(), Reviewer(), tmp_path)
+
+    assert result["status"] == "fail"
+    assert result["errors"][0]["source_spans"] == [[8, 53]]
+    assert "source_quotes" not in result["errors"][0]
 
 
 def test_warnings_do_not_block_acceptance() -> None:

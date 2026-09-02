@@ -2394,6 +2394,40 @@ class ResearchModelService:
                     "State evidence limitations without inventing methods or conclusions.",
                 ],
             }
+        elif node_id == "publication_produce":
+            manifest = (
+                kwargs.get("delivery_manifest")
+                if isinstance(kwargs.get("delivery_manifest"), dict)
+                else {}
+            )
+            report = kwargs.get("scientific_report") if isinstance(kwargs.get("scientific_report"), dict) else {}
+            files = [item for item in manifest.get("files") or [] if isinstance(item, dict)]
+            user = {
+                "node_id": node_id,
+                "complete_user_request": str(task_contract.get("user_intent") or ""),
+                "delivery_manifest": manifest,
+                "scientific_report": report,
+                "run_context": kwargs.get("run_context") if isinstance(kwargs.get("run_context"), dict) else {},
+                "required_output": {
+                    "files": [
+                        {
+                            "relative_path": str(item.get("relative_path") or ""),
+                            "content": f"complete {item.get('media_type') or 'text'} content",
+                        }
+                        for item in files
+                    ],
+                    "limitations": [],
+                },
+                "quality_requirements": [
+                    "Return exactly one files row for every delivery_manifest.files row, with the exact relative_path and no extra rows.",
+                    "Satisfy every per-file description, content_requirements and required_fields value without weakening or renaming them.",
+                    "Use only the supplied scientific_report and run_context as factual evidence; do not invent sources, run states, hashes or measurements.",
+                    "Emit syntactically valid Markdown, CSV, JSON, HTML or plain text matching each declared media_type.",
+                    "CSV content must contain every required_fields value as an exact header. JSON content must expose every required_fields value as a key.",
+                    "If evidence is insufficient for a requested conclusion, state that limitation in the relevant deliverable rather than fabricating support.",
+                    "Do not emit empty shells, placeholder prose, TODO markers or descriptions of what a later worker should write.",
+                ],
+            }
         elif node_id == "independent_review":
             user = {
                 "node_id": node_id,

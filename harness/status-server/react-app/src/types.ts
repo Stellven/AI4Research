@@ -425,6 +425,12 @@ export type Deliverable = {
 export type IntakeResponse = {
   ok: boolean;
   status?: string;
+  job_status?: "queued" | "running" | "succeeded" | "failed" | string;
+  terminal?: boolean;
+  phase?: string;
+  poll_after_ms?: number;
+  created_at?: string;
+  updated_at?: string;
   sprint_id?: string;
   request_id?: string;
   attribution?: string;

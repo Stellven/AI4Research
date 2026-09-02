@@ -73,7 +73,12 @@ def execute_operator(
         }
         return result
     try:
-        operator = get_operator(str(node_request.get("node_id") or ""))
+        implementation_node_id = str(
+            node_request.get("implementation_node_id")
+            or node_request.get("node_id")
+            or ""
+        )
+        operator = get_operator(implementation_node_id)
         return operator.execute(node_request, context)
     except ResearchOperatorError as exc:
         return error_result(context, exc)

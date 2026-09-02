@@ -410,8 +410,12 @@ def _scheduler_frozen_workspace(
         if not isinstance(ref, dict):
             return None, {"reason": "workspace_authority_ref_missing"}
         authority_path = Path(str(ref.get("path") or "")).expanduser().resolve()
-        canonical = (SPRINTS_DIR / f"{sid}.workspace_authority.json").resolve()
-        if authority_path != canonical:
+        # ``SPRINTS_DIR`` may be rebound to the isolated Scheduler runtime
+        # directory for one frozen graph.  The authority path itself already
+        # belongs to the hash-verified SchedulerInput projection, so preserve
+        # its controller-defined parent and enforce the canonical identity by
+        # filename plus the projection/hash checks below.
+        if authority_path.name != f"{sid}.workspace_authority.json":
             return None, {"reason": "workspace_authority_ref_not_canonical"}
         if not authority_path.is_file():
             return None, {"reason": "workspace_authority_missing"}
@@ -420,7 +424,11 @@ def _scheduler_frozen_workspace(
             return None, {"reason": "workspace_authority_hash_mismatch"}
         authority = _workspace_binding.verify_sprint_workspace_authority(
             authority_path,
-            sprints_dir=SPRINTS_DIR,
+            # The canonical authority carries the controller's sprint-store
+            # location.  An isolated Scheduler runtime may rebind
+            # ``SPRINTS_DIR`` to planning/runtime, which is not the store that
+            # owns the frozen compiler inputs verified by this authority.
+            sprints_dir=authority_path.parent,
             harness_dir=Path(str(ref.get("binding_harness_dir") or HARNESS_DIR)),
             require_active_binding=False,
         )
@@ -1303,22 +1311,6 @@ def _capture_eval_artifact_snapshot(
             Path(str(autosci_gate["json_path"])),
         )
 
-    staging_reads: dict[str, dict[str, Any]] = {}
-    for declared in _scope_values(node.get("read_scope")):
-        operator_dispatch = _current_operator_dispatch_read(sid, declared, node)
-        sprint_sidecar = _current_sprint_control_read(sid, declared, graph)
-        if operator_dispatch is not None:
-            add_operator_dispatch_read(declared, operator_dispatch)
-        elif sprint_sidecar is not None:
-            if sprint_sidecar.name == f"{sid}.task_graph.json":
-                add_governed_graph_read(declared, sprint_sidecar)
-            else:
-                add_sprint_sidecar_read(declared, sprint_sidecar)
-        else:
-            staging_reads[declared] = add_staging("read", declared)
-    for declared in _scope_values(node.get("write_scope")):
-        add_staging("write", declared)
-
     workspace: Path | None = None
     if _workspace_binding is not None:
         if (
@@ -1350,6 +1342,70 @@ def _capture_eval_artifact_snapshot(
                         "active_workspace": str(active),
                     }
                 )
+
+    frozen_workspace_reads: dict[str, dict[str, Any]] = {}
+    if workspace is not None:
+        for binding in node.get("workspace_reads") or []:
+            if not isinstance(binding, dict) or binding.get("kind") != "file":
+                continue
+            relative = str(binding.get("relative_path") or "").strip()
+            if not relative:
+                continue
+            resolved = (workspace / relative).resolve(strict=False)
+            frozen_workspace_reads[str(resolved)] = binding
+
+    def add_workspace_source_read(
+        declared: str,
+        binding: dict[str, Any],
+    ) -> dict[str, Any]:
+        source = Path(declared).expanduser().resolve(strict=False)
+        row = {
+            "scope": "read",
+            "authority": "controller_frozen_workspace_source",
+            "declared": declared,
+            "expected_sha256": str(binding.get("sha256") or "").lower(),
+            **_artifact_manifest.snapshot_path(source, root=workspace),
+        }
+        rows.append(row)
+        if (
+            row.get("unsafe")
+            or not row.get("exists")
+            or str(row.get("kind") or "") != "file"
+            or str(row.get("sha256") or "") != row["expected_sha256"]
+        ):
+            violations.append(
+                {
+                    "code": "FROZEN_WORKSPACE_SOURCE_MISMATCH",
+                    "declared": declared,
+                    "path": str(row.get("path") or ""),
+                    "expected_sha256": row["expected_sha256"],
+                    "actual_sha256": str(row.get("sha256") or ""),
+                }
+            )
+        return row
+
+    staging_reads: dict[str, dict[str, Any]] = {}
+    for declared in _scope_values(node.get("read_scope")):
+        operator_dispatch = _current_operator_dispatch_read(sid, declared, node)
+        sprint_sidecar = _current_sprint_control_read(sid, declared, graph)
+        if operator_dispatch is not None:
+            add_operator_dispatch_read(declared, operator_dispatch)
+        elif sprint_sidecar is not None:
+            if sprint_sidecar.name == f"{sid}.task_graph.json":
+                add_governed_graph_read(declared, sprint_sidecar)
+            else:
+                add_sprint_sidecar_read(declared, sprint_sidecar)
+        elif str(Path(declared).expanduser().resolve(strict=False)) in frozen_workspace_reads:
+            add_workspace_source_read(
+                declared,
+                frozen_workspace_reads[
+                    str(Path(declared).expanduser().resolve(strict=False))
+                ],
+            )
+        else:
+            staging_reads[declared] = add_staging("read", declared)
+    for declared in _scope_values(node.get("write_scope")):
+        add_staging("write", declared)
 
     if workspace is not None:
         for declared, staging_row in staging_reads.items():
@@ -1825,7 +1881,19 @@ def _atomic_workspace_publish_journal(path: Path, payload: dict[str, Any]) -> No
             handle.flush()
             os.fsync(handle.fileno())
         os.replace(temporary, path)
-        directory_fd = os.open(path.parent, os.O_RDONLY)
+        try:
+            directory_fd = os.open(path.parent, os.O_RDONLY)
+        except OSError:
+            # Windows does not expose ordinary directory handles through
+            # os.open, so a POSIX directory fsync is unavailable there. The
+            # journal file itself was fsynced before the atomic replace. Do
+            # not weaken the POSIX durability path on platforms that support
+            # directory fsync.
+            if os.name != "nt":
+                raise
+            directory_fd = None
+        if directory_fd is None:
+            return
         try:
             os.fsync(directory_fd)
         finally:
@@ -3912,6 +3980,27 @@ def _node_handoff_candidates(sid: str, node: dict[str, Any], graph: dict[str, An
         if str(scope).endswith(parent_handoff) or str(scope).endswith(f"{sid}.handoff.md"):
             candidates.append(SPRINTS_DIR / f"{sid}.handoff.md")
             break
+    # Frozen SchedulerInput routes are the current output authority. Generic
+    # model operators run inside the node write scope and may not write the
+    # scheduler-owned legacy sidecar above. Accept the exact declared
+    # artifact.handoff_md route when it is also present in the frozen write
+    # scope; do not infer a path from filenames or model prose.
+    routes = node.get("artifact_routes") if isinstance(node.get("artifact_routes"), dict) else {}
+    produces = routes.get("produces") if isinstance(routes.get("produces"), dict) else {}
+    raw_route = str(produces.get("artifact.handoff_md") or "").strip()
+    if raw_route:
+        work_dir_raw = str(graph.get("runtime_work_dir") or "").strip()
+        route = Path(raw_route)
+        if not route.is_absolute() and work_dir_raw:
+            route = Path(work_dir_raw) / route
+        route = route.resolve()
+        declared_writes = {
+            str(Path(str(scope)).resolve())
+            for scope in node.get("write_scope") or []
+            if str(scope).strip()
+        }
+        if str(route) in declared_writes:
+            candidates.append(route)
     return candidates
 
 
@@ -15257,6 +15346,78 @@ def _file_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _scheduler_autosci_artifact_admission(
+    node: dict[str, Any],
+    evidence_path: str | Path,
+) -> dict[str, Any]:
+    """Apply Scheduler-only final-admission semantics to typed evidence.
+
+    The scientific artifact gate answers whether an evidence document is a
+    valid instance of its ABI.  A valid ``artifact_review.v1`` may still be an
+    explicit diagnostic result (``inconclusive`` or local surrogate).  The
+    Scheduler must not confuse that validity with authorization to dispatch a
+    publication node.
+    """
+
+    expected_schema = _node_expected_schema(node)
+    if expected_schema != "artifact_review.v1":
+        return {"required": False, "ok": True, "schema": expected_schema}
+
+    path = Path(str(evidence_path or "")).expanduser()
+    if not path.is_absolute():
+        path = HARNESS_DIR / path
+    payload = _read_json_file_safe(path)
+    reasons: list[str] = []
+    if not path.is_file():
+        reasons.append("artifact_review evidence path is missing")
+    if payload.get("schema") != "artifact_review.v1":
+        reasons.append("artifact_review evidence schema is missing or incorrect")
+    if payload.get("status") != "completed":
+        reasons.append("artifact_review status is not completed")
+    outputs = payload.get("outputs") if isinstance(payload.get("outputs"), dict) else {}
+    review = outputs.get("review") if isinstance(outputs.get("review"), dict) else {}
+    artifact = outputs.get("artifact") if isinstance(outputs.get("artifact"), dict) else {}
+    boundary = (
+        outputs.get("final_acceptance_boundary")
+        if isinstance(outputs.get("final_acceptance_boundary"), dict)
+        else {}
+    )
+    if review.get("review_mode") != "review_llm" or review.get("review_available") is not True:
+        reasons.append("artifact_review does not contain a completed Review LLM assessment")
+    if review.get("recommendation") != "pass_with_review_required":
+        reasons.append("artifact_review recommendation is not passing")
+    if boundary.get("schema") != "autosci_review_final_acceptance_boundary.v1":
+        reasons.append("artifact_review final-acceptance boundary is missing")
+    if boundary.get("status") != "final_acceptance_ready" or boundary.get("final_acceptance_ready") is not True:
+        reasons.append("artifact_review is not final-acceptance ready")
+    if boundary.get("blocking_reasons"):
+        reasons.append("artifact_review final-acceptance boundary contains blockers")
+    if artifact.get("schema") != "scientific_report.v1":
+        reasons.append("artifact_review is not bound to a scientific_report.v1 input")
+    if artifact.get("route_authority") != "artifact_routes:scientific_report.v1":
+        reasons.append("artifact_review did not consume the frozen scientific-report route")
+    reviewed_path = Path(str(artifact.get("path") or "")).expanduser()
+    if not reviewed_path.is_absolute():
+        reviewed_path = HARNESS_DIR / reviewed_path
+    reviewed_sha256 = str(artifact.get("sha256") or "")
+    if not reviewed_path.is_file():
+        reasons.append("artifact_review reviewed-report path is missing")
+    elif not reviewed_sha256 or _file_sha256(reviewed_path) != reviewed_sha256:
+        reasons.append("artifact_review reviewed-report hash is missing or stale")
+    return {
+        "required": True,
+        "ok": not reasons,
+        "schema": "artifact_review.v1",
+        "evidence_path": str(path),
+        "status": str(payload.get("status") or "missing"),
+        "final_acceptance_ready": boundary.get("final_acceptance_ready") is True,
+        "reviewed_report_path": str(reviewed_path),
+        "reviewed_report_sha256": reviewed_sha256,
+        "reasons": reasons,
+        "reason": "" if not reasons else "artifact_review_not_finally_admissible",
+    }
+
+
 def _run_autosci_scientific_gate(
     graph_path: str,
     sid: str,
@@ -15314,13 +15475,34 @@ def _run_autosci_scientific_gate(
         if isinstance(payload, dict) and isinstance(payload.get("evidence"), dict)
         else {}
     )
-    policy_ok = bool(invocation_ok and verdict == "PASS" and isinstance(gate_result, dict) and gate_result.get("ok"))
+    admission = _scheduler_autosci_artifact_admission(
+        node,
+        str(result.get("evidence_path") or ""),
+    )
+    policy_ok = bool(
+        invocation_ok
+        and verdict == "PASS"
+        and isinstance(gate_result, dict)
+        and gate_result.get("ok")
+        and admission.get("ok")
+    )
+    effective_verdict = "PASS" if policy_ok else "FAIL"
+    if not invocation_ok:
+        policy_reason = str(result.get("reason") or "autosci_scientific_gate_failed")
+    elif not admission.get("ok"):
+        policy_reason = str(admission.get("reason") or "artifact_not_admissible")
+    elif verdict != "PASS" or not gate_result.get("ok"):
+        policy_reason = "autosci_scientific_gate_rejected_artifact"
+    else:
+        policy_reason = ""
     return {
         "required": True,
         "invocation_ok": invocation_ok,
         "ok": policy_ok,
-        "reason": "" if invocation_ok else str(result.get("reason") or "autosci_scientific_gate_failed"),
-        "verdict": verdict or "FAIL",
+        "reason": policy_reason,
+        "verdict": effective_verdict,
+        "structural_verdict": verdict or "FAIL",
+        "admission": admission,
         "json_path": str(gate_json),
         "md_path": str(gate_md),
         "sha256": _file_sha256(gate_json) if gate_json.is_file() else "",

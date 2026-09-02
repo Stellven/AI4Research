@@ -52,7 +52,15 @@ RUNTIME_PROJECTION_NODE_FIELDS = {
     "dispatch_id",
     "dispatch_retry_reason",
     "eval_artifact_snapshot",
+    "eval_assigned_to",
+    "eval_assignments",
+    "eval_dispatch_failures",
+    "eval_dispatch_group_id",
+    "eval_dispatch_id",
+    "eval_dispatched_at",
     "eval_json",
+    "eval_pm_task_id",
+    "eval_retry_reason",
     "evaluation_results",
     "evaluation_plan_requested",
     "evaluation_plan_runtime",
@@ -66,6 +74,10 @@ RUNTIME_PROJECTION_NODE_FIELDS = {
     "lease_id",
     "last_dispatch_failure_at",
     "last_dispatch_failure_reason",
+    "last_eval_closeout_failure",
+    "last_eval_dispatch_failure_at",
+    "last_eval_dispatch_failure_reason",
+    "last_eval_operator_cooldown_after_closeout",
     "last_operator_submission_failure",
     "next_action",
     "note",
@@ -256,6 +268,10 @@ def semantic_errors(value: dict[str, Any]) -> list[str]:
             except SchedulerInputError:
                 errors.append(f"OUTPUT_ROUTE_PATH_INVALID:{node_id}:{row.get('relative_path')}")
             if str(row.get("route_kind") or "") == "workspace_publish":
+                if row.get("private_scope") is not None:
+                    errors.append(
+                        f"PRIVATE_SCOPE_ON_WORKSPACE_ROUTE:{node_id}:{row.get('relative_path')}"
+                    )
                 workspace_authority_required = True
                 relative = str(row.get("relative_path") or "")
                 previous = workspace_publishers.get(relative)
@@ -561,8 +577,9 @@ def _output_paths(
                 claimed_workspace_paths[relative] = node_id
                 target = work_dir / "workspace" / relative
             elif route == "sprint_private":
+                private_scope = str(row.get("private_scope") or node_id)
                 target = work_dir / "private" / _bounded_record_component(
-                    node_id, fallback="node"
+                    private_scope, fallback="node"
                 ) / relative
             else:
                 raise SchedulerInputError(f"OUTPUT_ROUTE_KIND_INVALID:{node_id}:{route}")

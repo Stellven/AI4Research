@@ -413,6 +413,19 @@ def test_typed_scheduler_state_path_is_derived_from_adapter_result():
     assert "8767" not in helper
 
 
+def test_typed_scheduler_dispatch_executes_published_projection_without_rematerializing():
+    coordinator = (ROOT / "coordinator.sh").read_text(encoding="utf-8")
+    helper_start = coordinator.index("dispatch_typed_scheduler_once() {")
+    helper_end = coordinator.index("\nhandle_drafting() {", helper_start)
+    helper = coordinator[helper_start:helper_end]
+
+    assert '"runtime_projection"' in helper
+    assert '--graph "$runtime_projection"' in helper
+    assert '--scheduler-input' not in helper
+    assert '--scheduler-runtime-dir' not in helper
+    assert '--run-contract' not in helper
+
+
 def test_adapter_authorizes_only_verified_scheduler_projection(tmp_path, monkeypatch):
     adapter = _load("typed_adapter_test", TOOLS / "elastic_planner_adapter.py")
     requirement = tmp_path / "requirement_ir.json"
@@ -434,11 +447,20 @@ def test_adapter_authorizes_only_verified_scheduler_projection(tmp_path, monkeyp
         },
     )
 
-    def prepare(_scheduler_input, runtime_dir, *, run_contract_path):
+    def prepare(
+        _scheduler_input,
+        runtime_dir,
+        *,
+        run_contract_path,
+        artifact_bindings,
+    ):
         runtime_dir.mkdir(parents=True)
         path = runtime_dir / "sprint-typed.task_graph.json"
         path.write_text('{"schema_version":"solar.scheduler_runtime_projection.v1"}')
         assert run_contract_path == execution / "run_contract.frozen.json"
+        assert artifact_bindings == {
+            "requirement_ir.v1": str(requirement.resolve())
+        }
         return path
 
     monkeypatch.setattr(adapter, "prepare_runtime_graph", prepare)
@@ -457,6 +479,46 @@ def test_adapter_authorizes_only_verified_scheduler_projection(tmp_path, monkeyp
     assert result["runtime_handoff_allowed"] is True
     assert result["scheduler_input"].endswith("scheduler_input.json")
     assert result["runtime_projection"].endswith("sprint-typed.task_graph.json")
+
+
+def test_typed_adapter_carries_frozen_workspace_authority_into_planning(
+    tmp_path, monkeypatch
+):
+    adapter = _load("typed_adapter_workspace_authority", TOOLS / "elastic_planner_adapter.py")
+    requirement = tmp_path / "requirement_ir.json"
+    requirement.write_text(
+        json.dumps({"schema_version": "solar.requirement_ir.v2"}), encoding="utf-8"
+    )
+    authority_path = tmp_path / "sprint-typed.workspace_authority.json"
+    authority = {
+        "schema_version": "solar.workspace_authority.v1",
+        "artifact_role": "controller_frozen_authority",
+        "authority_id": "workspace-authority-sprint-typed",
+        "path": str(authority_path.resolve()),
+        "sprint_id": "sprint-typed",
+        "workspace_root": str((tmp_path / "workspace").resolve()),
+    }
+    authority_path.write_text(json.dumps(authority), encoding="utf-8")
+    observed = {}
+
+    def plan(*_args, **kwargs):
+        observed.update(kwargs)
+        return {"status": "failed", "verification_errors": ["expected-stop"]}
+
+    monkeypatch.setattr(adapter, "run_elastic_planning_request", plan)
+
+    result = adapter.run_adapter(
+        requirement_ir_path=requirement,
+        output_root=tmp_path / "planning",
+        sprint_id="sprint-typed",
+        workspace_root=str(tmp_path / "workspace"),
+        workspace_authority_path=authority_path,
+        planner_model=object(),
+        reviewer_model=object(),
+    )
+
+    assert result["status"] == "failed"
+    assert observed["upstream_artifacts"] == {"workspace_authority": authority}
 
 
 def test_research_registry_adapter_admits_claim_verify_with_all_routed_documents():
