@@ -321,6 +321,89 @@ def test_each_evidence_operator_executes_real_positive_path(node_id: str, worksp
     result = execute_operator(request, services=services, workspace_root=workspace)
     artifact = validate_result_and_artifact(result, workspace)
     assert artifact["outputs"]
+    if node_id == "claim_extract":
+        claim = artifact["outputs"]["claims"][0]
+        span = claim["citation_spans"][0]
+        section = next(
+            item
+            for item in paper_evidence()["outputs"]["paper"]["sections"]
+            if item["source_anchor"] == span["source_ref"]
+        )
+        normalized = " ".join(section["text"].split())
+        assert normalized[span["start_char"]:span["end_char"]] == claim["text"] == span["quote"]
+        assert span["source_text_sha256"] == hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+
+
+def test_landscape_memory_update_projects_each_pre_report_evidence_class(
+    workspace: Path,
+) -> None:
+    request, services = request_for("memory_update_initial", workspace)
+    request["typed_inputs"]["payload"] = {
+        "paper_evidence": paper_evidence(),
+        "verdict_evidence": {
+            "schema": "claim_verdict.v1",
+            "outputs": {
+                "verdicts": [
+                    {
+                        "claim_id": "claim-001",
+                        "verdict": "supported",
+                        "confidence": 0.9,
+                        "evidence_ids": ["inputs/paper.md#results"],
+                    }
+                ]
+            },
+        },
+        "research_method": {
+            "schema": "research_method.v1",
+            "outputs": {
+                "methods": [
+                    {
+                        "method_id": "method-001",
+                        "name": "Bounded parser",
+                        "confidence": 0.8,
+                        "evidence_ids": ["inputs/paper.md#methods"],
+                    }
+                ]
+            },
+        },
+        "source_assessment": {
+            "schema": "research_source_assessment.v1",
+            "outputs": {
+                "assessments": [
+                    {
+                        "source_id": "paper-bounded",
+                        "decision": "selected",
+                        "evidence_ids": ["inputs/paper.md#methods"],
+                        "credibility": {"score": 0.85},
+                    }
+                ]
+            },
+        },
+        "report_plan": {
+            "schema": "scientific_report_plan.v1",
+            "outputs": {
+                "report_plan": {
+                    "report_id": "landscape-plan-001",
+                    "evidence_ids": ["inputs/paper.md#results"],
+                    "reportable_claim_ids": ["claim-001"],
+                }
+            },
+        },
+    }
+
+    result = execute_operator(request, services=services, workspace_root=workspace)
+    artifact = validate_result_and_artifact(result, workspace)
+    changes = artifact["outputs"]["changes"]
+
+    assert {
+        "paper",
+        "claim_verdict",
+        "research_method",
+        "source_assessment",
+        "research_landscape_plan",
+    }.issubset({item["entity_type"] for item in changes})
+    assert all(item["evidence_ids"] for item in changes)
+    assert artifact["outputs"]["phase"] == "initial"
 
 
 def test_composed_scheduler_node_routes_by_frozen_implementation_identity(

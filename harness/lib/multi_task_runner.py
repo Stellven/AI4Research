@@ -1810,6 +1810,52 @@ def role_from_node(node: dict[str, Any]) -> str:
     return aliases.get(value, value or "builder")
 
 
+def _frozen_default_operator_profile(node: dict[str, Any]) -> str:
+    """Return a model profile frozen into the selected capsule authority.
+
+    A scheduler-runtime node may carry a logical role that is intentionally
+    more specific than the small multi-task role vocabulary.  Falling back to
+    that vocabulary used to select the generic builder profile even when the
+    frozen capsule named an evaluator profile.  The capsule snapshot is part
+    of execution authority, so it is the deterministic profile source here.
+
+    The historical capsule registry also permits ``default_operator_profile``
+    to name a physical operator directly.  A value present in the frozen
+    operator authority therefore belongs to physical selection, not to the
+    multi-task model-profile registry, and must be ignored at this boundary.
+    """
+    authority = node.get("execution_authority")
+    capsules = authority.get("capsules") if isinstance(authority, dict) else None
+    operators = authority.get("operators") if isinstance(authority, dict) else None
+    frozen_operator_ids = {
+        str(item.get("operator_id") or "").strip()
+        for item in node.get("physical_candidates") or []
+        if isinstance(item, dict) and str(item.get("operator_id") or "").strip()
+    }
+    if isinstance(operators, dict):
+        frozen_operator_ids.update(str(value).strip() for value in operators if str(value).strip())
+    capsule_ids = [
+        str(value)
+        for value in (node.get("capsule_binding") or {}).get("capsule_ids") or []
+        if str(value).strip()
+    ]
+    profiles: list[str] = []
+    for capsule_id in capsule_ids:
+        snapshot = capsules.get(capsule_id) if isinstance(capsules, dict) else None
+        profile = str(
+            snapshot.get("default_operator_profile") if isinstance(snapshot, dict) else ""
+        ).strip()
+        if profile in frozen_operator_ids:
+            continue
+        if profile and profile not in profiles:
+            profiles.append(profile)
+    if len(profiles) > 1:
+        raise ValueError(
+            "frozen capsule execution authority has conflicting default_operator_profile values"
+        )
+    return profiles[0] if profiles else ""
+
+
 def select_profile(node: dict[str, Any], profile_override: str = "", model_override: str = "", backend_override: str = "") -> dict[str, Any]:
     config = load_profiles()
     profiles = config.get("profiles") or {}
@@ -1818,7 +1864,9 @@ def select_profile(node: dict[str, Any], profile_override: str = "", model_overr
     # and quota-recovery hints may remain on a projected node as history, but
     # they must never bypass re-evaluation of the ranked candidate list.
     requested_profile = profile_override or (
-        "" if frozen_candidates else str(node.get("preferred_profile") or node.get("profile") or "")
+        _frozen_default_operator_profile(node)
+        if frozen_candidates
+        else str(node.get("preferred_profile") or node.get("profile") or "")
     )
     profile_name = normalize_profile_name(requested_profile, profiles)
     if not profile_name:
@@ -3204,17 +3252,44 @@ def monitor_summary(result: dict[str, Any], _messages: list[str]) -> dict[str, A
     }
 
 
-def last_launch_at() -> float | None:
+def _last_launch_record() -> dict[str, Any]:
     path = RUN_DIR / ".last-launch"
     try:
-        return float(path.read_text(encoding="utf-8").strip())
+        raw = path.read_text(encoding="utf-8").strip()
     except Exception:
-        return None
+        return {}
+    try:
+        payload = json.loads(raw)
+    except Exception:
+        # Backward compatibility for the historical timestamp-only marker.
+        try:
+            return {"at": float(raw), "sprint_id": ""}
+        except Exception:
+            return {}
+    if not isinstance(payload, dict):
+        return {}
+    try:
+        launched_at = float(payload.get("at"))
+    except (TypeError, ValueError):
+        return {}
+    return {"at": launched_at, "sprint_id": str(payload.get("sprint_id") or "")}
 
 
-def set_last_launch() -> None:
+def last_launch_at() -> float | None:
+    record = _last_launch_record()
+    return float(record["at"]) if "at" in record else None
+
+
+def last_launch_scope() -> str:
+    return str(_last_launch_record().get("sprint_id") or "")
+
+
+def set_last_launch(sprint_id: str = "") -> None:
     RUN_DIR.mkdir(parents=True, exist_ok=True)
-    (RUN_DIR / ".last-launch").write_text(str(time.time()), encoding="utf-8")
+    json_write(
+        RUN_DIR / ".last-launch",
+        {"at": time.time(), "sprint_id": str(sprint_id or "")},
+    )
 
 
 def free_memory_gb() -> float | None:
@@ -3286,7 +3361,13 @@ def quota_hit_recovered_for_fallback(log: Path) -> bool:
     return not recorded_failure or recorded_failure == log.parent.name or bool(node.get("quota_failure_reason"))
 
 
-def launch_guard(max_workers: int, reserve_gb: float, cooldown: int, quota_backoff: int) -> dict[str, Any]:
+def launch_guard(
+    max_workers: int,
+    reserve_gb: float,
+    cooldown: int,
+    quota_backoff: int,
+    launch_scope: str = "",
+) -> dict[str, Any]:
     active = active_tasks()
     if len(active) >= max_workers:
         return {"ok": False, "reason": "worker_pool_full", "active": len(active), "max_workers": max_workers}
@@ -3295,8 +3376,14 @@ def launch_guard(max_workers: int, reserve_gb: float, cooldown: int, quota_backo
     if mem is not None and mem < reserve_gb:
         return {"ok": False, "reason": "low_memory", "free_gb": round(mem, 2), "reserve_gb": reserve_gb}
 
+    # The launch timestamp protects the short registration window for one
+    # sprint.  It must not become a global lock: the Coordinator visits
+    # multiple ready sprints in a stable order, and a global cooldown would let
+    # the first sprint monopolize every scheduling pass.
     last = last_launch_at()
-    if last is not None:
+    last_scope = last_launch_scope()
+    same_scope = not launch_scope or not last_scope or launch_scope == last_scope
+    if active and same_scope and last is not None:
         elapsed = time.time() - last
         if elapsed < cooldown:
             return {"ok": False, "reason": "launch_cooldown", "wait_s": int(cooldown - elapsed)}
@@ -4388,6 +4475,7 @@ def _build_operator_envelope(
         "command": profile.get("command"),
         "backend": profile.get("backend"),
         "model": profile.get("model"),
+        "reasoning_effort": profile.get("reasoning_effort"),
         "profile": profile.get("name"),
         "write_scope": payload.get("write_scope") or [],
         "handoff_path": payload.get("handoff"),
@@ -4729,7 +4817,7 @@ def launch_node(graph_path: Path, graph: dict[str, Any], node: dict[str, Any], a
             json_write(status_path(task_dir), payload)
             set_node_status(graph, node_id, "dispatched", pane=f"operator:{operator_id}", dispatch_id=dispatch_id)
             save_graph(graph_path, graph)
-            set_last_launch()
+            set_last_launch(sid)
 
             if OPERATORD_RESULT_TIMEOUT_SEC > 0:
                 result = _poll_operator_result(
@@ -4885,7 +4973,7 @@ def launch_node(graph_path: Path, graph: dict[str, Any], node: dict[str, Any], a
         )
         set_node_status(graph, node_id, "dispatched", pane=f"multi-task:{window}", dispatch_id=dispatch_id)
         save_graph(graph_path, graph)
-        set_last_launch()
+        set_last_launch(sid)
 
     return payload
 
@@ -5024,7 +5112,21 @@ def schedule_once(args: argparse.Namespace) -> dict[str, Any]:
             recovered_quota_failures += recover_quota_failed_nodes(graph_path, graph)
         except Exception:
             continue
-    guard = launch_guard(max_workers, args.memory_reserve_gb, args.cooldown_sec, args.quota_backoff_sec)
+    requested_graphs = graph_files(args.graph)
+    launch_scope = ""
+    if len(requested_graphs) == 1:
+        try:
+            launch_graph = load_graph(requested_graphs[0])
+            launch_scope = sprint_id_for(launch_graph, requested_graphs[0])
+        except Exception:
+            launch_scope = ""
+    guard = launch_guard(
+        max_workers,
+        args.memory_reserve_gb,
+        args.cooldown_sec,
+        args.quota_backoff_sec,
+        launch_scope=launch_scope,
+    )
     if (
         recovered_quota_failures
         and guard.get("reason") == "recent_quota_or_rate_limit"
@@ -5055,7 +5157,7 @@ def schedule_once(args: argparse.Namespace) -> dict[str, Any]:
             "advance": advance,
         }
 
-    for graph_path in graph_files(args.graph):
+    for graph_path in requested_graphs:
         if slots <= 0 and not args.dry_run:
             break
         try:

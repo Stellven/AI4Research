@@ -651,6 +651,73 @@ def test_codex_research_service_rejects_schema_invalid_agent_output(
     } == {"request.json", "response.schema.json", "response.json", "events.jsonl", "exchange.json"}
 
 
+def test_codex_research_service_retries_one_explicit_transport_failure(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls = 0
+
+    class TransportThenSuccessProcess:
+        pid = 12348
+
+        def __init__(self, command: list[str], **_kwargs: object) -> None:
+            nonlocal calls
+            calls += 1
+            self.call_number = calls
+            self.command = command
+            self.returncode = 1 if calls == 1 else 0
+
+        def communicate(self, _prompt: str, timeout: int) -> tuple[str, None]:
+            assert timeout == 20
+            if self.call_number == 1:
+                return (
+                    '{"type":"turn.failed","error":{"message":"stream disconnected before completion: failed to lookup address information: Try again"}}\n',
+                    None,
+                )
+            response_path = Path(
+                self.command[self.command.index("--output-last-message") + 1]
+            )
+            response_path.write_text(json.dumps({
+                "node_id": "evidence_synthesis",
+                "limitations": [],
+                "claims": [{
+                    "claim_id": "claim-1",
+                    "text": "Bounded result",
+                    "evidence_ids": ["e1"],
+                    "evidence_quotes": [{"source_id": "s1", "quote": "Evidence e1."}],
+                    "uncertainty": "low",
+                    "limitations": [],
+                }],
+            }) + "\n", encoding="utf-8")
+            return '{"type":"turn.completed"}\n', None
+
+    monkeypatch.setattr(cr.shutil, "which", lambda _name: "/usr/bin/codex")
+    monkeypatch.setattr(cr.subprocess, "Popen", TransportThenSuccessProcess)
+    source_home = tmp_path / "source-codex-home"
+    source_home.mkdir()
+    (source_home / "auth.json").write_text('{"auth_mode":"chatgpt"}\n', encoding="utf-8")
+    monkeypatch.setenv("SOLAR_CODEX_SOURCE_HOME", str(source_home))
+    service = CodexResearchModelService(
+        tmp_path, model="gpt-test", role="writer", timeout_seconds=20
+    )
+
+    result = service(
+        node_id="evidence_synthesis",
+        task_contract={"user_intent": "Use only evidence e1."},
+        source_validation={"accepted": [{"source_id": "s1", "content_summary": "Evidence e1."}]},
+    )
+
+    assert calls == 2
+    assert [item["status"] for item in result["provider_usage"]] == [
+        "failed",
+        "completed",
+    ]
+    assert [item["error_type"] for item in [
+        json.loads((tmp_path / usage["archive_path"]).read_text(encoding="utf-8"))
+        for usage in result["provider_usage"]
+    ]] == ["transient_provider_failure", ""]
+    assert result["claims"][0]["evidence_ids"] == ["e1"]
+
+
 def test_report_revision_two_call_evidence_is_aggregated_and_fully_accounted(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

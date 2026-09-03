@@ -89,6 +89,7 @@ import {
   type TerminalRunOutcome,
 } from "./runPipeline";
 import { perRunUsageLabel } from "./runUsage";
+import { buildPocPreviewModel, selectPocArtifact } from "./pocPreview";
 import {
   ROLE_META,
   ROLE_ORDER,
@@ -102,6 +103,7 @@ import {
   localTimeZoneName,
   mergeEvents,
   nodeId,
+  planNodeLabel,
   nodeTitle,
   normalizeRole,
   payload,
@@ -858,8 +860,8 @@ function NewTaskDialog({
 }
 
 const MAX_INTAKE_FILES = 8;
-const MAX_INTAKE_FILE_BYTES = 5 * 1024 * 1024;
-const MAX_INTAKE_TOTAL_BYTES = 10 * 1024 * 1024;
+const MAX_INTAKE_FILE_BYTES = 20 * 1024 * 1024;
+const MAX_INTAKE_TOTAL_BYTES = 64 * 1024 * 1024;
 
 function readableFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -888,12 +890,16 @@ function IntakeAttachments({
     }
     const oversized = selected.find((file) => file.size > MAX_INTAKE_FILE_BYTES);
     if (oversized) {
-      onError(`${oversized.name} is larger than 5 MB.`);
+      onError(
+        `${oversized.name} is larger than ${readableFileSize(MAX_INTAKE_FILE_BYTES)}.`,
+      );
       return;
     }
     const total = combined.reduce((sum, file) => sum + file.size, 0);
     if (total > MAX_INTAKE_TOTAL_BYTES) {
-      onError("Attachments may total up to 10 MB per task.");
+      onError(
+        `Attachments may total up to ${readableFileSize(MAX_INTAKE_TOTAL_BYTES)} per task.`,
+      );
       return;
     }
     onError("");
@@ -1523,6 +1529,126 @@ function RunOverview({
   );
 }
 
+function PocLivePreview({
+  projection,
+  sprintId,
+  deliverables,
+  onOpenArtifact,
+}: {
+  projection?: ProjectionResponse;
+  sprintId: string;
+  deliverables: Deliverable[];
+  onOpenArtifact: (path: string) => void;
+}) {
+  const [expanded, setExpanded] = useState(true);
+  const model = buildPocPreviewModel(projection);
+  const artifact = selectPocArtifact(deliverables);
+  const previewUrl = artifact ? deliverableUrl(sprintId, artifact) : "";
+  const isHtml = artifact?.kind.toLowerCase() === "html";
+  const phase = model.phase.replace(/_/g, " ") || "waiting for plan";
+  const readiness = model.terminal
+    ? model.failed > 0
+      ? "Completed with failures"
+      : "POC ready"
+    : model.active > 0
+      ? "Building now"
+      : "Preparing";
+
+  return (
+    <section className="poc-preview" data-testid="poc-preview" aria-label="POC live preview">
+      <div className="poc-preview-head">
+        <div>
+          <span className="poc-preview-kicker">Dynamic POC preview</span>
+          <div className="poc-preview-title-row">
+            <strong>{readiness}</strong>
+            <span className="poc-preview-phase">{phase}</span>
+          </div>
+        </div>
+        <button
+          type="button"
+          className="poc-preview-toggle"
+          onClick={() => setExpanded((value) => !value)}
+          aria-expanded={expanded}
+        >
+          {expanded ? <EyeOff size={15} /> : <Eye size={15} />}
+          <span>{expanded ? "Hide" : "Show"}</span>
+        </button>
+      </div>
+      <div className="poc-preview-progress" aria-label={`${model.percent}% complete`}>
+        <div className="poc-preview-progress-track">
+          <div style={{ width: `${model.percent}%` }} />
+        </div>
+        <strong>{model.percent}%</strong>
+      </div>
+      {expanded && (
+        <div className="poc-preview-grid">
+          <div className="poc-preview-status">
+            <div className="poc-preview-metrics">
+              <span><strong>{model.done}</strong><small>passed</small></span>
+              <span><strong>{model.total}</strong><small>total steps</small></span>
+              <span className={model.failed ? "has-failure" : ""}>
+                <strong>{model.failed}</strong><small>failed</small>
+              </span>
+            </div>
+            <div className="poc-preview-repairs">
+              <span className="poc-preview-section-title">
+                <ShieldCheck size={14} /> Fixed during this run
+              </span>
+              {model.resolvedIssues.length > 0 ? (
+                <ul>
+                  {model.resolvedIssues.map((code) => (
+                    <li key={code}>
+                      <CheckCircle2 size={13} />
+                      <span>{code.replace(/_/g, " ").toLowerCase()}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>
+                  {model.terminal
+                    ? "No planner repair codes were recorded."
+                    : "Repair results will appear here as the plan stabilizes."}
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="poc-preview-window">
+            <div className="poc-preview-window-head">
+              <span>{artifact ? deliverableLabel(artifact) : "POC output"}</span>
+              {artifact && (
+                <button type="button" onClick={() => onOpenArtifact(artifact.rel_path)}>
+                  Open details <ArrowUpRight size={13} />
+                </button>
+              )}
+            </div>
+            {artifact && isHtml ? (
+              <iframe
+                src={previewUrl}
+                title={`POC preview: ${artifact.name}`}
+                sandbox="allow-same-origin"
+              />
+            ) : (
+              <div className="poc-preview-placeholder">
+                {artifact ? (
+                  <>
+                    <FileCheck2 size={22} />
+                    <span>{deliverableLabel(artifact)} is ready to inspect.</span>
+                  </>
+                ) : (
+                  <>
+                    <Loader2 className={model.terminal ? "" : "spin"} size={22} />
+                    <span>The preview will appear when a POC artifact is produced.</span>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function SessionView({
   sprint,
   sprintId,
@@ -1624,6 +1750,12 @@ function SessionView({
               deliverables={session.deliverables}
               onOpenResult={rail.openArtifact}
               requestId={requestId}
+            />
+            <PocLivePreview
+              projection={projection}
+              sprintId={sprintId}
+              deliverables={session.deliverables}
+              onOpenArtifact={rail.openArtifact}
             />
             <RunHealth projection={projection} usage={session.usage} />
             <PlanFlow projection={projection} isBlocked={isBlocked} />
@@ -1766,14 +1898,6 @@ function isSystemBlocked(
     return false;
   }
   return true;
-}
-
-// The signature element: the multi-agent relay. Each variant expresses the
-// same subject (who acted, and where the capability gate held the work)
-function planNodeLabel(node: DagNode): string {
-  const id = asString(node.node_id || node.id);
-  const short = id.replace(/^build-/, "");
-  return short || asString(node.title) || id;
 }
 
 // Group the plan's DAG nodes by dependency depth so parallel siblings share a stage —
@@ -1932,7 +2056,7 @@ function PlanFlow({
                   >
                     <span className="plan-card-head">
                       <span className="plan-card-dot" aria-hidden="true" />
-                      <span className="plan-card-role">{nodeActor(node)}</span>
+                      <span className="plan-card-step">{planNodeLabel(node)}</span>
                       <span className="plan-card-status">{status}</span>
                     </span>
                     <span className="plan-card-title">
@@ -3454,7 +3578,7 @@ function buildProcessSteps(
     (typedFailure || !steps.some((step) => step.state === "blocked"))
   ) {
     const failureFacts = typedFailureFacts(stall);
-    const step: NarrativeStep = {
+    const step: ProcessStep = {
       id: "stall-summary",
       actor: "Harness",
       title: asString(stall.title) || "Dispatch is blocked",

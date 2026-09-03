@@ -1856,7 +1856,7 @@ def test_launch_attaches_attempt_to_authoritative_graph_node(
     monkeypatch.setattr(multi_task_runner, "select_profile", lambda *_args, **_kwargs: deepcopy(profile))
     monkeypatch.setattr(multi_task_runner, "capability_for_profile", lambda _profile: {"status": "ok", "provider": "test"})
     monkeypatch.setattr(multi_task_runner, "build_dispatch_text", lambda *_args, **_kwargs: "dispatch")
-    monkeypatch.setattr(multi_task_runner, "set_last_launch", lambda: None)
+    monkeypatch.setattr(multi_task_runner, "set_last_launch", lambda *_args: None)
     dispatch_record_roots: list[Path] = []
 
     def capture_dispatch_record_root(output_root, **_kwargs):
@@ -2001,6 +2001,45 @@ def test_scheduler_input_semantic_check_resolves_to_evaluator_pool(
     assert evaluators[0]["resolution_source"] == (
         "evaluation_check_registry_to_operator_pool"
     )
+
+
+def test_scheduler_input_unprefixed_registered_check_resolves_to_evaluator_pool(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    value = _scheduler_input()
+    for node in value["graph"]["nodes"]:
+        node["evaluation_binding"]["semantic_evaluator_ids"] = [
+            "structured_output_parses"
+        ]
+    source = tmp_path / "scheduler_input.json"
+    _write(source, value)
+    graph_path = scheduler_input.prepare_runtime_graph(source, tmp_path / "runtime")
+    graph = graph_scheduler.load_graph(graph_path)
+    monkeypatch.setattr(operator_runtime, "get_operator_config", lambda _operator_id: None)
+    import execution_authority
+
+    monkeypatch.setattr(
+        execution_authority,
+        "frozen_evaluation_check_ids",
+        lambda _graph: {"structured_output_parses"},
+    )
+    monkeypatch.setattr(
+        graph_node_dispatcher,
+        "_evaluator_operator_pool_workers",
+        lambda: [
+            {
+                "pane": "operator-pool:evaluator.0",
+                "models": ["gpt-5.5"],
+                "skills": ["review"],
+                "busy": False,
+            }
+        ],
+    )
+
+    evaluators = graph_node_dispatcher._scheduler_input_bound_evaluators(graph)
+
+    assert [item["pane"] for item in evaluators] == ["operator-pool:evaluator.0"]
+    assert evaluators[0]["semantic_check_ids"] == ["structured_output_parses"]
 
 
 def test_eval_broker_child_uses_the_scheduler_runtime_root(

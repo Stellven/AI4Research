@@ -36,6 +36,22 @@ def _blank(schema: dict[str, Any]) -> Any:
     return None
 
 
+def requirement_check_rows(registry: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return checks that evaluate a requirement-bound output.
+
+    Artifact-type checks are attached automatically after the Planner chooses
+    an output ABI.  Offering them to the Requirement Compiler lets a semantic
+    process obligation accidentally preselect an artifact type that does not
+    yet exist at this handoff.
+    """
+    return [
+        row
+        for row in registry.get("checks", [])
+        if isinstance(row, dict)
+        and (row.get("applies_to") or {}).get("kind") == "bound_output"
+    ]
+
+
 def make_template(intent: dict[str, Any], registry: dict[str, Any]) -> dict[str, Any]:
     contract = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
     if contract.get("contract_id") != "solar.requirement_semantic_contract" or contract.get("version") != 3:
@@ -58,7 +74,8 @@ def make_template(intent: dict[str, Any], registry: dict[str, Any]) -> dict[str,
         ("goals", "goal_id"), ("outcomes", "outcome_id"), ("constraints", "constraint_id"),
         ("unknowns", "unknown_id"), ("ambiguities", "ambiguity_id"), ("conflicts", "conflict_id")
     ) for row in intent.get(collection, [])})
-    check_ids = sorted({row["check_id"] for row in registry.get("checks", [])})
+    selectable_checks = requirement_check_rows(registry)
+    check_ids = sorted({row["check_id"] for row in selectable_checks})
     if not source_ids or not check_ids:
         raise ValueError("REQUIREMENT_EMPTY_SOURCE_OR_CHECK_REGISTRY")
     properties["requirements"]["items"]["properties"]["check"]["enum"] = check_ids
@@ -98,6 +115,7 @@ def make_template(intent: dict[str, Any], registry: dict[str, Any]) -> dict[str,
         "compiler_output_schema": output_schema,
         "reviewer_output_schema": review_schema,
         "evaluation_check_registry": copy.deepcopy(registry),
+        "requirement_check_options": copy.deepcopy(selectable_checks),
         "source_constraints": copy.deepcopy(intent.get("constraints", [])),
         "item_templates": {
             "requirements": _blank(properties["requirements"]["items"]),

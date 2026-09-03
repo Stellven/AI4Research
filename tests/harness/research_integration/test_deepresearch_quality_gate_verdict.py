@@ -46,6 +46,71 @@ def test_deepresearch_node_verdict_requires_quality_gate(tmp_path, monkeypatch):
     assert result["reason"] == "missing_deepresearch_quality_gate"
 
 
+def test_frozen_report_plan_closeout_does_not_infer_unplanned_gate_from_path(tmp_path, monkeypatch):
+    sid = "sprint-test-frozen-report-plan-gate"
+    graph = _graph(sid)
+    node = graph["nodes"][0]
+    node["required_capabilities"] = ["cap.research-method-aware-report-plan"]
+    node["write_scope"] = ["workspace/evidence/final_report_plan.json"]
+    node["evaluation_binding"] = {
+        "deterministic_gate_ids": ["check.scientific.scientific_report_plan.v1"],
+        "semantic_evaluator_ids": [],
+    }
+    graph_path = tmp_path / f"{sid}.task_graph.json"
+    graph_path.write_text(json.dumps(graph), encoding="utf-8")
+    eval_json = tmp_path / f"{sid}.R8-eval.json"
+    eval_json.write_text(json.dumps({"verdict": "PASS"}), encoding="utf-8")
+
+    monkeypatch.setattr(gnd, "SPRINTS_DIR", tmp_path)
+    monkeypatch.setattr(gnd, "release_lease", lambda *a, **kw: {"released": False})
+    monkeypatch.setattr(gnd, "_mark_parent_sprint_passed_if_ready", lambda *a, **kw: False)
+
+    result = gnd.node_verdict(
+        str(graph_path),
+        "R8_section_fact_check",
+        "pass",
+        eval_json=str(eval_json),
+        dispatch_downstream=False,
+    )
+
+    assert result["ok"] is True
+    assert result["status"] == "passed"
+    assert result["research_quality_gate"] == {"required": False, "ok": True}
+
+
+def test_frozen_closeout_still_enforces_explicit_deepresearch_gate(tmp_path, monkeypatch):
+    sid = "sprint-test-frozen-explicit-deepresearch-gate"
+    graph = _graph(sid)
+    node = graph["nodes"][0]
+    node["evaluation_binding"] = {
+        "deterministic_gate_ids": ["check.scientific.scientific_report.v1"],
+        "semantic_evaluator_ids": [],
+    }
+    node["research_quality_gate_required"] = True
+    graph_path = tmp_path / f"{sid}.task_graph.json"
+    graph_path.write_text(json.dumps(graph), encoding="utf-8")
+    eval_json = tmp_path / f"{sid}.R8-eval.json"
+    eval_json.write_text(json.dumps({"verdict": "PASS"}), encoding="utf-8")
+
+    monkeypatch.setattr(gnd, "SPRINTS_DIR", tmp_path)
+    monkeypatch.setattr(
+        gnd,
+        "_deepresearch_quality_gate_auto_run",
+        lambda *_args, **_kwargs: {"present": False, "ok": False},
+    )
+
+    result = gnd.node_verdict(
+        str(graph_path),
+        "R8_section_fact_check",
+        "pass",
+        eval_json=str(eval_json),
+        dispatch_downstream=False,
+    )
+
+    assert result["ok"] is False
+    assert result["reason"] == "missing_deepresearch_quality_gate"
+
+
 def test_deepresearch_node_verdict_blocks_failed_quality_gate(tmp_path, monkeypatch):
     sid = "sprint-test-deepresearch-gate-fail"
     graph_path = tmp_path / f"{sid}.task_graph.json"

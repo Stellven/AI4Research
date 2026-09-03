@@ -131,15 +131,18 @@
       "properties": {
         "node_id": {
           "type": "string",
-          "pattern": "^[A-Za-z][A-Za-z0-9._-]{0,63}$"
+          "pattern": "^[A-Za-z][A-Za-z0-9._-]{0,63}$",
+          "description": "Stable identifier for one user-visible executable operation. Do not create nodes for controller phases already completed before planning or for controller-owned Evidence Gate and Closure phases."
         },
         "logical_operator": {
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "description": "Registered semantic operation actually executed by this node. ScientificWorkflowEvolver means a bounded workflow-improvement proposal; it never means run Closure or final status reporting."
         },
         "objective": {
           "type": "string",
-          "minLength": 5
+          "minLength": 5,
+          "description": "Facts and outcomes produced by this executable operation. For an explicit ordered workflow, preserve the named stage semantics instead of summarizing omitted stages in a later objective."
         },
         "retrieval_contract_ref": {
           "type": [
@@ -150,6 +153,7 @@
         },
         "depends_on": {
           "type": "array",
+          "description": "Direct executable predecessors. Preserve the relative order of user-mandated stages. Controller-completed Intake, Requirement Compilation, and Research Plan and controller-owned Evidence Gate and Closure are not represented as dependencies.",
           "items": {
             "type": "string",
             "minLength": 1
@@ -158,7 +162,7 @@
         },
         "consumes": {
           "type": "array",
-          "description": "Artifact types available to the node as inputs. Each value resolves to the unique closest producer in the dependency ancestry (or a controller input). A later same-typed transform shadows its earlier upstream state; incomparable closest producers are ambiguous. A consumed type is not satisfied by this node's own same-typed output and does not authorize aliasing.",
+          "description": "Artifact types available to the node as inputs. Each value resolves to the unique closest producer in the dependency ancestry (or a controller input). A later same-typed transform shadows its earlier upstream state; incomparable closest producers are ambiguous. A consumed type is not satisfied by this node's own same-typed output and does not authorize aliasing. A scientific report plan is orchestration metadata, not a container that forwards evidence: a report-drafting node must directly consume every renderable evidence type consumed by its closest report-plan producer. When Artifact Review precedes Report Generation, use scientific_report_plan.v1 -> scientific_report_plan_review.v1 -> scientific_report.v1; never review one scientific_report.v1 and then generate a different report unless the new report consumes both the reviewed report and artifact_review.v1.",
           "items": {
             "type": "string",
             "minLength": 1

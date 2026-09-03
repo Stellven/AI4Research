@@ -1570,6 +1570,9 @@ def test_plan_prompt_exposes_semantic_capsule_abi_not_physical_catalog() -> None
 
     assert "capability_capsules" not in payload
     assert payload["capability_capsule_abis"]
+    assert payload["capsule_collection_outputs"]["cap.research-paper-analyze"] == [
+        "schema:schemas/evidence/research_paper.v1.schema.json"
+    ]
     assert payload["evaluation_check_abis"]
     assert payload["controller_input_artifact_types"] == sorted(
         planner._CONTROLLER_INPUT_TYPES
@@ -1578,7 +1581,7 @@ def test_plan_prompt_exposes_semantic_capsule_abi_not_physical_catalog() -> None
         "controller_input_artifact_types"
     ]
     assert "implementation-only support steps out of PlanIR" in payload["instruction"]
-    assert "type `collection`" in payload["instruction"]
+    assert "cardinality `many`" in payload["instruction"]
     assert "source- or literature-discovery node must own" in payload["instruction"]
     assert "full research query, not a generic topic summary" in payload["instruction"]
     assert "permission envelope for the capsule" in payload["instruction"]
@@ -1613,6 +1616,29 @@ def test_plan_prompt_exposes_semantic_capsule_abi_not_physical_catalog() -> None
         } <= set(first)
     assert "operator_compatibility" not in prompt
     assert len(prompt.encode("utf-8")) < 60000
+
+
+def test_plan_authoring_contract_separates_executable_stages_from_controller_closure() -> None:
+    requirement_ir = _requirement_ir()
+    prompt = json.loads(
+        planner._plan_prompt(
+            requirement_ir,
+            _decision(requirement_ir),
+            _catalog(),
+            {"requirement_ir": requirement_ir},
+            planner.evaluation_planning.load_evaluation_check_registry(),
+            generation=0,
+        )
+    )["instruction"]
+
+    normalized_prompt = " ".join(prompt.split())
+    assert "preserve the relative order" in normalized_prompt
+    assert "Evidence Gate and Closure are controller-owned post-execution phases" in normalized_prompt
+    assert "Never use ScientificWorkflowEvolver as a synonym for Closure" in normalized_prompt
+
+    registry = json.loads((planner.LOGICAL_OPERATORS_PATH).read_text(encoding="utf-8"))
+    description = registry["logical_operators"]["ScientificWorkflowEvolver"]["description"]
+    assert "does not perform lifecycle Closure" in description
 
 
 def test_plan_repair_prompt_explains_unrequested_capsule_effect() -> None:
@@ -2180,6 +2206,129 @@ def test_collection_capsule_requires_directory_materialization() -> None:
     assert "COLLECTION_MATERIALIZATION_REQUIRES_DIRECTORY" in {
         row["code"] for row in validation["errors"]
     }
+
+    # A later scalar-producing step must not hide a collection emitted by an
+    # intermediate capsule in the same admitted composition.
+    for composition_row in composition_catalog["nodes"]:
+        admitted = set(composition_row.get("admitted_candidate_ids") or [])
+        for candidate in (composition_row.get("search") or {}).get("candidates") or []:
+            if candidate.get("candidate_id") in admitted:
+                candidate["steps"].append(
+                    {"capsule_id": "cap.research-source-assess"}
+                )
+
+    intermediate_validation = planner.validate_plan_ir(
+        requirement_ir,
+        decision,
+        plan_ir,
+        catalog,
+        composition_catalog,
+    )
+
+    assert "COLLECTION_MATERIALIZATION_REQUIRES_DIRECTORY" in {
+        row["code"] for row in intermediate_validation["errors"]
+    }
+
+
+def test_batch_paper_analysis_requires_directory_before_composition_freeze() -> None:
+    """The analyzer's batch contract must reject a file-scoped intermediate handoff."""
+    paper_type = "schema:schemas/evidence/research_paper.v1.schema.json"
+    assessment_type = (
+        "schema:schemas/evidence/research_source_assessment.v1.schema.json"
+    )
+    requirement_ir = _requirement_ir()
+    decision = _decision(requirement_ir)
+    plan_ir = _wrapped_plan(
+        requirement_ir,
+        decision,
+        {
+            "nodes": [
+                {
+                    "node_id": "parallel-paper-analysis",
+                    "logical_operator": "ScientificPaperAnalyzer",
+                    "objective": "Analyze the ingested paper collection and assess sources.",
+                    "depends_on": [],
+                    "consumes": [paper_type],
+                    "produces": [
+                        {
+                            "artifact_type": paper_type,
+                            "verifier_ids": ["check.scientific.research_paper.v1"],
+                            "materialization": {
+                                "kind": "file",
+                                "path": "evidence/analyzed_research_papers.json",
+                                "route": "sprint_private",
+                            },
+                        },
+                        {
+                            "artifact_type": assessment_type,
+                            "verifier_ids": [
+                                "check.scientific.research_source_assessment.v1"
+                            ],
+                            "materialization": {
+                                "kind": "file",
+                                "path": "evidence/source_assessments.json",
+                                "route": "sprint_private",
+                            },
+                        },
+                    ],
+                    "requirement_ids": ["REQ-001", "REQ-002"],
+                    "operator_requirements": {
+                        "capabilities": ["scientific_evidence"],
+                        "network": "forbidden",
+                        "execution_trust": "evidence_transform",
+                        "minimum_context_tokens": 4000,
+                        "effects": ["read", "write", "execute"],
+                    },
+                    "gate_requirement": "paper_analysis_review",
+                    "workspace_reads": [],
+                }
+            ]
+        },
+    )
+    catalog = _catalog()
+    composition_catalog = {
+        "nodes": [
+            {
+                "node_id": "parallel-paper-analysis",
+                "admitted_candidate_ids": ["composition-001"],
+                "search": {
+                    "candidates": [
+                        {
+                            "candidate_id": "composition-001",
+                            "steps": [
+                                {
+                                    "capsule_id": "cap.research-paper-analyze",
+                                    "consumes": [paper_type],
+                                    "produces": [paper_type],
+                                },
+                                {
+                                    "capsule_id": "cap.research-source-assess",
+                                    "consumes": [paper_type],
+                                    "produces": [assessment_type],
+                                },
+                            ],
+                        }
+                    ]
+                },
+            }
+        ]
+    }
+
+    validation = planner.validate_plan_ir(
+        requirement_ir,
+        decision,
+        plan_ir,
+        catalog,
+        composition_catalog,
+    )
+
+    collection_errors = [
+        row
+        for row in validation["errors"]
+        if row["code"] == "COLLECTION_MATERIALIZATION_REQUIRES_DIRECTORY"
+    ]
+    assert collection_errors
+    assert any(paper_type in row["message"] for row in collection_errors)
 
 
 def test_delivery_manifest_requires_exact_publication_directory_route() -> None:
@@ -5120,3 +5269,210 @@ def test_exact_reuse_component_freezes_registered_capsules_and_topology(
     assert planner.scheduler_input_runtime.validate(
         result["execution"]["scheduler_input"], require_runtime_authority=True
     ) == {"ok": True, "errors": []}
+
+
+def _report_handoff_test_node(
+    node_id: str,
+    logical_operator: str,
+    *,
+    depends_on: list[str],
+    consumes: list[str],
+    produces: list[str],
+    requirement_ids: list[str] | None = None,
+) -> dict:
+    return {
+        "node_id": node_id,
+        "logical_operator": logical_operator,
+        "objective": f"Exercise the typed handoff for {node_id}.",
+        "depends_on": depends_on,
+        "consumes": consumes,
+        "produces": [
+            {
+                "artifact_type": artifact_type,
+                "verifier_ids": ["check.patch.v1"],
+                "materialization": {
+                    "kind": "file",
+                    "path": f"{node_id}-{index}.json",
+                    "route": "sprint_private",
+                },
+            }
+            for index, artifact_type in enumerate(produces)
+        ],
+        "workspace_reads": [],
+        "requirement_ids": requirement_ids or [],
+        "operator_requirements": {
+            "capabilities": ["research_synthesis"],
+            "network": "forbidden",
+            "execution_trust": "evidence_transform",
+            "minimum_context_tokens": 8000,
+            "effects": ["read", "write", "execute"],
+        },
+        "gate_requirement": "typed_report_handoff",
+    }
+
+
+def test_report_draft_must_receive_evidence_used_by_its_report_plan() -> None:
+    claim_type = "schema:schemas/evidence/claim_verdict.v1.schema.json"
+    method_type = "schema:schemas/evidence/research_method.v1.schema.json"
+    assessment_type = (
+        "schema:schemas/evidence/research_source_assessment.v1.schema.json"
+    )
+    plan_type = "schema:schemas/evidence/scientific_report_plan.v1.schema.json"
+    report_type = "schema:schemas/evidence/scientific_report.v1.schema.json"
+    requirement_ir = _requirement_ir()
+    decision = _decision(requirement_ir)
+    body = {
+        "nodes": [
+            _report_handoff_test_node(
+                "evidence",
+                "ScientificSourceAssessor",
+                depends_on=[],
+                consumes=["schema:request-envelope.schema.json"],
+                produces=[claim_type, method_type, assessment_type],
+            ),
+            _report_handoff_test_node(
+                "report_plan",
+                "ScientificReportPlanner",
+                depends_on=["evidence"],
+                consumes=[claim_type, method_type, assessment_type],
+                produces=[plan_type],
+            ),
+            _report_handoff_test_node(
+                "report",
+                "ScientificReportDrafter",
+                depends_on=["report_plan"],
+                consumes=[plan_type, claim_type],
+                produces=[report_type],
+                requirement_ids=["REQ-001", "REQ-002"],
+            ),
+        ]
+    }
+    plan_ir = _wrapped_plan(requirement_ir, decision, body)
+
+    validation = planner.validate_plan_ir(
+        requirement_ir, decision, plan_ir, _catalog()
+    )
+    defect = next(
+        row
+        for row in validation["errors"]
+        if row["code"] == "REPORT_DRAFT_EVIDENCE_HANDOFF_INCOMPLETE"
+    )
+    assert defect["report_plan_producer_id"] == "report_plan"
+    assert defect["required_consumes"] == sorted([method_type, assessment_type])
+
+    plan_ir["nodes"][2]["consumes"].extend([method_type, assessment_type])
+    validation = planner.validate_plan_ir(
+        requirement_ir, decision, plan_ir, _catalog()
+    )
+    assert "REPORT_DRAFT_EVIDENCE_HANDOFF_INCOMPLETE" not in {
+        row["code"] for row in validation["errors"]
+    }
+
+
+def test_report_generated_after_final_review_must_bind_reviewed_instance() -> None:
+    plan_type = "schema:schemas/evidence/scientific_report_plan.v1.schema.json"
+    report_type = "schema:schemas/evidence/scientific_report.v1.schema.json"
+    review_type = "schema:schemas/evidence/artifact_review.v1.schema.json"
+    requirement_ir = _requirement_ir()
+    decision = _decision(requirement_ir)
+    body = {
+        "nodes": [
+            _report_handoff_test_node(
+                "plan",
+                "ScientificReportPlanner",
+                depends_on=[],
+                consumes=["schema:request-envelope.schema.json"],
+                produces=[plan_type],
+            ),
+            _report_handoff_test_node(
+                "draft",
+                "ScientificReportDrafter",
+                depends_on=["plan"],
+                consumes=[plan_type],
+                produces=[report_type],
+            ),
+            _report_handoff_test_node(
+                "review",
+                "ScientificArtifactReviewer",
+                depends_on=["draft"],
+                consumes=[report_type],
+                produces=[review_type],
+            ),
+            _report_handoff_test_node(
+                "replacement_report",
+                "ScientificReportDrafter",
+                depends_on=["review"],
+                consumes=[plan_type],
+                produces=[report_type],
+                requirement_ids=["REQ-001", "REQ-002"],
+            ),
+        ]
+    }
+    plan_ir = _wrapped_plan(requirement_ir, decision, body)
+
+    validation = planner.validate_plan_ir(
+        requirement_ir, decision, plan_ir, _catalog()
+    )
+    assert "POST_REVIEW_REPORT_NOT_BOUND" in {
+        row["code"] for row in validation["errors"]
+    }
+
+    plan_ir["nodes"][3]["consumes"].extend([report_type, review_type])
+    validation = planner.validate_plan_ir(
+        requirement_ir, decision, plan_ir, _catalog()
+    )
+    assert "POST_REVIEW_REPORT_NOT_BOUND" not in {
+        row["code"] for row in validation["errors"]
+    }
+
+
+def test_pre_draft_review_must_be_consumed_by_report_generation() -> None:
+    plan_type = "schema:schemas/evidence/scientific_report_plan.v1.schema.json"
+    plan_review_type = (
+        "schema:schemas/evidence/scientific_report_plan_review.v1.schema.json"
+    )
+    report_type = "schema:schemas/evidence/scientific_report.v1.schema.json"
+    requirement_ir = _requirement_ir()
+    decision = _decision(requirement_ir)
+    body = {
+        "nodes": [
+            _report_handoff_test_node(
+                "plan",
+                "ScientificReportPlanner",
+                depends_on=[],
+                consumes=["schema:request-envelope.schema.json"],
+                produces=[plan_type],
+            ),
+            _report_handoff_test_node(
+                "plan_review",
+                "ScientificArtifactReviewer",
+                depends_on=["plan"],
+                consumes=[plan_type],
+                produces=[plan_review_type],
+            ),
+            _report_handoff_test_node(
+                "report",
+                "ScientificReportDrafter",
+                depends_on=["plan_review"],
+                consumes=[plan_type],
+                produces=[report_type],
+                requirement_ids=["REQ-001", "REQ-002"],
+            ),
+        ]
+    }
+    plan_ir = _wrapped_plan(requirement_ir, decision, body)
+
+    validation = planner.validate_plan_ir(
+        requirement_ir, decision, plan_ir, _catalog()
+    )
+    assert "PRE_DRAFT_REVIEW_NOT_BOUND" in {
+        row["code"] for row in validation["errors"]
+    }
+
+    plan_ir["nodes"][2]["consumes"].append(plan_review_type)
+    validation = planner.validate_plan_ir(
+        requirement_ir, decision, plan_ir, _catalog()
+    )
+    assert "PRE_DRAFT_REVIEW_NOT_BOUND" not in {
+        row["code"] for row in validation["errors"]
+    }

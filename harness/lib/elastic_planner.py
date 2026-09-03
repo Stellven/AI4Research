@@ -99,6 +99,21 @@ def _configured_max_repairs() -> int:
 
 MAX_REPAIRS = _configured_max_repairs()
 _SYSTEM_WORKFLOW_INPUTS = {"sid", "sprint_id", "workspace_root", "resolved_root"}
+_SCIENTIFIC_REPORT_PLAN_TYPE = (
+    "schema:schemas/evidence/scientific_report_plan.v1.schema.json"
+)
+_SCIENTIFIC_REPORT_PLAN_REVIEW_TYPE = (
+    "schema:schemas/evidence/scientific_report_plan_review.v1.schema.json"
+)
+_SCIENTIFIC_REPORT_TYPE = "schema:schemas/evidence/scientific_report.v1.schema.json"
+_ARTIFACT_REVIEW_TYPE = "schema:schemas/evidence/artifact_review.v1.schema.json"
+_REPORT_RENDER_EVIDENCE_TYPES = {
+    "schema:schemas/evidence/claim_verdict.v1.schema.json",
+    "schema:schemas/evidence/research_method.v1.schema.json",
+    "schema:schemas/evidence/research_source_assessment.v1.schema.json",
+    "schema:schemas/evidence/experiment_plan.v1.schema.json",
+    "schema:schemas/evidence/experiment_result.v1.schema.json",
+}
 
 
 class ElasticPlannerError(RuntimeError):
@@ -1214,31 +1229,27 @@ meaning, audience, domain, or scope from them; use only admitted semantic conten
 Use only logical_operator values in the supplied registry. PlanIR describes meaning, dependencies,
 typed artifact handoffs, requirement ownership, resource needs, and verification needs. It must not
 name a capability capsule, model, profile, pane, or physical operator. Every RequirementIR identifier
-must be owned by at least one node. Support nodes may have an empty requirement_ids list only when they
-cannot be traced to an accepted requirement. A source- or literature-discovery node must own the
-scope/evidence-coverage requirements that define what evidence it must retrieve; do not assign it a
-final-answer, publication, or delivery requirement. Preserve the exact named subjects, comparison
-dimensions, constraints, and required coverage values from those requirements in the discovery node's
-objective so the physical operator receives the full research query, not a generic topic summary. Assign
-a discovery node only requirements that can be decided from its candidate-acquisition artifact. A
-requirement to determine whether a source reliably supports a claim, compare methods, resolve scientific
-disagreements, or recommend an evaluation belongs to a downstream ingestion, verification, synthesis, or
-delivery node whose artifact can actually prove that conclusion; discovery may only preserve it as query
-context. When RequirementIR has semantic_contract, its requirement_roles are authoritative (not substrings
-in check names). Set retrieval_contract_ref to discovery.contract_id on a discovery node or a logical node
-requiring discovery in its implementation; otherwise use null. Do NOT restate process/delivery constraints
-as research subjects or source filters. The physical operator receives the exact structured retrieval
-contract, never a reinterpreted objective. Assign
-a requirement only to a node whose produced artifact can actually be judged by that requirement's check.
-Requirements whose acceptance contract calls for a finding, supporting evidence, and unresolved status
-are resolution requirements, not discovery-scope requirements. A discovery node may retain those study
-protocol questions as context only, not as search scope, and it must not own them when its output ABI promises
-only a source shortlist. Assign their ownership to a downstream synthesis or report node whose artifact
-can explicitly resolve the question or preserve it as unresolved with evidence.
+must be owned by at least one node; support nodes may be unowned. A source- or literature-discovery node must own
+only the scope/evidence-coverage requirements decidable from candidate acquisition, never final-answer,
+publication, delivery, claim-support, comparison, disagreement-resolution, or recommendation requirements.
+Its objective must preserve exact subjects, dimensions, constraints, and coverage so the worker receives the
+full research query, not a generic topic summary. With semantic_contract, requirement_roles and the exact
+discovery contract are authoritative: bind discovery.contract_id where discovery is required, otherwise null;
+never turn process/delivery constraints into source filters. Assign each requirement only to an output that its
+registered check can judge. Acceptance requiring a finding, evidence, and unresolved status defines
+resolution requirements, not discovery-scope requirements; a shortlist may carry those questions as context,
+but downstream synthesis/report owns and resolves or retains them as unresolved with evidence.
 Keep implementation-only support steps out of PlanIR. A single logical node may be implemented by a
 multi-capsule chain, so declare that node's external input/output boundary and let capsule composition
 insert internal artifacts such as a report plan. Add a separate logical node only when it represents a
 distinct user-visible operation, independently owned requirement, effect boundary, or dependency.
+Treat process rows as workflow obligations. For an exact stage list, preserve the relative order of all named
+executable stages, including unowned support stages. Intake, Requirement Compilation, and Research Plan are
+already completed controller phases; Evidence Gate and Closure are controller-owned post-execution phases,
+not worker nodes. A requested run manifest/publication bundle may own order, scheduling, Evidence Ledger, and
+final-summary requirements when it records the graph, statuses, gates, paths, limitations, and Closure status.
+Never use ScientificWorkflowEvolver as a synonym for Closure; it requires an explicit workflow-improvement
+request. Never reverse or omit a stage to fit an ABI; let composition admission expose capability gaps.
 The logical operator must describe work that is actually performed at the node boundary. Do not label an
 ingestion/extraction/verification-only node as synthesis or assign it cross-source comparison, disagreement,
 or recommendation requirements merely because it prepares evidence. Either give those requirements to the
@@ -1249,34 +1260,28 @@ For every requirement it owns, the matching produced artifact must list that req
 check/verification identifier in verifier_ids. For artifact_type checks, the output artifact_type must
 appear in that check's artifact_types. Support outputs should use their compatible auto-apply artifact
 check when one exists. Never invent, combine, rename, or weaken verifier identifiers.
-The capsule ABI catalog is authoritative for executable artifact identities. Each produced artifact_type
-must be copied exactly from at least one capsule's `produces`; each non-RequirementIR consumed type
-must be copied exactly from an upstream node output. Design each logical node contract so either one
-capsule or a typed composition of capsules can satisfy its declared inputs, outputs, effects, and network
-policy. Do not name or select capsules in PlanIR; a later binding pass owns that decision.
-PlanIR is a table-like artifact: fill the supplied fields rather than inventing a replacement format.
-`artifact_type` identifies representation compatibility, not artifact-instance identity or completion.
-Every produces row is a distinct output slot that this node must actually create. If a transforming
-capsule consumes and produces the same artifact_type, retain both sides: the matching input does not
-mean the output already exists and does not authorize an implicit no-op or passthrough.
+The capsule ABI catalog is authoritative. Copy produced types from capsule `produces` and non-controller
+consumed types from upstream outputs. One capsule or typed composition must satisfy inputs, outputs, effects,
+and network policy; PlanIR never names/selects capsules because binding owns that decision.
+Report plans do not forward evidence; drafts consume it directly. Pre-draft review uses plan -> plan_review ->
+report. A post-review report consumes both the reviewed report and review.
+`capsule_collection_outputs` is the deterministic subset of capsule outputs whose contract cardinality is
+`many`; materialize those outputs as directories even when they are intermediate in a multi-capsule chain.
+Fill the table-like PlanIR fields; do not invent a replacement format. `artifact_type` means representation
+compatibility, not instance identity or completion. Every output slot must be created. Preserve same-typed
+transform inputs and outputs; matching types never authorize a no-op or passthrough.
 `schema:<path>` and `artifact.<name>` are different identities unless a manifest explicitly declares
 the same identity; never infer equivalence from similar words or filenames.
-A produced artifact must declare how it materializes inside that node's isolated workspace: a safe
-relative file or directory path and an explicit route. Use workspace_publish only for a requested
-product deliverable that may be published after its independent gate passes; use sprint_private for
-evaluation, receipt, proof, and intermediate artifacts. Never use an absolute path, '..', or a shared
-path owned by another node. Code work must name a real code-file output, not only a patch/report placeholder.
-When a compatible capsule contract marks an output as type `collection`, materialize that output as a
+A produced artifact needs a safe relative file/directory path and route in its node workspace. Use
+workspace_publish only for requested gated deliverables and sprint_private for intermediates/proofs. Forbid
+absolute paths, '..', cross-node shared paths, and code tasks that output only a patch/report placeholder.
+When a compatible capsule contract marks an output with cardinality `many`, materialize that output as a
 directory. The directory may contain multiple independently schema-valid artifacts of the declared
 artifact_type; do not invent a collection wrapper schema.
-A consumed artifact must either be copied exactly from `controller_input_artifact_types` or be produced
-by a direct or transitive dependency. When a dependency chain produces the same artifact_type more than
-once, consumes resolves to the unique closest upstream producer; preserve the transforming dependency
-instead of deleting it. Two incomparable upstream producers of the same type are ambiguous and must be
-consolidated before handoff. Use requirement_ir.v1 when the logical node itself reads the compiled
-requirements. Use schema:request-envelope.schema.json when the selected capsule ABI needs the controller's
-normalized request envelope. Every value in consumes is an artifact_type identifier, never a materialization
-file path and never `node_id:path`.
+A consumed type must be a controller input or dependency output. Same-typed chains resolve to the unique
+closest producer; keep the transform. Incomparable closest producers are ambiguous. Use requirement_ir.v1
+for compiled requirements and schema:request-envelope.schema.json for normalized request input. Consumes
+contains artifact types only, never paths or `node_id:path`.
 materialization.path is only the relative file/directory location inside the producer node workspace.
 When semantic_contract.delivery_manifest is non-null, the node producing
 schema:schemas/evidence/publication_bundle.v1.schema.json must consume requirement_ir.v1 and use one
@@ -1309,14 +1314,10 @@ Use at most one logical Critic, Verifier, or Evaluator node in the entire PlanIR
 plans. It must be the final independent semantic review. Do not create separate Critic and Verifier
 nodes or model-review quorums. Schema validation, hash binding, RequirementIR coverage aggregation,
 and proof-obligation checks are deterministic controller gates and do not need additional LLM nodes.
-When the request requires a real measured experiment and no controller input already supplies its exact
-dataset, model, runner code, and hashes, represent experiment-package preparation as a distinct logical
-node. That node must consume governed claims, require network for attributable public acquisition, and
-produce the exact dataset-manifest artifact offered by the capsule ABI catalog. The experiment-design node
-must consume both the governed claim and that manifest. The later experiment-run node remains a separate
-measured_execution boundary and must consume an exact plan plus approval. Never replace this chain with a
-proposed experiment, lineage replay, synthetic result, or a single opaque node that hides data/code
-preparation inside execution.
+For real measured experiments lacking an exact controller-supplied dataset/model/runner/hash bundle, add a
+package-preparation node: consume governed claims, require network for attributable acquisition, and produce
+the registered dataset manifest. Design consumes claim+manifest; run is a separate measured_execution node
+consuming exact plan+approval. Never substitute a proposal, replay, synthetic result, or opaque combined node.
 """.strip()
     payload: dict[str, Any] = {
         "instruction": instruction,
@@ -1332,7 +1333,7 @@ preparation inside execution.
         "capability_capsule_abis": [
             {
                 "capsule_id": str(row.get("capsule_id") or ""),
-                "description": str(row.get("description") or "")[:80],
+                "description": str(row.get("description") or "")[:63],
                 "task_types": list(row.get("task_types") or []),
                 "consumes": list(row.get("consumes") or []),
                 "produces": list(row.get("produces") or []),
@@ -1346,6 +1347,31 @@ preparation inside execution.
             for row in catalog.get("capsules", [])
             if isinstance(row, dict)
         ],
+        "capsule_collection_outputs": {
+            str(row.get("capsule_id") or ""): sorted(
+                artifact_type
+                for artifact_type in (
+                    (
+                        f"schema:{str(shape.get('schema_ref') or '').strip()}"
+                        if str(shape.get("schema_ref") or "").strip()
+                        else str(shape.get("type") or "").strip()
+                    )
+                    for shape in (
+                        ((row.get("contract") or {}).get("required_outputs") or [])
+                    )
+                    if isinstance(shape, dict)
+                    and str(shape.get("cardinality") or "one") == "many"
+                )
+                if artifact_type
+            )
+            for row in catalog.get("capsules", [])
+            if isinstance(row, dict)
+            and any(
+                isinstance(shape, dict)
+                and str(shape.get("cardinality") or "one") == "many"
+                for shape in ((row.get("contract") or {}).get("required_outputs") or [])
+            )
+        },
         "evaluation_check_abis": [
             {
                 "check_id": str(row.get("check_id") or ""),
@@ -2897,14 +2923,20 @@ def validate_plan_ir(
                     for step in candidate.get("steps") or []
                     if isinstance(step, dict)
                 ]
-                terminal_capsule = capsule_by_id.get(
-                    str((steps[-1] if steps else {}).get("capsule_id") or ""),
-                    {},
-                )
-                terminal_outputs = (
-                    (terminal_capsule.get("contract") or {}).get("required_outputs")
-                    or []
-                )
+                candidate_outputs = [
+                    shape
+                    for step in steps
+                    for shape in (
+                        (
+                            capsule_by_id.get(
+                                str(step.get("capsule_id") or ""), {}
+                            ).get("contract")
+                            or {}
+                        ).get("required_outputs")
+                        or []
+                    )
+                    if isinstance(shape, dict)
+                ]
                 if any(
                     (
                         f"schema:{str(shape.get('schema_ref') or '').strip()}"
@@ -2913,8 +2945,7 @@ def validate_plan_ir(
                     )
                     == artifact_type
                     and str(shape.get("cardinality") or "one") == "many"
-                    for shape in terminal_outputs
-                    if isinstance(shape, dict)
+                    for shape in candidate_outputs
                 ):
                     collection_candidates.add(str(candidate.get("candidate_id") or ""))
             if (
@@ -3139,6 +3170,114 @@ def validate_plan_ir(
                 )
                 defect["producer_node_ids"] = sorted(nearest_producers)
                 checks["artifact_handoffs"].append(defect)
+    for index, node in enumerate(node_rows):
+        node_id = str(node.get("node_id") or "")
+        consumed_types = {str(value) for value in node.get("consumes") or []}
+        produced_types = {
+            str((output or {}).get("artifact_type") or "")
+            for output in node.get("produces") or []
+            if isinstance(output, dict)
+        }
+        ancestors = _ancestors(node_id, nodes)
+        if (
+            _SCIENTIFIC_REPORT_TYPE in produced_types
+            and _SCIENTIFIC_REPORT_PLAN_TYPE in consumed_types
+        ):
+            nearest_plan_producers = _nearest_artifact_producers(
+                node_id,
+                produced_by.get(_SCIENTIFIC_REPORT_PLAN_TYPE) or [],
+                nodes,
+            )
+            if len(nearest_plan_producers) == 1:
+                plan_producer_id = next(iter(nearest_plan_producers))
+                plan_producer = nodes[plan_producer_id]
+                required_evidence = (
+                    {
+                        str(value)
+                        for value in plan_producer.get("consumes") or []
+                    }
+                    & _REPORT_RENDER_EVIDENCE_TYPES
+                )
+                missing_evidence = sorted(required_evidence - consumed_types)
+                if missing_evidence:
+                    defect = _error(
+                        "REPORT_DRAFT_EVIDENCE_HANDOFF_INCOMPLETE",
+                        f"nodes.{index}.consumes",
+                        (
+                            f"Report node {node_id!r} consumes a report plan from "
+                            f"{plan_producer_id!r}, but not the renderable "
+                            f"evidence used to author that plan: {missing_evidence}. "
+                            "Add those exact artifact types to consumes and retain "
+                            "dependency ancestry to their producers; a report plan does "
+                            "not forward evidence payloads."
+                        ),
+                    )
+                    defect["report_plan_producer_id"] = plan_producer_id
+                    defect["required_consumes"] = missing_evidence
+                    checks["artifact_handoffs"].append(defect)
+        if _SCIENTIFIC_REPORT_TYPE not in produced_types:
+            continue
+        plan_review_ancestors = [
+            ancestor_id
+            for ancestor_id in sorted(ancestors)
+            if _SCIENTIFIC_REPORT_PLAN_REVIEW_TYPE
+            in {
+                str((output or {}).get("artifact_type") or "")
+                for output in nodes[ancestor_id].get("produces") or []
+                if isinstance(output, dict)
+            }
+        ]
+        if (
+            plan_review_ancestors
+            and _SCIENTIFIC_REPORT_PLAN_REVIEW_TYPE not in consumed_types
+        ):
+            defect = _error(
+                "PRE_DRAFT_REVIEW_NOT_BOUND",
+                f"nodes.{index}.consumes",
+                (
+                    f"Report node {node_id!r} follows pre-draft review node(s) "
+                    f"{plan_review_ancestors} but does not consume "
+                    "scientific_report_plan_review.v1. Bind the review artifact so its "
+                    "findings cannot be dropped before report generation."
+                ),
+            )
+            defect["review_node_ids"] = plan_review_ancestors
+            defect["required_consumes"] = [_SCIENTIFIC_REPORT_PLAN_REVIEW_TYPE]
+            checks["artifact_handoffs"].append(defect)
+        final_review_ancestors = [
+            ancestor_id
+            for ancestor_id in sorted(ancestors)
+            if _ARTIFACT_REVIEW_TYPE
+            in {
+                str((output or {}).get("artifact_type") or "")
+                for output in nodes[ancestor_id].get("produces") or []
+                if isinstance(output, dict)
+            }
+            and _SCIENTIFIC_REPORT_TYPE
+            in {str(value) for value in nodes[ancestor_id].get("consumes") or []}
+        ]
+        if final_review_ancestors and not {
+            _SCIENTIFIC_REPORT_TYPE,
+            _ARTIFACT_REVIEW_TYPE,
+        }.issubset(consumed_types):
+            defect = _error(
+                "POST_REVIEW_REPORT_NOT_BOUND",
+                f"nodes.{index}.consumes",
+                (
+                    f"Report node {node_id!r} follows final-report review node(s) "
+                    f"{final_review_ancestors} but does not consume both the reviewed "
+                    "scientific_report.v1 and its artifact_review.v1 decision. Use the "
+                    "pre-draft scientific_report_plan.v1 -> "
+                    "scientific_report_plan_review.v1 -> scientific_report.v1 ABI when "
+                    "review precedes initial report generation, or bind both artifacts "
+                    "to an admitted report-revision contract."
+                ),
+            )
+            defect["review_node_ids"] = final_review_ancestors
+            defect["required_consumes"] = sorted(
+                {_SCIENTIFIC_REPORT_TYPE, _ARTIFACT_REVIEW_TYPE}
+            )
+            checks["artifact_handoffs"].append(defect)
     missing = sorted(known_requirements - owned_requirements)
     if missing:
         checks["requirement_ownership"].append(_error("REQUIREMENTS_UNCOVERED", "nodes.requirement_ids", f"Uncovered requirements: {missing}."))

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import io
 import json
 import re
@@ -89,7 +90,7 @@ def verify_claim(node_request: dict[str, Any], context: OperatorContext) -> dict
                 continue
             normalized_text = re.sub(
                 r"\s+", " ", str(section.get("text") or "")
-            ).strip().casefold()
+            ).strip()
             paper_anchor_text.setdefault(anchor, []).append(normalized_text)
             if paper_id:
                 paper_anchor_text.setdefault(
@@ -109,12 +110,31 @@ def verify_claim(node_request: dict[str, Any], context: OperatorContext) -> dict
         literature_grounded = bool(resolved_paper_ids or anchor_resolved)
         normalized_claim_text = re.sub(
             r"\s+", " ", str(claim.get("text") or "")
-        ).strip().casefold()
+        ).strip()
+        valid_citation_spans: list[dict[str, Any]] = []
+        for span in claim.get("citation_spans") or []:
+            if not isinstance(span, dict):
+                continue
+            span_anchor = str(span.get("source_ref") or "").strip()
+            source_candidates = paper_anchor_text.get(span_anchor, [])
+            start = span.get("start_char")
+            end = span.get("end_char")
+            quote = str(span.get("quote") or "")
+            expected_digest = str(span.get("source_text_sha256") or "").lower()
+            if not isinstance(start, int) or not isinstance(end, int) or start < 0 or end <= start:
+                continue
+            if any(
+                end <= len(source_text)
+                and source_text[start:end] == quote == normalized_claim_text
+                and hashlib.sha256(source_text.encode("utf-8")).hexdigest() == expected_digest
+                for source_text in source_candidates
+            ):
+                valid_citation_spans.append(dict(span))
         source_reported_exact = bool(
             anchor_resolved
             and normalized_claim_text
             and any(
-                normalized_claim_text in source_text
+                normalized_claim_text.casefold() in source_text.casefold()
                 for source_text in paper_anchor_text.get(source_anchor, [])
             )
         )
@@ -170,7 +190,16 @@ def verify_claim(node_request: dict[str, Any], context: OperatorContext) -> dict
                     "Measured evidence is positive, but the claim's literature source does not resolve "
                     "in the retained paper evidence."
                 )
-        verdicts.append({
+        source_grounding = {
+            "paper_evidence_supplied": bool(papers),
+            "resolved": literature_grounded,
+            "resolved_paper_ids": resolved_paper_ids,
+            "source_anchor_resolved": anchor_resolved,
+            "exact_quote_resolved": source_reported_exact,
+        }
+        if claim.get("citation_spans"):
+            source_grounding["precise_source_span_resolved"] = bool(valid_citation_spans)
+        verdict_record = {
             "claim_id": claim_id,
             "claim_text": str(claim.get("text") or "").strip(),
             "verdict": verdict,
@@ -195,14 +224,11 @@ def verify_claim(node_request: dict[str, Any], context: OperatorContext) -> dict
             "locally_reproduced": bool(results and outcome == "supports" and matched),
             "overclaim_risks": scope_risks,
             "scope_comparison": scope_comparison,
-            "source_grounding": {
-                "paper_evidence_supplied": bool(papers),
-                "resolved": literature_grounded,
-                "resolved_paper_ids": resolved_paper_ids,
-                "source_anchor_resolved": anchor_resolved,
-                "exact_quote_resolved": source_reported_exact,
-            },
-        })
+            "source_grounding": source_grounding,
+        }
+        if claim.get("citation_spans"):
+            verdict_record["citation_spans"] = valid_citation_spans
+        verdicts.append(verdict_record)
     return completed_result(
         context,
         operator_id=CLAIM_VERIFIER_ID,
@@ -539,8 +565,7 @@ def _claim_status_mappings(
             or evidence_outcome in {"contradicted", "refuted"}
             or bool(item.get("contradicted_by"))
         )
-        mappings.append(
-            {
+        mapping = {
                 "claim_id": claim_id,
                 "verdict": verdict,
                 "support_classification": str(
@@ -563,7 +588,17 @@ def _claim_status_mappings(
                     if str(value).strip()
                 ],
             }
-        )
+        claim_text = str(item.get("claim_text") or "").strip()
+        citation_spans = [
+            dict(value)
+            for value in item.get("citation_spans") or []
+            if isinstance(value, dict)
+        ]
+        if claim_text and citation_spans:
+            mapping["claim_text"] = claim_text
+        if citation_spans:
+            mapping["citation_spans"] = citation_spans
+        mappings.append(mapping)
     return mappings
 
 
@@ -1483,6 +1518,7 @@ def _semantic_report_draft(
     unknown_resolution_traces: list[dict[str, Any]],
     methods: list[dict[str, Any]],
     source_assessment: dict[str, Any],
+    plan_review: dict[str, Any],
 ) -> tuple[dict[str, Any], list[str], list[dict[str, Any]]]:
     """Optionally synthesize the narrative with a real injected model service.
 
@@ -1519,11 +1555,13 @@ def _semantic_report_draft(
             "unknowns": unknown_resolution_traces,
             "methods": methods,
             "source_assessment": source_assessment,
+            "pre_draft_plan_review": plan_review,
             "rules": [
                 "Produce a comprehensive source-bounded landscape, not a concatenation of extracts.",
                 "Resolve each unknown when the supplied evidence permits it; otherwise state exactly why it remains unresolved.",
                 "Do not reproduce a claim whose source text is visibly truncated mid-sentence.",
                 "Compare requested method families only to the depth supported by supplied evidence.",
+                "Address every pre-draft review finding when the governed evidence permits it; otherwise retain the finding explicitly as a limitation.",
             ],
         },
         evidence_synthesis={"claims": grounded_claims},
@@ -1568,6 +1606,67 @@ def _semantic_report_draft(
         [str(item) for item in response.get("limitations") or [] if str(item).strip()],
         [item for item in response.get("provider_usage") or [] if isinstance(item, dict)],
     )
+
+
+_REPORT_RELEVANCE_STOPWORDS = frozenset(
+    {
+        "artifact",
+        "comprehensive",
+        "conclusion",
+        "conclusions",
+        "draft",
+        "evidence",
+        "final",
+        "generation",
+        "grounded",
+        "methodology",
+        "perform",
+        "produce",
+        "producing",
+        "report",
+        "research",
+        "reviewed",
+        "source",
+        "structured",
+        "supported",
+        "synthesis",
+        "technical",
+    }
+)
+
+
+def _report_relevance_terms(value: str) -> set[str]:
+    """Extract deterministic domain terms, including CJK bigrams."""
+
+    text = str(value or "").casefold()
+    latin = {
+        token
+        for token in re.findall(r"[a-z][a-z0-9-]{3,}", text)
+        if token not in _REPORT_RELEVANCE_STOPWORDS
+    }
+    cjk: set[str] = set()
+    for sequence in re.findall(r"[\u3400-\u4dbf\u4e00-\u9fff]+", text):
+        if len(sequence) == 1:
+            cjk.add(sequence)
+        else:
+            cjk.update(sequence[index : index + 2] for index in range(len(sequence) - 1))
+    return latin | cjk
+
+
+def _semantic_report_is_relevant(title: str, semantic_report: dict[str, Any], markdown: str) -> bool:
+    """Check topic fidelity without requiring an action sentence verbatim."""
+
+    normalized_markdown = " ".join(str(markdown or "").split()).casefold()
+    if " ".join(str(title or "").split()).casefold() in normalized_markdown:
+        return True
+    requested_terms = _report_relevance_terms(title)
+    generated_terms = _report_relevance_terms(
+        f"{semantic_report.get('title') or ''}\n{markdown}"
+    )
+    if not requested_terms:
+        return False
+    required_overlap = 1 if len(requested_terms) <= 2 else 2 if len(requested_terms) <= 8 else 3
+    return len(requested_terms & generated_terms) >= required_overlap
 
 
 def _semantic_unknown_resolution(
@@ -1646,6 +1745,33 @@ def draft_report(node_request: dict[str, Any], context: OperatorContext) -> dict
         source_assessment,
         source_assessment_limitations,
     ) = _report_plan_and_verdicts(context)
+    review_documents = load_documents(
+        context,
+        schemas=("scientific_report_plan_review.v1",),
+        payload_keys=("report_plan_review",),
+        required=False,
+    )
+    plan_sha256 = stable_json_sha256(plan)
+    plan_review: dict[str, Any] = {}
+    plan_review_findings: list[dict[str, Any]] = []
+    if review_documents:
+        review_document = review_documents[0]
+        review_outputs = _outputs(review_document)
+        plan_review = review_outputs.get("review") if isinstance(review_outputs.get("review"), dict) else {}
+        plan_review_findings = [
+            item for item in review_outputs.get("findings") or [] if isinstance(item, dict)
+        ]
+        if (
+            review_document.get("schema") != "scientific_report_plan_review.v1"
+            or review_document.get("status") != "completed"
+            or plan_review.get("review_stage") != "pre_draft_plan"
+            or plan_review.get("target_schema") != "scientific_report_plan.v1"
+            or plan_review.get("reviewed_artifact_sha256") != plan_sha256
+        ):
+            raise ResearchOperatorError(
+                "Pre-draft review is missing or does not match the routed scientific report plan",
+                error_type="artifact_identity_mismatch",
+            )
     study_protocol = (
         plan.get("study_protocol")
         if isinstance(plan.get("study_protocol"), dict)
@@ -1745,6 +1871,7 @@ def draft_report(node_request: dict[str, Any], context: OperatorContext) -> dict
         unknown_resolution_traces=unknown_resolution_traces,
         methods=methods,
         source_assessment=source_assessment,
+        plan_review={"review": plan_review, "findings": plan_review_findings},
     )
     for section in require_list(plan.get("sections"), "report sections"):
         section_id = require_text(section.get("section_id"), "section_id")
@@ -1967,6 +2094,25 @@ def draft_report(node_request: dict[str, Any], context: OperatorContext) -> dict
             for item in conclusions
         )
         markdown_parts.extend(["\n## Evidence-bounded conclusions", conclusion_body])
+    review_trace_rows = [
+        f"- {item.get('finding_id')} [{item.get('severity')} / {item.get('category')}]: "
+        f"{item.get('evidence')} Action: {item.get('suggestion')}"
+        for item in plan_review_findings
+    ]
+    review_trace_body = "\n".join(review_trace_rows) or "- The pre-draft reviewer returned no findings."
+    if plan_review:
+        sections.append(
+            {
+                "section_id": "pre_draft_review_trace",
+                "title": "Pre-draft artifact review trace",
+                "body": review_trace_body,
+                "evidence_ids": [
+                    str(item) for item in plan_review.get("evidence_ids") or [] if str(item).strip()
+                ],
+                "requirement_ids": [],
+            }
+        )
+        markdown_parts.extend(["\n## Pre-draft artifact review trace", review_trace_body])
     markdown = "\n".join(markdown_parts).strip() + "\n"
     if semantic_report:
         semantic_sections = [
@@ -1981,6 +2127,20 @@ def draft_report(node_request: dict[str, Any], context: OperatorContext) -> dict
         ]
         markdown = require_text(semantic_report.get("body"), "semantic report body").rstrip() + "\n"
         sections = semantic_sections or sections
+        if plan_review:
+            markdown += "\n## Pre-draft artifact review trace\n" + review_trace_body + "\n"
+        if semantic_sections and plan_review:
+            sections.append(
+                {
+                    "section_id": "pre_draft_review_trace",
+                    "title": "Pre-draft artifact review trace",
+                    "body": review_trace_body,
+                    "evidence_ids": [
+                        str(item) for item in plan_review.get("evidence_ids") or [] if str(item).strip()
+                    ],
+                    "requirement_ids": [],
+                }
+            )
         unknown_resolution_traces = _semantic_unknown_resolution(
             unknown_resolution_traces,
             requirement_bindings,
@@ -1994,7 +2154,11 @@ def draft_report(node_request: dict[str, Any], context: OperatorContext) -> dict
             }
             for binding in report_requirement_bindings
         ]
-    if title.lower() not in markdown.lower():
+    if semantic_report:
+        relevant = _semantic_report_is_relevant(title, semantic_report, markdown)
+    else:
+        relevant = title.casefold() in markdown.casefold()
+    if not relevant:
         raise ResearchOperatorError("Draft is not relevant to the requested topic", error_type="product_failure")
     report = {
         "report_id": require_text(plan.get("report_id"), "report_id"),
@@ -2081,6 +2245,20 @@ def draft_report(node_request: dict[str, Any], context: OperatorContext) -> dict
             else None
         ),
         "study_protocol": study_protocol,
+        "pre_draft_review": (
+            {
+                "reviewed_artifact_sha256": plan_sha256,
+                "recommendation": str(plan_review.get("recommendation") or ""),
+                "finding_ids": [
+                    str(item.get("finding_id") or "")
+                    for item in plan_review_findings
+                    if str(item.get("finding_id") or "")
+                ],
+                "disposition": "consumed_and_retained",
+            }
+            if plan_review
+            else None
+        ),
         "markdown": markdown,
     }
     extra_artifacts: list[dict[str, Any]] = []
@@ -2124,7 +2302,9 @@ def _report(context: OperatorContext) -> dict[str, Any]:
     return report
 
 
-def review_artifact(node_request: dict[str, Any], context: OperatorContext) -> dict[str, Any]:
+def _review_final_report(context: OperatorContext) -> dict[str, Any]:
+    """Retain the existing post-draft structural-review behavior for its ABI."""
+
     report = _report(context)
     findings: list[dict[str, Any]] = []
     markdown = str(report.get("markdown") or "").strip()
@@ -2175,7 +2355,130 @@ def review_artifact(node_request: dict[str, Any], context: OperatorContext) -> d
     )
 
 
-def _report_and_review(
+def review_artifact(node_request: dict[str, Any], context: OperatorContext) -> dict[str, Any]:
+    documents = load_documents(
+        context,
+        schemas=("scientific_report_plan.v1",),
+        payload_keys=("report_plan",),
+        required=False,
+    )
+    if not documents:
+        return _review_final_report(context)
+    document = documents[0]
+    values = _outputs(document)
+    plan = values.get("report_plan") if isinstance(values.get("report_plan"), dict) else values
+    if not isinstance(plan, dict) or not plan:
+        raise ResearchOperatorError("Scientific report plan is malformed", error_type="invalid_input")
+    review_model = context.services.get("review_model_generate")
+    if review_model is None:
+        raise ResearchOperatorError(
+            "Pre-draft artifact review requires the configured review model service",
+            error_type="provider_unavailable",
+        )
+    findings: list[dict[str, Any]] = []
+    sections = plan.get("sections") if isinstance(plan.get("sections"), list) else []
+    if len(sections) < 3:
+        findings.append({"finding_id": "plan.weak-structure", "severity": "high", "category": "structure", "evidence": f"Only {len(sections)} planned sections are present.", "suggestion": "Add enough planned sections to cover methods, findings, limitations, and conclusions."})
+    reportable_ids = [
+        str(item) for item in (plan.get("reportable_claim_ids") or plan.get("supported_claim_ids") or [])
+        if str(item).strip()
+    ]
+    if not reportable_ids:
+        findings.append({"finding_id": "plan.no-reportable-claims", "severity": "high", "category": "evidence", "evidence": "The report plan contains no reportable claim identifiers.", "suggestion": "Retain at least one source-grounded claim or explicitly stop for insufficient evidence."})
+    if not [item for item in plan.get("requirement_bindings") or [] if isinstance(item, dict)]:
+        findings.append({"finding_id": "plan.no-requirement-bindings", "severity": "high", "category": "coverage", "evidence": "The report plan contains no requirement bindings.", "suggestion": "Bind accepted requirements to report sections and evidence before drafting."})
+    protocol = plan.get("study_protocol") if isinstance(plan.get("study_protocol"), dict) else {}
+    unresolved_protocol = [str(item) for item in protocol.get("unresolved_fields") or [] if str(item).strip()]
+    if unresolved_protocol:
+        findings.append({"finding_id": "plan.protocol-unresolved", "severity": "medium", "category": "coverage", "evidence": "Unresolved protocol fields: " + ", ".join(unresolved_protocol), "suggestion": "Retain these fields as explicit limitations unless governed evidence resolves them during drafting."})
+    task_contract = context.payload.get("task_contract") if isinstance(context.payload.get("task_contract"), dict) else {}
+    response = review_model(
+        node_id="artifact_review",
+        task_contract=task_contract,
+        report_plan=plan,
+    )
+    if not isinstance(response, dict):
+        raise ResearchOperatorError(
+            "review_model_generate service must return a JSON object",
+            error_type="provider_contract_failure",
+        )
+    for index, item in enumerate(response.get("findings") or [], start=1):
+        if not isinstance(item, dict):
+            raise ResearchOperatorError(
+                "Review model returned a non-object finding",
+                error_type="provider_contract_failure",
+            )
+        message = require_text(item.get("message"), f"review finding {index} message")
+        severity = str(item.get("severity") or "").strip().lower()
+        if severity not in {"low", "medium", "high", "critical"}:
+            raise ResearchOperatorError(
+                "Review model returned an unsupported finding severity",
+                error_type="provider_contract_failure",
+            )
+        findings.append(
+            {
+                "finding_id": require_text(item.get("finding_id"), f"review finding {index} id"),
+                "severity": severity,
+                "category": require_text(item.get("category"), f"review finding {index} category"),
+                "evidence": message,
+                "suggestion": f"Address or explicitly retain this pre-draft finding: {message}",
+            }
+        )
+    requested = str(response.get("verdict_suggestion") or "").strip().lower()
+    if requested not in {"accept", "revise", "reject"}:
+        raise ResearchOperatorError(
+            "Review model returned an unsupported verdict suggestion",
+            error_type="provider_contract_failure",
+        )
+    blocking = any(str(item.get("severity") or "") in {"high", "critical"} for item in findings)
+    recommendation = "revise_plan" if blocking or requested != "accept" else "ready_with_findings"
+    score = max(0.0, 1.0 - 0.2 * sum(str(item.get("severity") or "") in {"high", "critical"} for item in findings) - 0.05 * sum(str(item.get("severity") or "") in {"low", "medium"} for item in findings))
+    plan_sha256 = stable_json_sha256(plan)
+    evidence_ids = sorted({
+        *[str(item.get("finding_id")) for item in findings if item.get("finding_id")],
+        *[str(item) for item in reportable_ids],
+        f"report-plan:{str(plan.get('report_id') or 'unknown')}",
+    })
+    review = {
+        "artifact_id": require_text(plan.get("report_id"), "report_id"),
+        "target_schema": "scientific_report_plan.v1",
+        "review_stage": "pre_draft_plan",
+        "review_mode": "review_llm",
+        "review_available": True,
+        "score": score,
+        "recommendation": recommendation,
+        "evidence_ids": evidence_ids,
+        "reviewed_artifact_sha256": plan_sha256,
+        "review_scope": "pre_draft_evidence_and_coverage",
+        "task_contract_sha256": stable_json_sha256(task_contract),
+        "writer_self_assessment_trusted": False,
+        "reviewer_usage": [item for item in response.get("provider_usage") or [] if isinstance(item, dict)],
+    }
+    return completed_result(
+        context,
+        operator_id=ARTIFACT_REVIEWER_ID,
+        schema="scientific_report_plan_review.v1",
+        outputs={
+            "review": review,
+            "findings": findings,
+            "artifact": {
+                "report_id": plan.get("report_id"),
+                "title": plan.get("title"),
+                "schema": "scientific_report_plan.v1",
+                "sha256": plan_sha256,
+            },
+        },
+        filename="scientific_report_plan_review.v1.json",
+        artifact_id="scientific_report_plan_review",
+        limitations=[
+            *[str(item) for item in response.get("limitations") or [] if str(item).strip()],
+            "This pre-draft review guides report generation and does not replace the post-generation Evidence Gate.",
+        ],
+        model_provider_usage=[item for item in response.get("provider_usage") or [] if isinstance(item, dict)],
+    )
+
+
+def _report_and_optional_review(
     context: OperatorContext,
 ) -> tuple[dict[str, Any], dict[str, Any], list[dict[str, Any]], dict[str, Any]]:
     documents = load_documents(
@@ -2198,13 +2501,15 @@ def _report_and_review(
         if isinstance(values.get("review"), dict):
             review = values["review"]
             findings = [item for item in values.get("findings") or [] if isinstance(item, dict)]
-    if not report or not review:
-        raise ResearchOperatorError("Report and artifact review are required", error_type="missing_input")
+    if not report:
+        raise ResearchOperatorError("Scientific report is required", error_type="missing_input")
     return report, review, findings, requirement_ir
 
 
-def _safe_delivery_path(value: Any, *, label: str) -> str:
+def _safe_delivery_path(value: Any, *, label: str, directory: bool = False) -> str:
     raw = str(value or "").strip().replace("\\", "/")
+    if directory:
+        raw = raw.rstrip("/")
     path = Path(raw)
     if (
         not raw
@@ -2265,6 +2570,203 @@ def _validated_delivery_content(row: dict[str, Any], content: Any) -> str:
     return text
 
 
+def _bind_claim_index_spans(content: str, report: dict[str, Any]) -> str:
+    """Replace model-authored citation locations with verified upstream spans."""
+
+    try:
+        payload = json.loads(content)
+    except json.JSONDecodeError:
+        return content
+    if not isinstance(payload, dict):
+        return content
+    claims = payload.get("claims")
+    if not isinstance(claims, list):
+        return content
+    mappings = {
+        str(item.get("claim_id") or ""): item
+        for item in report.get("claim_status_mappings") or []
+        if isinstance(item, dict) and str(item.get("claim_id") or "")
+    }
+    for claim in claims:
+        if not isinstance(claim, dict):
+            continue
+        mapping = mappings.get(str(claim.get("claim_id") or ""))
+        if not mapping:
+            continue
+        spans = [
+            dict(item)
+            for item in mapping.get("citation_spans") or []
+            if isinstance(item, dict)
+        ]
+        if spans:
+            claim["citation_spans"] = spans
+        evidence_ids = [
+            str(item)
+            for item in mapping.get("evidence_ids") or []
+            if str(item).strip()
+        ]
+        if evidence_ids:
+            claim["evidence_ids"] = evidence_ids
+    return json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2) + "\n"
+
+
+def _run_manifest_content(
+    content: str,
+    *,
+    rows: list[dict[str, Any]],
+    refs_by_path: dict[str, dict[str, Any]],
+    self_path: str,
+    run_context: dict[str, Any],
+) -> str:
+    """Record post-materialization hashes without claiming an impossible self hash."""
+
+    try:
+        payload = json.loads(content)
+    except json.JSONDecodeError as exc:
+        raise ResearchOperatorError(
+            f"Delivery JSON is invalid: {self_path}",
+            error_type="provider_contract_failure",
+        ) from exc
+    if not isinstance(payload, dict):
+        raise ResearchOperatorError(
+            f"Research run manifest must be a JSON object: {self_path}",
+            error_type="provider_contract_failure",
+        )
+    snapshot = (
+        run_context.get("runtime_execution_snapshot")
+        if isinstance(run_context.get("runtime_execution_snapshot"), dict)
+        else {}
+    )
+    snapshot_nodes = [
+        dict(item)
+        for item in snapshot.get("nodes") or []
+        if isinstance(item, dict) and str(item.get("node_id") or "").strip()
+    ]
+    if snapshot.get("availability") != "available" or not snapshot_nodes:
+        raise ResearchOperatorError(
+            "Research run manifest requires an available Scheduler runtime execution snapshot",
+            error_type="invalid_input",
+        )
+
+    def bind_node_statuses(existing: Any) -> list[dict[str, Any]]:
+        existing_by_id = {
+            str(item.get("node_id") or item.get("id") or ""): dict(item)
+            for item in existing or []
+            if isinstance(item, dict)
+            and str(item.get("node_id") or item.get("id") or "").strip()
+        }
+        bound: list[dict[str, Any]] = []
+        for observed in snapshot_nodes:
+            node_id = str(observed["node_id"])
+            row = existing_by_id.get(node_id, {"node_id": node_id})
+            row["node_id"] = node_id
+            row["status"] = str(observed.get("status") or "")
+            row["attempt"] = int(observed.get("attempt") or 0)
+            row["blocked_by"] = [str(value) for value in observed.get("blocked_by") or []]
+            row["status_source"] = "scheduler_runtime_execution_snapshot"
+            bound.append(row)
+        return bound
+
+    graph = payload.get("graph") if isinstance(payload.get("graph"), dict) else {}
+    graph["nodes"] = bind_node_statuses(graph.get("nodes"))
+    payload["graph"] = graph
+    if isinstance(payload.get("nodes"), list):
+        payload["nodes"] = bind_node_statuses(payload.get("nodes"))
+    payload["runtime_execution_snapshot"] = snapshot
+    prior_status = payload.get("status")
+    status = dict(prior_status) if isinstance(prior_status, dict) else {}
+    if prior_status is not None and not isinstance(prior_status, dict):
+        status["semantic_author_status"] = prior_status
+    status.update(
+        {
+            "publication_materialization": "completed_pending_deterministic_evaluation",
+            "Evidence Gate": "pending_deterministic_evaluation",
+            "Closure-status": "pending_scheduler_closure",
+        }
+    )
+    payload["status"] = status
+    existing_paths = {
+        str(item.get("relative_path") or ""): item
+        for item in payload.get("artifact_paths") or []
+        if isinstance(item, dict) and str(item.get("relative_path") or "")
+    }
+    artifact_paths: list[dict[str, Any]] = []
+    artifact_hashes: list[dict[str, str]] = []
+    for row in rows:
+        relative_path = str(row.get("relative_path") or "")
+        if relative_path == self_path:
+            continue
+        ref = refs_by_path.get(relative_path)
+        if not ref:
+            raise ResearchOperatorError(
+                f"Research run manifest cannot bind missing artifact: {relative_path}",
+                error_type="product_failure",
+            )
+        digest = str(ref.get("sha256") or "")
+        item = dict(existing_paths.get(relative_path) or {})
+        item.update(
+            {
+                "relative_path": relative_path,
+                "media_type": str(row.get("media_type") or "text/plain"),
+                "content_hash_sha256": digest,
+            }
+        )
+        artifact_paths.append(item)
+        artifact_hashes.append(
+            {"relative_path": relative_path, "algorithm": "sha256", "value": digest}
+        )
+    payload["artifact_paths"] = artifact_paths
+    payload["artifact_hashes"] = artifact_hashes
+    payload["manifest_self_hash"] = {
+        "relative_path": self_path,
+        "algorithm": "sha256",
+        "recorded_in": "publication_bundle.v1.outputs.bundle.files",
+        "reason": "The outer publication bundle records the byte hash after this manifest is finalized.",
+    }
+    limitations = [
+        str(item)
+        for item in payload.get("limitations") or []
+        if str(item).strip()
+        and not (
+            "hash" in str(item).casefold()
+            and "could not be computed" in str(item).casefold()
+        )
+    ]
+    payload["limitations"] = limitations
+    return json.dumps(payload, ensure_ascii=False, sort_keys=True, indent=2) + "\n"
+
+
+def _publication_limitations(
+    response: dict[str, Any], report: dict[str, Any], generated_by_path: dict[str, dict[str, Any]]
+) -> list[str]:
+    values = [str(item) for item in response.get("limitations") or [] if str(item).strip()]
+    for generated in generated_by_path.values():
+        try:
+            parsed = json.loads(str(generated.get("content") or ""))
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(parsed, dict):
+            continue
+        values.extend(str(item) for item in parsed.get("limitations") or [] if str(item).strip())
+        values.extend(
+            str(item.get("detail") or "")
+            for item in parsed.get("failures_and_degraded_states") or []
+            if isinstance(item, dict) and str(item.get("detail") or "").strip()
+        )
+    for section in report.get("sections") or []:
+        if not isinstance(section, dict):
+            continue
+        title = str(section.get("title") or "").casefold()
+        body = str(section.get("body") or "").strip()
+        if body and ("limitation" in title or "evidence gate" in title):
+            values.append(body)
+    if not values:
+        values.append(
+            "Bundle materialization preserves the source scientific report's evidence boundary and does not independently validate its claims."
+        )
+    return list(dict.fromkeys(values))
+
+
 def _manifest_publication(
     context: OperatorContext,
     *,
@@ -2308,53 +2810,92 @@ def _manifest_publication(
             error_type="provider_contract_failure",
         )
     generated_by_path = {str(item["relative_path"]): item for item in generated}
-    validated = [
-        _validated_delivery_content(row, generated_by_path[path].get("content"))
+    validated_by_path = {
+        path: _validated_delivery_content(row, generated_by_path[path].get("content"))
         for row, path in zip(rows, expected_paths)
-    ]
+    }
+    for path, row in zip(expected_paths, rows):
+        if Path(path).name == "claim_evidence_index.json":
+            validated_by_path[path] = _validated_delivery_content(
+                row, _bind_claim_index_spans(validated_by_path[path], report)
+            )
     first_scope = context.write_scope[0] if context.write_scope else ""
     if not first_scope or Path(first_scope).suffix:
         raise ResearchOperatorError(
             "Manifest-driven publication requires a directory write scope",
             error_type="scope_violation",
         )
-    expected_root = _safe_delivery_path(manifest.get("output_root"), label="output_root")
+    expected_root = _safe_delivery_path(
+        manifest.get("output_root"),
+        label="output_root",
+        directory=True,
+    )
     normalized_scope = str(first_scope).replace("\\", "/").rstrip("/")
     if normalized_scope != expected_root and not normalized_scope.endswith("/" + expected_root):
         raise ResearchOperatorError(
             "Frozen publication write scope does not match delivery manifest output_root",
             error_type="scope_violation",
         )
-    artifacts: list[dict[str, Any]] = []
-    hashes: list[dict[str, str]] = []
-    files: list[dict[str, Any]] = []
-    for index, (row, relative_path, content) in enumerate(zip(rows, expected_paths, validated), start=1):
+    refs_by_path: dict[str, dict[str, Any]] = {}
+    hashes_by_path: dict[str, dict[str, str]] = {}
+    run_manifest_paths = [path for path in expected_paths if Path(path).name == "research_run_manifest.json"]
+    write_order = [path for path in expected_paths if path not in run_manifest_paths]
+    for relative_path in write_order:
+        index = expected_paths.index(relative_path) + 1
+        row = rows[index - 1]
         artifact_id = f"publication_file_{index}"
         ref, digest = write_scoped_text(
             context,
             relative_path=f"{first_scope.rstrip('/\\')}/{relative_path}",
-            content=content,
+            content=validated_by_path[relative_path],
             artifact_id=artifact_id,
             schema=str(row.get("media_type") or "text/plain"),
         )
-        artifacts.append(ref)
-        hashes.append(digest)
-        files.append(
-            {
-                "type": str(row.get("media_type") or "text/plain"),
-                "path": ref["path"],
-                "sha256": ref["sha256"],
-                "manifest_relative_path": relative_path,
-            }
+        refs_by_path[relative_path] = ref
+        hashes_by_path[relative_path] = digest
+    for relative_path in run_manifest_paths:
+        index = expected_paths.index(relative_path) + 1
+        row = rows[index - 1]
+        content = _run_manifest_content(
+            validated_by_path[relative_path],
+            rows=rows,
+            refs_by_path=refs_by_path,
+            self_path=relative_path,
+            run_context=context.payload.get("run_context") or {},
         )
-    limitations = [str(item) for item in response.get("limitations") or [] if str(item).strip()]
+        content = _validated_delivery_content(row, content)
+        ref, digest = write_scoped_text(
+            context,
+            relative_path=f"{first_scope.rstrip('/\\')}/{relative_path}",
+            content=content,
+            artifact_id=f"publication_file_{index}",
+            schema=str(row.get("media_type") or "application/json"),
+        )
+        refs_by_path[relative_path] = ref
+        hashes_by_path[relative_path] = digest
+        generated_by_path[relative_path]["content"] = content
+    artifacts = [refs_by_path[path] for path in expected_paths]
+    hashes = [hashes_by_path[path] for path in expected_paths]
+    files = [
+        {
+            "type": str(row.get("media_type") or "text/plain"),
+            "path": refs_by_path[path]["path"],
+            "sha256": refs_by_path[path]["sha256"],
+            "manifest_relative_path": path,
+        }
+        for row, path in zip(rows, expected_paths)
+    ]
+    limitations = _publication_limitations(response, report, generated_by_path)
     usage = [item for item in response.get("provider_usage") or [] if isinstance(item, dict)]
     return files, artifacts, hashes, limitations, usage
 
 
 def produce_publication(node_request: dict[str, Any], context: OperatorContext) -> dict[str, Any]:
-    report, review, findings, requirement_ir = _report_and_review(context)
-    if review.get("recommendation") != "pass_with_review_required" or any(item.get("severity") == "high" for item in findings):
+    report, review, findings, requirement_ir = _report_and_optional_review(context)
+    if review and (
+        review.get("recommendation") != "pass_with_review_required"
+        or any(item.get("severity") in {"high", "critical"} for item in findings)
+    ):
         raise ResearchOperatorError("Artifact review requires revision before publication", error_type="quality_gate_failed")
     publication_type = str(context.payload.get("publication_type") or "paper")
     if publication_type not in {"paper", "poster", "rebuttal", "slides", "supplement", "mixed"}:
@@ -2405,12 +2946,17 @@ def produce_publication(node_request: dict[str, Any], context: OperatorContext) 
         files = [{"type": "markdown", "path": compiled_ref["path"], "sha256": compiled_ref["sha256"]}]
     else:
         files = [{"type": "embedded_markdown", "path": output_location(context, "publication_bundle.v1.json")}]
+    source_report_id = require_text(report.get("report_id"), "source_report_id")
+    evidence_ids = list(dict.fromkeys([
+        source_report_id,
+        *[str(item) for item in report.get("evidence_ids") or [] if str(item).strip()],
+    ]))
     bundle = {
         "bundle_id": str(context.payload.get("bundle_id") or f"bundle-{report.get('report_id', 'report')}"),
         "publication_type": publication_type,
         "files": files,
-        "source_report_id": require_text(report.get("report_id"), "source_report_id"),
-        "evidence_ids": [str(item) for item in report.get("evidence_ids") or []],
+        "source_report_id": source_report_id,
+        "evidence_ids": evidence_ids,
         "compiled_markdown": markdown,
         "deliverable_inspection": {
             "status": "inspected",
@@ -2419,7 +2965,7 @@ def produce_publication(node_request: dict[str, Any], context: OperatorContext) 
             "evidence_linked": bool(report.get("evidence_ids")),
             "not_schema_only": True,
         },
-        "review_score": review.get("score"),
+        "review_score": review.get("score") if review else None,
     }
     if isinstance(delivery_manifest, dict):
         bundle["delivery_manifest"] = delivery_manifest

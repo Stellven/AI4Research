@@ -67,9 +67,9 @@ effects:
   execute:
     - plugins/autosci/operators/scientific_lifecycle/action/delivery.py
   network:
-    - none by default
+    - configured model_generate service
   cost:
-    - bounded drafting cost
+    - bounded model-backed drafting cost
   risk:
     - narrative generation can overstate evidence without verifier checks
 bindings:

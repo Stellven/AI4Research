@@ -120,6 +120,47 @@ class TestPlanGovernanceStates:
         assert gov["plan_compile_bounces"] == 2, gov
         assert "PLAN_GATE_PATH_DENIED" in gov["compile_error_codes"], gov
 
+    def test_completed_repair_record_survives_finalized_projection(self, tmp_path):
+        _write_fixture(
+            tmp_path,
+            graph_top={
+                "workflow_contract_id": "pm.generic.v1",
+                "plan_certificate": CERT,
+                "plan_compile_required": True,
+            },
+            status_extra={"status": "passed", "phase": "finalized"},
+        )
+        repair_path = (
+            tmp_path
+            / "sprints"
+            / SID
+            / "planning"
+            / "semantic"
+            / "repair_record.json"
+        )
+        repair_path.parent.mkdir(parents=True, exist_ok=True)
+        repair_path.write_text(
+            json.dumps(
+                {
+                    "status": "completed",
+                    "generation": 1,
+                    "defects": [
+                        {"code": "DISCOVERY_NON_SCOPE_OWNERSHIP"},
+                        {"code": "REQUIREMENT_VERIFIER_MISSING"},
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        gov = _governance(_load_routes(tmp_path))
+
+        assert gov["plan_compile_bounces"] == 1, gov
+        assert gov["compile_error_codes"] == [
+            "DISCOVERY_NON_SCOPE_OWNERSHIP",
+            "REQUIREMENT_VERIFIER_MISSING",
+        ], gov
+
     def test_terminal_plan_compile_failed(self, tmp_path):
         _write_fixture(
             tmp_path,

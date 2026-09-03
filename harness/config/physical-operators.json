@@ -4618,16 +4618,31 @@
       "deprecated": false
     },
     "autosci-memory-update-worker": {
-      "display_name": "AutoSci memory update worker",
-      "owner_host": "stub_docker_sandbox",
+      "display_name": "Native AutoSci typed memory update worker",
+      "owner_host": "research_operator_registry",
       "role": "scientific-memory-updater",
       "persona": "scientific-memory-updater",
-      "backend": "command",
-      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action update_memory --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "backend": "research_operator_registry",
+      "model_provider_neutral": true,
       "enabled": true,
       "available": true,
       "health_status": "ok",
       "max_concurrency": 1,
+      "execution_trust": "evidence_transform",
+      "resource_requirements": {
+        "required_services": [],
+        "required_authorizations": [],
+        "required_artifact_types": [
+          "schema:schemas/evidence/research_paper.v1.schema.json"
+        ],
+        "network": "forbidden",
+        "compute_profiles": []
+      },
+      "runtime_binding": {
+        "registry": "plugins.autosci.operators.scientific_lifecycle.evidence.registry",
+        "node_id": "memory_update_initial",
+        "implementation_operator_id": "autosci-evidence-memory-update-initial"
+      },
       "compat_maps_to": {
         "host_type": "local_command_worker"
       },
@@ -4826,16 +4841,34 @@
       "deprecated": false
     },
     "autosci-artifact-review-worker": {
-      "display_name": "AutoSci artifact review worker",
-      "owner_host": "stub_docker_sandbox",
+      "display_name": "Native AutoSci artifact review worker",
+      "owner_host": "research_operator_registry",
       "role": "lab-evaluator",
       "persona": "lab-evaluator",
-      "backend": "command",
-      "command": "PY=\"${SOLAR_AUTOSCI_PYTHON:-$HARNESS_DIR/../.venv/bin/python}\"; [ -x \"$PY\" ] || PY=python3; \"$PY\" \"$HARNESS_DIR/plugins/autosci/bin/autosci_bridge.py\" run --action review_artifact --envelope \"$SOLAR_OPERATOR_ENVELOPE_JSON\"",
+      "backend": "research_operator_registry",
+      "model_provider_neutral": true,
       "enabled": true,
       "available": true,
       "health_status": "ok",
       "max_concurrency": 1,
+      "execution_trust": "evidence_transform",
+      "resource_requirements": {
+        "required_services": [
+          "review_model_generate"
+        ],
+        "required_authorizations": [],
+        "required_artifact_types": [
+          "schema:schemas/evidence/scientific_report_plan.v1.schema.json",
+          "schema:schemas/evidence/scientific_report.v1.schema.json"
+        ],
+        "network": "optional",
+        "compute_profiles": []
+      },
+      "runtime_binding": {
+        "registry": "plugins.autosci.operators.scientific_lifecycle.registry",
+        "node_id": "artifact_review",
+        "implementation_operator_id": "autosci-artifact-review-physical"
+      },
       "compat_maps_to": {
         "host_type": "local_command_worker"
       },
@@ -4915,13 +4948,16 @@
       "execution_trust": "evidence_transform",
       "max_concurrency": 1,
       "resource_requirements": {
-        "required_services": [],
+        "required_services": [
+          "model_generate"
+        ],
         "required_authorizations": [],
         "required_artifact_types": [
           "schema:schemas/evidence/scientific_report_plan.v1.schema.json",
+          "schema:schemas/evidence/scientific_report_plan_review.v1.schema.json",
           "schema:schemas/evidence/claim_verdict.v1.schema.json"
         ],
-        "network": "forbidden",
+        "network": "required",
         "compute_profiles": []
       },
       "runtime_binding": {
@@ -4951,8 +4987,7 @@
         "required_authorizations": [],
         "required_artifact_types": [
           "requirement_ir.v1",
-          "schema:schemas/evidence/scientific_report.v1.schema.json",
-          "schema:schemas/evidence/artifact_review.v1.schema.json"
+          "schema:schemas/evidence/scientific_report.v1.schema.json"
         ],
         "network": "forbidden",
         "compute_profiles": []

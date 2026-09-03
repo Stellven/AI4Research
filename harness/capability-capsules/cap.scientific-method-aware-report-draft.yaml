@@ -2,7 +2,7 @@ capability_capsule_id: cap.scientific-method-aware-report-draft
 capsule_kind: capability
 metadata:
   name: Method- and source-assessment-aware Scientific Report Draft
-  description: Draft a scientific report from its plan, claim verdicts, structured method evidence, governed source-quality decisions, and the preserved study protocol.
+  description: Draft a scientific report from its reviewed plan, pre-draft review findings, claim verdicts, structured method evidence, governed source-quality decisions, and the preserved study protocol.
 applicability:
   task_types:
     - scientific-research
@@ -25,22 +25,28 @@ contract:
         schema_ref: schemas/evidence/research_method.v1.schema.json
       - name: research_source_assessment
         schema_ref: schemas/evidence/research_source_assessment.v1.schema.json
+      - name: scientific_report_plan_review
+        schema_ref: schemas/evidence/scientific_report_plan_review.v1.schema.json
+        description: Completed pre-draft review whose findings must be addressed or retained as explicit limitations.
   outputs:
     required:
       - name: scientific_report
         schema_ref: schemas/evidence/scientific_report.v1.schema.json
   preconditions:
     - check: method_aware_plan_available
-      description: The report plan, verdicts, method evidence, and source assessment are available.
+      description: The report plan, its hash-bound pre-draft review, verdicts, method evidence, and source assessment are available.
   postconditions:
     - check: draft_evidence_linked
       description: Findings and method descriptions cite retained evidence IDs.
     - check: study_protocol_rendered
       description: The final report renders search strategy, source-selection criteria, time range, inclusion/exclusion criteria, and unresolved protocol fields from its plan.
+    - check: plan_review_consumed
+      description: The final report records the reviewed plan hash and each review finding as addressed or explicitly retained.
   invariants:
     - Supplied method evidence is rendered and not silently dropped.
     - Unsupported claims remain explicit.
     - Study-protocol limitations from the report plan remain explicit and are not silently resolved.
+    - Pre-draft review findings are never treated as a final-publication verdict.
 composition:
   consumes:
     - schema_ref: schemas/evidence/scientific_report_plan.v1.schema.json
@@ -51,6 +57,8 @@ composition:
       purpose: Structured method evidence assigned by the report plan.
     - schema_ref: schemas/evidence/research_source_assessment.v1.schema.json
       purpose: Source-quality decisions that constrain which evidence can support report findings.
+    - schema_ref: schemas/evidence/scientific_report_plan_review.v1.schema.json
+      purpose: Hash-bound pre-draft review findings that guide the report writer.
   produces:
     - schema_ref: schemas/evidence/scientific_report.v1.schema.json
       purpose: Method-aware scientific report.
@@ -65,15 +73,16 @@ effects:
     - schemas/evidence/research_method.v1.schema.json
     - schemas/evidence/research_source_assessment.v1.schema.json
     - schemas/evidence/scientific_report_plan.v1.schema.json
+    - schemas/evidence/scientific_report_plan_review.v1.schema.json
     - schemas/evidence/scientific_report.v1.schema.json
   write:
     - artifacts/scientific/scientific_report/
   execute:
     - plugins/autosci/operators/scientific_lifecycle/action/delivery.py
   network:
-    - none
+    - configured model_generate service
   cost:
-    - bounded drafting cost
+    - bounded model-backed drafting cost
   risk:
     - narrative generation can overstate method evidence without review
 bindings:
@@ -86,6 +95,7 @@ bindings:
     - schemas/evidence/research_method.v1.schema.json
     - schemas/evidence/research_source_assessment.v1.schema.json
     - schemas/evidence/scientific_report_plan.v1.schema.json
+    - schemas/evidence/scientific_report_plan_review.v1.schema.json
     - schemas/evidence/scientific_report.v1.schema.json
   secret_refs: []
 verification:
@@ -93,6 +103,7 @@ verification:
     - Validate emitted evidence against scientific_report.v1.schema.json.
     - Confirm the Methods section retains method evidence IDs and limitations.
     - Confirm the report contains a study-protocol section copied from the report plan.
+    - Confirm the pre-draft review targets the exact report-plan hash and its findings are retained in report provenance.
   external_verifier:
     required: true
   pass_conditions:

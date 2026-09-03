@@ -1,0 +1,107 @@
+capability_capsule_id: cap.research-landscape-memory-update
+capsule_kind: capability
+metadata:
+  name: Scientific Landscape Memory Update
+  description: Project the pre-report research landscape, claim verdicts, methods, source decisions, and contradiction or gap plan into auditable memory proposals without drafting a report.
+applicability:
+  task_types:
+    - scientific-research
+    - research-memory
+    - evidence-synthesis
+  positive_signals:
+    - update research memory before report generation
+    - preserve contradiction and gap analysis
+    - persist a source-grounded landscape
+  negative_signals:
+    - draft report
+    - produce publication bundle
+contract:
+  inputs:
+    required:
+      - name: research_paper
+        schema_ref: schemas/evidence/research_paper.v1.schema.json
+      - name: claim_verdict
+        schema_ref: schemas/evidence/claim_verdict.v1.schema.json
+      - name: research_method
+        schema_ref: schemas/evidence/research_method.v1.schema.json
+      - name: research_source_assessment
+        schema_ref: schemas/evidence/research_source_assessment.v1.schema.json
+      - name: contradiction_gap_plan
+        schema_ref: schemas/evidence/scientific_report_plan.v1.schema.json
+        description: Pre-report synthesis plan carrying contradictions, gaps, unresolved questions, and study-protocol boundaries.
+  outputs:
+    required:
+      - name: research_memory_update
+        schema_ref: schemas/evidence/research_memory_update.v1.schema.json
+  preconditions:
+    - check: landscape_evidence_present
+      description: Ingested papers and the derived verdict, method, source-assessment, and contradiction-gap artifacts are available.
+  postconditions:
+    - check: update_traceable
+      description: Each proposed memory entity cites evidence IDs from the routed pre-report artifacts.
+  invariants:
+    - Does not draft a scientific report as an adapter for memory update.
+    - Does not treat report-plan content as a completed report or publication verdict.
+    - Does not mutate global research memory without separate approval.
+composition:
+  consumes:
+    - schema_ref: schemas/evidence/research_paper.v1.schema.json
+      purpose: Ingested and analyzed local source evidence.
+    - schema_ref: schemas/evidence/claim_verdict.v1.schema.json
+      purpose: Explicit support, contradiction, and uncertainty decisions.
+    - schema_ref: schemas/evidence/research_method.v1.schema.json
+      purpose: Source-grounded method entities.
+    - schema_ref: schemas/evidence/research_source_assessment.v1.schema.json
+      purpose: Selected, excluded, and unresolved source decisions.
+    - schema_ref: schemas/evidence/scientific_report_plan.v1.schema.json
+      purpose: Contradiction, gap, unresolved-question, and protocol synthesis prepared before report drafting.
+  produces:
+    - schema_ref: schemas/evidence/research_memory_update.v1.schema.json
+      purpose: Evidence-backed pre-report memory proposals.
+  compatible_with:
+    - cap.research-graph-update
+    - cap.research-report-plan-review
+  incompatible_with:
+    - cap.scientific-report-draft
+  requires_after: []
+effects:
+  read:
+    - typed pre-report scientific evidence
+    - schemas/evidence/research_memory_update.v1.schema.json
+  write:
+    - artifacts/scientific/research_memory_update/
+  execute:
+    - plugins/autosci/operators/scientific_lifecycle/evidence/operators.py
+  network:
+    - none
+  cost:
+    - bounded local evidence projection
+  risk:
+    - incomplete evidence routing can omit a required landscape entity
+bindings:
+  skills:
+    required: []
+    optional:
+      - autosci.memory_update
+  mcp_capabilities: {}
+  data_refs:
+    - schemas/evidence/research_memory_update.v1.schema.json
+  secret_refs: []
+verification:
+  self_check:
+    - Validate emitted evidence against research_memory_update.v1.schema.json.
+    - Confirm paper, claim, method, source-decision, and contradiction-gap entities remain traceable.
+    - Confirm no scientific_report.v1 adapter was generated.
+  external_verifier:
+    required: true
+  pass_conditions:
+    - The memory update contains source-grounded proposals for every routed evidence class.
+    - The update remains proposal-only and preserves unresolved findings.
+operator_compatibility:
+  preferred:
+    - autosci-memory-update-worker
+  forbidden:
+    - BackendFullWorkflowRunner
+provenance:
+  owner: opensolar
+  source_phase: pre_report_landscape_memory_handoff

@@ -38,8 +38,8 @@ contract:
   postconditions:
     - check: shortlist_traceable
       description: Candidate ranking includes sources, rationale, and dedup status.
-    - check: live_public_sources_recorded
-      description: Completed discovery contains at least one non-fixture online source channel and a reviewable public source reference.
+    - check: traceable_sources_recorded
+      description: Completed discovery contains either a non-fixture online source channel or controller-frozen, hash-bound local sources; unavailable online providers remain explicit limitations.
     - check: study_protocol_traceable
       description: Discovery records its search strategy, source-selection criteria, time range, inclusion criteria, exclusion criteria, and unresolved protocol fields.
   invariants:
@@ -88,12 +88,12 @@ verification:
   self_check:
     - Validate emitted evidence against literature_discovery.v1.schema.json.
     - Confirm candidates include source channels, ranking rationale, and dedup status.
-    - Require completed evidence to contain a non-fixture online source channel.
+    - Require completed evidence to contain a non-fixture online source channel or controller-frozen, hash-bound local sources.
     - Confirm outputs.study_protocol records all systematic-review protocol fields and identifies unresolved values.
   external_verifier:
     required: false
   pass_conditions:
-    - Live provider discovery emits at least one traceable public candidate; provider failure remains inconclusive or failed.
+    - Live provider discovery emits at least one traceable public candidate; provider failure may complete only when controller-frozen, hash-bound local sources remain available and the provider failure is recorded.
     - The discovery artifact always carries a study_protocol, including when provider discovery is inconclusive.
     - No memory or ingestion artifact is created by this capsule alone.
 operator_compatibility:

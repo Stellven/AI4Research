@@ -102,10 +102,53 @@ def check_operator(authority: dict[str, Any], operator_id: str,
         raise ValueError(f"FROZEN_OPERATOR_DEFINITION_CHANGED:{operator_id}")
 
 
+def frozen_evaluation_check_ids(graph: dict[str, Any]) -> set[str]:
+    """Load check identities from the hash-bound registry frozen for this run.
+
+    ``semantic_evaluator_ids`` is a historical mixed-identity field: current
+    planners put evaluation-check IDs in it, while older SchedulerInput
+    fixtures may contain physical evaluator IDs.  Prefix inspection is not a
+    valid discriminator because registered checks such as
+    ``structured_output_parses`` intentionally have no ``check.`` prefix.
+    """
+    run_contract_ref = graph.get("run_contract_ref")
+    if not isinstance(run_contract_ref, dict):
+        return set()
+    run_contract_path = Path(str(run_contract_ref.get("path") or ""))
+    expected_contract_sha = str(run_contract_ref.get("sha256") or "")
+    if not run_contract_path.is_file() or not expected_contract_sha:
+        raise ValueError("GRAPH_EVAL_CHECK_REGISTRY_INVALID")
+    if hashlib.sha256(run_contract_path.read_bytes()).hexdigest() != expected_contract_sha:
+        raise ValueError("GRAPH_EVAL_CHECK_REGISTRY_INVALID")
+    try:
+        run_contract = json.loads(run_contract_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError("GRAPH_EVAL_CHECK_REGISTRY_INVALID") from exc
+    registry_ref = run_contract.get("evaluation_check_registry_ref")
+    if not isinstance(registry_ref, dict):
+        raise ValueError("GRAPH_EVAL_CHECK_REGISTRY_INVALID")
+    expected_registry_sha = str(registry_ref.get("sha256") or "")
+    registry_path = run_contract_path.parent / "evaluation_check_registry.snapshot.json"
+    if not registry_path.is_file() or not expected_registry_sha:
+        raise ValueError("GRAPH_EVAL_CHECK_REGISTRY_INVALID")
+    if hashlib.sha256(registry_path.read_bytes()).hexdigest() != expected_registry_sha:
+        raise ValueError("GRAPH_EVAL_CHECK_REGISTRY_INVALID")
+    try:
+        registry = json.loads(registry_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError("GRAPH_EVAL_CHECK_REGISTRY_INVALID") from exc
+    return {
+        str(row.get("check_id") or "").strip()
+        for row in registry.get("checks") or []
+        if isinstance(row, dict) and str(row.get("check_id") or "").strip()
+    }
+
+
 def _validate_graph_evaluation_envelope(
     envelope: dict[str, Any],
     node: dict[str, Any],
     *,
+    graph: dict[str, Any],
     graph_path: Path,
     current_operator: dict[str, Any] | None = None,
 ) -> None:
@@ -146,7 +189,12 @@ def _validate_graph_evaluation_envelope(
     if not evaluator_ids:
         raise ValueError("GRAPH_EVAL_SEMANTIC_BINDING_MISSING")
     operator_id = str(envelope.get("operator_id") or "").strip()
-    physical_ids = [value for value in evaluator_ids if not value.startswith("check.")]
+    registered_check_ids = frozen_evaluation_check_ids(graph)
+    physical_ids = [
+        value
+        for value in evaluator_ids
+        if value not in registered_check_ids and not value.startswith("check.")
+    ]
     if physical_ids and operator_id not in physical_ids:
         raise ValueError("GRAPH_EVAL_OPERATOR_NOT_ADMITTED")
 
@@ -219,6 +267,7 @@ def from_envelope(
         _validate_graph_evaluation_envelope(
             envelope,
             node,
+            graph=graph,
             graph_path=Path(graph_path),
             current_operator=current_operator,
         )

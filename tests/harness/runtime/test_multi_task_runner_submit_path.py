@@ -407,6 +407,121 @@ class TestSubmitPathRejection:
         assert selected["scheduler_candidate_rank"] == 1
         assert "quota_fallback_from" not in selected
 
+    def test_frozen_capsule_profile_drives_model_service_envelope(self, monkeypatch):
+        """A specialized frozen node must not fall back to the generic builder model."""
+        node = {
+            "id": "artifact_review",
+            "logical_operator": "ScientificArtifactReviewer",
+            "capsule_binding": {"capsule_ids": ["cap.research-report-plan-review"]},
+            "execution_authority": {
+                "capsules": {
+                    "cap.research-report-plan-review": {
+                        "default_operator_profile": "codex-evaluator"
+                    }
+                }
+            },
+            "physical_candidates": [
+                {"rank": 1, "operator_id": "autosci-artifact-review-worker"},
+            ],
+        }
+        config = {
+            "defaults": {"profile": "codex-builder", "backend": "command"},
+            "profiles": {
+                "codex-builder": {
+                    "role": "builder",
+                    "backend": "command",
+                    "model": "wrong-builder-model",
+                    "reasoning_effort": "medium",
+                },
+                "codex-evaluator": {
+                    "role": "evaluator",
+                    "backend": "command",
+                    "model": "gpt-5.5",
+                    "reasoning_effort": "high",
+                },
+            },
+        }
+        monkeypatch.setattr(mtr, "load_profiles", lambda: config)
+        monkeypatch.setattr(
+            mtr,
+            "select_operator",
+            lambda *_: ({
+                "operator_id": "autosci-artifact-review-worker",
+                "backend": "research_operator_registry",
+                "role": "lab-evaluator",
+                "runtime_binding": {"registry": "example", "node_id": "artifact_review"},
+                "scheduler_candidate_rank": 1,
+            }, ""),
+        )
+
+        selected = mtr.select_profile(node)
+        envelope = mtr._build_operator_envelope(
+            "dispatch-1",
+            "sprint-1",
+            "artifact_review",
+            node,
+            selected,
+            {"work_dir": "/tmp/work"},
+        )
+
+        assert selected["name"] == "codex-evaluator"
+        assert envelope["model"] == "gpt-5.5"
+        assert envelope["reasoning_effort"] == "high"
+
+    def test_frozen_physical_operator_default_is_not_treated_as_model_profile(self, monkeypatch):
+        """An overloaded capsule default that names its native worker stays a physical binding."""
+        node = {
+            "id": "paper_preparation_ingestion",
+            "role": "builder",
+            "capsule_binding": {"capsule_ids": ["cap.research-source-assess"]},
+            "execution_authority": {
+                "capsules": {
+                    "cap.research-source-assess": {
+                        "default_operator_profile": "source_assess_worker"
+                    }
+                },
+                "operators": {
+                    "source_assess_worker": {
+                        "backend": "research_operator_registry",
+                        "role": "scientific-source-assessor",
+                    }
+                },
+            },
+            "physical_candidates": [
+                {"rank": 1, "operator_id": "source_assess_worker"},
+            ],
+        }
+        config = {
+            "defaults": {"profile": "codex-builder", "backend": "command"},
+            "profiles": {
+                "codex-builder": {
+                    "role": "builder",
+                    "backend": "command",
+                    "model": "gpt-5.5",
+                    "reasoning_effort": "medium",
+                }
+            },
+        }
+        monkeypatch.setattr(mtr, "load_profiles", lambda: config)
+        monkeypatch.setattr(
+            mtr,
+            "select_operator",
+            lambda *_: ({
+                "operator_id": "source_assess_worker",
+                "backend": "research_operator_registry",
+                "role": "scientific-source-assessor",
+                "runtime_binding": {"registry": "example", "node_id": "source_assess"},
+                "scheduler_candidate_rank": 1,
+            }, ""),
+        )
+
+        assert mtr._frozen_default_operator_profile(node) == ""
+        selected = mtr.select_profile(node)
+
+        assert selected["name"] == "codex-builder"
+        assert selected["operator_id"] == "source_assess_worker"
+        assert selected["model"] == "gpt-5.5"
+
     @pytest.mark.parametrize(
         ("submit_error", "expected_reason"),
         [

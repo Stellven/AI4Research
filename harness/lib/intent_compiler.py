@@ -212,7 +212,7 @@ class CodexJsonModel:
     """Fresh, schema-bound Codex invocation for one semantic boundary."""
 
     model: str
-    timeout_seconds: int = 180
+    timeout_seconds: int = 240
     provider: str = "codex"
 
     def generate(self, prompt: str, schema_path: Path, work_dir: Path) -> dict[str, Any]:
@@ -339,7 +339,7 @@ class CodexJsonModel:
 
 
 def model_from_environment(role: str) -> JsonModel:
-    timeout = int(os.environ.get("SOLAR_INTENT_MODEL_TIMEOUT_SEC", "180") or "180")
+    timeout = int(os.environ.get("SOLAR_INTENT_MODEL_TIMEOUT_SEC", "240") or "240")
     return stage_model("intent", role, timeout_seconds=timeout)
 
 

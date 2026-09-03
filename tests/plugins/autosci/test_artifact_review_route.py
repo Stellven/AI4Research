@@ -86,5 +86,7 @@ def test_artifact_review_fails_closed_on_ambiguous_scientific_report_route(tmp_p
     )
 
     assert resolved["path"] is None
-    assert resolved["route_error"] == "scientific_report.v1 route contained multiple completed reports"
+    assert resolved["route_error"] == (
+        "typed review route (scientific_report.v1) contained multiple completed artifacts"
+    )
     assert str(legacy_target) not in resolved["checked_paths"]

@@ -468,6 +468,20 @@ capsules:
     - memory
     owner: opensolar
     default_operator_profile: codex-builder
+  - capability_capsule_id: cap.research-landscape-memory-update
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: "../capability-capsules/cap.research-landscape-memory-update.yaml"
+    tags:
+    - research
+    - scientific
+    - autosci
+    - memory
+    - landscape
+    owner: opensolar
+    default_operator_profile: codex-builder
   - capability_capsule_id: cap.research-graph-update
     version: 0.1.0
     capsule_kind: capability
@@ -775,6 +789,20 @@ capsules:
     - scientific
     - autosci
     - review
+    owner: opensolar
+    default_operator_profile: codex-evaluator
+  - capability_capsule_id: cap.research-report-plan-review
+    version: 0.1.0
+    capsule_kind: capability
+    status: stable
+    schema_ref: schemas/draft/capability-capsule.v1.draft.json
+    manifest_path: "../capability-capsules/cap.research-report-plan-review.yaml"
+    tags:
+    - research
+    - scientific
+    - autosci
+    - review
+    - report-plan
     owner: opensolar
     default_operator_profile: codex-evaluator
   - capability_capsule_id: cap.research-publication-produce

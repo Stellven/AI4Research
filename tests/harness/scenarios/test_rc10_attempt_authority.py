@@ -659,7 +659,7 @@ def test_multi_task_launch_persists_canonical_legacy_attempt(
     monkeypatch.setattr(mtr, "capability_for_profile", lambda _profile: {"provider": "test", "status": "ready"})
     monkeypatch.setattr(mtr, "build_dispatch_text", lambda *_args, **_kwargs: "# dispatch\n")
     monkeypatch.setattr(mtr, "tmux_start", lambda *_args, **_kwargs: None)
-    monkeypatch.setattr(mtr, "set_last_launch", lambda: None)
+    monkeypatch.setattr(mtr, "set_last_launch", lambda *_args: None)
     monkeypatch.setattr(mtr, "_record_node_attribution", lambda *_args, **_kwargs: None)
 
     payload = mtr.launch_node(

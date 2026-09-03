@@ -46,6 +46,8 @@ function withToken(url: string): string {
 // still shell out synchronously. Intake has its own persisted asynchronous job contract below.
 const REQUEST_TIMEOUT_MS = 30000;
 const LONG_REQUEST_TIMEOUT_MS = 210000;
+const INTAKE_POLL_MAX_TRANSIENT_FAILURES = 5;
+const INTAKE_POLL_MAX_BACKOFF_MS = 5000;
 
 async function requestJson<T>(
   path: string,
@@ -317,11 +319,32 @@ export async function submitIntake(
   if (accepted.terminal || !accepted.request_id) return accepted;
 
   let pollAfterMs = Math.max(250, Number(accepted.poll_after_ms) || 1000);
+  let consecutiveTransientFailures = 0;
   while (true) {
     await new Promise((resolve) => window.setTimeout(resolve, pollAfterMs));
-    const status = await requestJson<IntakeResponse>(
-      `/intake/${encodeURIComponent(accepted.request_id)}`,
-    );
+    let status: IntakeResponse;
+    try {
+      status = await requestJson<IntakeResponse>(
+        `/intake/${encodeURIComponent(accepted.request_id)}`,
+      );
+      consecutiveTransientFailures = 0;
+    } catch (err) {
+      const transient =
+        err instanceof TypeError ||
+        (err instanceof Error && err.message.startsWith("Request timed out after "));
+      if (
+        !transient ||
+        consecutiveTransientFailures >= INTAKE_POLL_MAX_TRANSIENT_FAILURES
+      ) {
+        throw err;
+      }
+      consecutiveTransientFailures += 1;
+      pollAfterMs = Math.min(
+        INTAKE_POLL_MAX_BACKOFF_MS,
+        Math.max(500, pollAfterMs * 2),
+      );
+      continue;
+    }
     if (status.terminal) return status;
     pollAfterMs = Math.max(250, Number(status.poll_after_ms) || pollAfterMs);
   }

@@ -557,7 +557,7 @@ pane_runtime_cli_path() {
   case "$SOLAR_PANE_RUNTIME" in
     codex)
       [[ -n "${SOLAR_CODEX_BIN:-}" ]] && candidates+=("$SOLAR_CODEX_BIN")
-      candidates+=("$HOME/.npm-global/bin/codex" "$HOME/bin/codex" "$HOME/n/bin/codex")
+      candidates+=("$HOME/.local/bin/codex" "$HOME/.npm-global/bin/codex" "$HOME/bin/codex" "$HOME/n/bin/codex")
       c="$(command -v codex 2>/dev/null || true)"
       ;;
     claude)
@@ -4106,7 +4106,10 @@ print(json.dumps({
             "SOLAR_INTENT_GATEWAY_DIR=$_ss_intents_dir"
             "SOLAR_INTAKE_WORKSPACE_ROOT=$_ss_workspace_root"
             "SOLAR_INTENT_CONSUMER_WORKSPACE_ROOT=${SOLAR_INTENT_CONSUMER_WORKSPACE_ROOT:-$_ss_workspace_root}"
-            "SOLAR_BIND_HOST=${SOLAR_BIND_HOST:-127.0.0.1}"
+            # Preserve an explicit override, but otherwise let status-server.py
+            # choose loopback for native/mirrored networking and authenticated
+            # 0.0.0.0 for WSL NAT.
+            "SOLAR_BIND_HOST=${SOLAR_BIND_HOST:-}"
             "SOLAR_STATUS_PORT_START=$_SS_PORT_START"
             "SOLAR_STATUS_PORT_END=$_SS_PORT_END"
             "CODEX_HOME=${CODEX_HOME:-$HOME/.codex}"

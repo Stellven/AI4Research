@@ -159,6 +159,16 @@ def _explicit_source_paths(requirement_ir: dict[str, Any]) -> list[dict[str, Any
     """Return user-relative paths admitted by source-pack requirements only."""
 
     grouped: dict[str, set[str]] = {}
+    semantic_contract = (
+        requirement_ir.get("semantic_contract")
+        if isinstance(requirement_ir.get("semantic_contract"), dict)
+        else {}
+    )
+    source_constraints = {
+        str(row.get("constraint_id") or ""): row
+        for row in semantic_contract.get("source_constraints") or []
+        if isinstance(row, dict) and str(row.get("constraint_id") or "")
+    }
     for requirement in requirement_ir.get("requirements") or []:
         if not isinstance(requirement, dict):
             continue
@@ -181,6 +191,27 @@ def _explicit_source_paths(requirement_ir: dict[str, Any]) -> list[dict[str, Any
             str(requirement.get("statement") or requirement.get("source_text") or ""),
             *[str(value) for value in acceptance.get("required_values") or []],
         ]
+        # Requirement statements are compiler-authored semantic summaries and
+        # may normalize ``./path`` to ``path``.  Path authority must instead
+        # survive from the exact, program-preserved Intent constraints that the
+        # source-pack requirement cites.  Scan only those referenced constraints
+        # and retain the explicit ``./`` requirement so ordinary prose cannot
+        # accidentally grant workspace-read authority.
+        for source_ref in requirement.get("source_refs") or []:
+            constraint = source_constraints.get(str(source_ref))
+            if not isinstance(constraint, dict):
+                continue
+            expression = (
+                constraint.get("expression")
+                if isinstance(constraint.get("expression"), dict)
+                else {}
+            )
+            values.extend(
+                [
+                    str(constraint.get("statement") or ""),
+                    str(expression.get("literal") or ""),
+                ]
+            )
         for value in values:
             for match in EXPLICIT_RELATIVE_PATH.findall(value):
                 raw = match.rstrip("'\"`)]}>.!")
@@ -202,9 +233,32 @@ def _explicit_source_paths(requirement_ir: dict[str, Any]) -> list[dict[str, Any
     ]
 
 
+def _source_pack_requirement_ids(requirement_ir: dict[str, Any]) -> list[str]:
+    """Return accepted requirement owners for user-supplied source material."""
+
+    return sorted(
+        {
+            str(requirement.get("requirement_id") or requirement.get("id") or "").strip()
+            for requirement in requirement_ir.get("requirements") or []
+            if isinstance(requirement, dict)
+            and str(
+                requirement.get("check")
+                or requirement.get("verification_method")
+                or ""
+            )
+            == "check.source_packs_verified"
+            and str(requirement.get("requirement_id") or requirement.get("id") or "").strip()
+        }
+    )
+
+
 def _freeze_source_inventory(
     workspace: Path,
     requirement_ir: dict[str, Any],
+    *,
+    raw_intent: dict[str, Any] | None = None,
+    harness_dir: Path | None = None,
+    sprint_id: str = "",
 ) -> dict[str, Any] | None:
     """Freeze exact files under explicitly admitted local-source paths.
 
@@ -213,8 +267,6 @@ def _freeze_source_inventory(
     """
 
     declared = _explicit_source_paths(requirement_ir)
-    if not declared:
-        return None
     files_by_path: dict[str, dict[str, Any]] = {}
     declared_rows: list[dict[str, Any]] = []
     for row in declared:
@@ -275,10 +327,107 @@ def _freeze_source_inventory(
                 raise ValueError(
                     f"declared source inventory exceeds {MAX_SOURCE_INVENTORY_FILES} files"
                 )
+    raw_block = (
+        raw_intent.get("raw")
+        if isinstance(raw_intent, dict) and isinstance(raw_intent.get("raw"), dict)
+        else {}
+    )
+    attachments = raw_block.get("attachments") if isinstance(raw_block, dict) else []
+    if attachments:
+        if not isinstance(attachments, list):
+            raise ValueError("raw intent attachments are invalid")
+        if harness_dir is None or not SAFE_SPRINT_ID.fullmatch(sprint_id):
+            raise ValueError("attachment source inventory context is invalid")
+        try:
+            upload_root = (harness_dir / "run" / "intake-uploads").resolve(strict=True)
+        except OSError as exc:
+            raise ValueError("intake upload root is unavailable") from exc
+        staging_relative = Path(".solar-intake-sources") / sprint_id
+        staging_dir = workspace / staging_relative
+        attachment_requirement_ids = _source_pack_requirement_ids(requirement_ir)
+        cursor = workspace
+        for part in staging_relative.parts:
+            cursor = cursor / part
+            if cursor.exists() and cursor.is_symlink():
+                raise ValueError("attachment staging path contains a symlink")
+        staging_dir.mkdir(parents=True, exist_ok=True)
+        declared_rows.append(
+            {
+                "relative_path": staging_relative.as_posix(),
+                "requirement_ids": attachment_requirement_ids,
+                "kind": "directory",
+                "status": "available",
+            }
+        )
+        seen_attachment_names: set[str] = set()
+        for attachment in attachments:
+            if not isinstance(attachment, dict):
+                raise ValueError("raw intent attachment row is invalid")
+            raw_path = Path(str(attachment.get("path") or "")).expanduser()
+            if raw_path.is_symlink():
+                raise ValueError("raw intent attachment is a symlink")
+            try:
+                source = raw_path.resolve(strict=True)
+                source.relative_to(upload_root)
+            except (OSError, ValueError) as exc:
+                raise ValueError("raw intent attachment is outside the intake upload root") from exc
+            if not source.is_file():
+                raise ValueError("raw intent attachment is not a file")
+            name = source.name
+            if name.casefold() in seen_attachment_names:
+                raise ValueError("raw intent attachment name is duplicated")
+            seen_attachment_names.add(name.casefold())
+            try:
+                declared_size = int(attachment["size"])
+            except (KeyError, TypeError, ValueError) as exc:
+                raise ValueError("raw intent attachment size is invalid") from exc
+            declared_hash = str(attachment.get("sha256") or "").lower()
+            actual_hash = _sha256(source)
+            if declared_size != source.stat().st_size:
+                raise ValueError("raw intent attachment size mismatch")
+            if declared_hash != actual_hash:
+                raise ValueError("raw intent attachment hash mismatch")
+            target = staging_dir / name
+            if target.exists():
+                if (
+                    not target.is_file()
+                    or target.is_symlink()
+                    or target.stat().st_size != declared_size
+                    or _sha256(target) != actual_hash
+                ):
+                    raise ValueError("attachment staging target conflicts with frozen source")
+            else:
+                fd, temporary = tempfile.mkstemp(prefix=f".{name}.", dir=staging_dir)
+                try:
+                    with source.open("rb") as reader, os.fdopen(fd, "wb") as writer:
+                        for chunk in iter(lambda: reader.read(1024 * 1024), b""):
+                            writer.write(chunk)
+                        writer.flush()
+                        os.fsync(writer.fileno())
+                    os.chmod(temporary, 0o600)
+                    os.replace(temporary, target)
+                finally:
+                    try:
+                        Path(temporary).unlink(missing_ok=True)
+                    except OSError:
+                        pass
+            relative = target.relative_to(workspace).as_posix()
+            files_by_path[relative] = {
+                "relative_path": relative,
+                "sha256": actual_hash,
+                "size_bytes": declared_size,
+                "requirement_ids": attachment_requirement_ids,
+            }
+            if len(files_by_path) > MAX_SOURCE_INVENTORY_FILES:
+                raise ValueError(
+                    f"declared source inventory exceeds {MAX_SOURCE_INVENTORY_FILES} files"
+                )
+    if not declared_rows and not files_by_path:
+        return None
     return {
         "schema_version": SOURCE_INVENTORY_SCHEMA,
         "artifact_role": "controller_frozen_source_inventory",
-        "selection_basis": "accepted_source_pack_requirements",
+        "selection_basis": "accepted_source_pack_requirements_and_user_attachments",
         "declared_paths": declared_rows,
         "files": [files_by_path[path] for path in sorted(files_by_path)],
     }
@@ -365,6 +514,9 @@ def freeze_sprint_workspace_authority(
     source_inventory = _freeze_source_inventory(
         workspace,
         _read_json_object(inputs["requirement_ir"]),
+        raw_intent=raw,
+        harness_dir=Path(harness_dir).expanduser().resolve(),
+        sprint_id=sid,
     )
     payload = {
         "schema_version": AUTHORITY_SCHEMA,

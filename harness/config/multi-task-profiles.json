@@ -195,6 +195,7 @@
       "persona": "builder",
       "backend": "command",
       "model": "gpt-5.5",
+      "reasoning_effort": "medium",
       "approval_mode": "default",
       "best_for": [
         "implementation",
@@ -213,6 +214,7 @@
       "persona": "planner",
       "backend": "command",
       "model": "gpt-5.5",
+      "reasoning_effort": "medium",
       "approval_mode": "default",
       "best_for": [
         "planning",
@@ -229,6 +231,7 @@
       "persona": "evaluator",
       "backend": "command",
       "model": "gpt-5.5",
+      "reasoning_effort": "medium",
       "approval_mode": "default",
       "best_for": [
         "verification",

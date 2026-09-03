@@ -11,6 +11,57 @@ sys.path.insert(0, str(ROOT / "lib"))
 import multi_task_runner as mtr  # noqa: E402
 
 
+def test_launch_guard_does_not_cool_down_an_idle_pool(monkeypatch):
+    monkeypatch.setattr(mtr, "active_tasks", lambda: [])
+    monkeypatch.setattr(mtr, "free_memory_gb", lambda: None)
+    monkeypatch.setattr(mtr, "last_launch_at", lambda: 995.0)
+    monkeypatch.setattr(mtr.time, "time", lambda: 1000.0)
+    monkeypatch.setattr(mtr, "quota_guard", lambda _seconds: {"ok": True, "reason": "clear"})
+
+    result = mtr.launch_guard(max_workers=2, reserve_gb=0, cooldown=30, quota_backoff=0)
+
+    assert result["ok"] is True
+    assert result["reason"] == "ready"
+
+
+def test_launch_guard_keeps_registration_cooldown_while_worker_is_active(monkeypatch):
+    monkeypatch.setattr(mtr, "active_tasks", lambda: [{"id": "task-active"}])
+    monkeypatch.setattr(mtr, "free_memory_gb", lambda: None)
+    monkeypatch.setattr(mtr, "last_launch_at", lambda: 995.0)
+    monkeypatch.setattr(mtr, "last_launch_scope", lambda: "sprint-a")
+    monkeypatch.setattr(mtr.time, "time", lambda: 1000.0)
+
+    result = mtr.launch_guard(
+        max_workers=2,
+        reserve_gb=0,
+        cooldown=30,
+        quota_backoff=0,
+        launch_scope="sprint-a",
+    )
+
+    assert result == {"ok": False, "reason": "launch_cooldown", "wait_s": 25}
+
+
+def test_launch_guard_does_not_apply_another_sprints_cooldown(monkeypatch):
+    monkeypatch.setattr(mtr, "active_tasks", lambda: [{"id": "task-active"}])
+    monkeypatch.setattr(mtr, "free_memory_gb", lambda: None)
+    monkeypatch.setattr(mtr, "last_launch_at", lambda: 995.0)
+    monkeypatch.setattr(mtr, "last_launch_scope", lambda: "sprint-a")
+    monkeypatch.setattr(mtr.time, "time", lambda: 1000.0)
+    monkeypatch.setattr(mtr, "quota_guard", lambda _seconds: {"ok": True, "reason": "clear"})
+
+    result = mtr.launch_guard(
+        max_workers=2,
+        reserve_gb=0,
+        cooldown=30,
+        quota_backoff=0,
+        launch_scope="sprint-b",
+    )
+
+    assert result["ok"] is True
+    assert result["reason"] == "ready"
+
+
 def test_schedule_once_respects_profile_parallel_limit(monkeypatch, tmp_path):
     graph_path = tmp_path / "sprint-x.task_graph.json"
     graph = {"sprint_id": "sprint-x", "nodes": [{"id": "N1"}, {"id": "N2"}]}

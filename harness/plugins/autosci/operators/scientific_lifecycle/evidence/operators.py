@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import re
 import tempfile
 from collections import Counter
@@ -879,6 +880,28 @@ def _source_sentences(text: str, *, minimum_length: int) -> list[str]:
     return [item.strip() for item in _SENTENCE.split(unwrapped) if len(item.strip()) >= minimum_length]
 
 
+def _source_sentence_spans(text: str, *, minimum_length: int) -> list[tuple[str, int, int, str]]:
+    """Return sentences with deterministic coordinates in normalized section text."""
+
+    normalized = re.sub(r"\s+", " ", str(text or "")).strip()
+    digest = hashlib.sha256(normalized.encode("utf-8")).hexdigest()
+    spans: list[tuple[str, int, int, str]] = []
+    cursor = 0
+    for raw_sentence in _SENTENCE.split(normalized):
+        sentence = raw_sentence.strip()
+        if len(sentence) < minimum_length:
+            continue
+        start = normalized.find(sentence, cursor)
+        if start < 0:
+            start = normalized.find(sentence)
+        if start < 0:
+            continue
+        end = start + len(sentence)
+        spans.append((sentence, start, end, digest))
+        cursor = end
+    return spans
+
+
 def _analyze_paper_document(paper: dict[str, Any]) -> tuple[dict[str, Any], int]:
     paper = dict(paper)
     sections = _section_texts(paper)
@@ -958,8 +981,23 @@ def memory_update(context: OperatorContext, spec: OperatorSpec) -> dict[str, Any
         )
         keys = ("source_evidence", "report_evidence", "review_evidence", "verdict_evidence")
     else:
-        schemas = ("research_paper.v1",)
-        keys = ("paper_evidence", "research_paper")
+        schemas = (
+            "research_paper.v1",
+            "claim_verdict.v1",
+            "research_method.v1",
+            "research_source_assessment.v1",
+            "scientific_report_plan.v1",
+            "scientific_report.v1",
+        )
+        keys = (
+            "paper_evidence",
+            "research_paper",
+            "verdict_evidence",
+            "research_method",
+            "source_assessment",
+            "report_plan",
+            "report_evidence",
+        )
     documents = load_evidence_inputs(context, *schemas, payload_keys=keys)
     if not documents:
         raise _product_error(f"{spec.node_id} requires typed upstream evidence")
@@ -978,6 +1016,98 @@ def memory_update(context: OperatorContext, spec: OperatorSpec) -> dict[str, Any
             summary = f"Propose recording source-grounded metadata and analysis for {title}."
             path = f"knowledge/research/papers/{entity_id}.md"
             entity_type = "paper"
+        elif source_schema == "claim_verdict.v1":
+            for verdict_index, verdict in enumerate(
+                document.get("outputs", {}).get("verdicts") or [], start=1
+            ):
+                if not isinstance(verdict, dict):
+                    continue
+                claim_id = str(verdict.get("claim_id") or f"claim-{verdict_index:03d}")
+                verdict_name = str(verdict.get("verdict") or "inconclusive")
+                changes.append(
+                    {
+                        "entity_type": "claim_verdict",
+                        "entity_id": claim_id,
+                        "operation": "propose",
+                        "path": f"knowledge/research/claims/{claim_id}.md",
+                        "evidence_ids": [
+                            str(item)
+                            for item in verdict.get("evidence_ids") or []
+                            if str(item).strip()
+                        ] or [f"claim:{claim_id}"],
+                        "confidence": float(verdict.get("confidence") or 0.0),
+                        "summary": f"Propose recording the {verdict_name} verdict for {claim_id}.",
+                    }
+                )
+            continue
+        elif source_schema == "research_method.v1":
+            for method_index, method in enumerate(
+                document.get("outputs", {}).get("methods") or [], start=1
+            ):
+                if not isinstance(method, dict):
+                    continue
+                method_id = str(method.get("method_id") or f"method-{method_index:03d}")
+                changes.append(
+                    {
+                        "entity_type": "research_method",
+                        "entity_id": method_id,
+                        "operation": "propose",
+                        "path": f"knowledge/research/methods/{method_id}.md",
+                        "evidence_ids": [
+                            str(item)
+                            for item in method.get("evidence_ids") or []
+                            if str(item).strip()
+                        ] or [f"method:{method_id}"],
+                        "confidence": float(method.get("confidence") or 0.0),
+                        "summary": f"Propose recording the source-grounded method {method.get('name') or method_id}.",
+                    }
+                )
+            continue
+        elif source_schema == "research_source_assessment.v1":
+            for assessment_index, assessment in enumerate(
+                document.get("outputs", {}).get("assessments") or [], start=1
+            ):
+                if not isinstance(assessment, dict):
+                    continue
+                source_id = str(assessment.get("source_id") or f"source-{assessment_index:03d}")
+                decision = str(assessment.get("decision") or "unresolved")
+                changes.append(
+                    {
+                        "entity_type": "source_assessment",
+                        "entity_id": source_id,
+                        "operation": "propose",
+                        "path": f"knowledge/research/sources/{source_id}.md",
+                        "evidence_ids": [
+                            str(item)
+                            for item in assessment.get("evidence_ids") or []
+                            if str(item).strip()
+                        ] or [f"source:{source_id}"],
+                        "confidence": float(
+                            (assessment.get("credibility") or {}).get("score") or 0.0
+                        ),
+                        "summary": f"Propose recording the {decision} source decision for {source_id}.",
+                    }
+                )
+            continue
+        elif source_schema == "scientific_report_plan.v1":
+            plan = document.get("outputs", {}).get("report_plan") or {}
+            report_id = str(plan.get("report_id") or f"report-plan-{index:03d}")
+            evidence_ids = [
+                str(item)
+                for item in plan.get("evidence_ids") or []
+                if str(item).strip()
+            ]
+            evidence_ids.extend(
+                str(item)
+                for item in plan.get("reportable_claim_ids") or []
+                if str(item).strip()
+            )
+            entity_id = report_id
+            summary = (
+                "Propose recording the pre-report contradiction, gap, and unresolved-question synthesis plan."
+            )
+            path = f"knowledge/research/plans/{report_id}.md"
+            entity_type = "research_landscape_plan"
         else:
             entity_id = f"{source_schema.replace('.v1', '')}-{index:03d}"
             evidence_ids = [f"{source_schema}:{document.get('node_id', index)}"]
@@ -1069,14 +1199,22 @@ def _extract_claim_rows(context: OperatorContext, *, limit: int) -> list[dict[st
                 if raw_anchor and anchor_counts[raw_anchor] > 1
                 else raw_anchor
             )
-            sentences = _source_sentences(text, minimum_length=30)
+            sentence_spans = _source_sentence_spans(text, minimum_length=30)
             selected = [
                 item
-                for item in sentences
-                if 30 <= len(item) <= 1_000 and cue.search(item)
+                for item in sentence_spans
+                if 30 <= len(item[0]) <= 1_000 and cue.search(item[0])
             ]
-            for sentence in selected:
+            for sentence, start_char, end_char, source_text_sha256 in selected:
                 normalized_sentence = " ".join(sentence.split()).casefold()
+                citation_span = {
+                    "source_ref": anchor,
+                    "coordinate_space": "section_text_whitespace_normalized",
+                    "start_char": start_char,
+                    "end_char": end_char,
+                    "quote": sentence,
+                    "source_text_sha256": source_text_sha256,
+                }
                 existing = candidates_by_text.get(normalized_sentence)
                 if existing is None:
                     existing = {
@@ -1086,10 +1224,12 @@ def _extract_claim_rows(context: OperatorContext, *, limit: int) -> list[dict[st
                         "testability": "testable" if re.search(r"\d|%|compared|than", sentence, re.IGNORECASE) else "partially_testable",
                         "verification_status": "unverified",
                         "evidence_ids": [anchor],
+                        "citation_spans": [citation_span],
                     }
                     candidates_by_text[normalized_sentence] = existing
                 elif anchor not in existing["evidence_ids"]:
                     existing["evidence_ids"].append(anchor)
+                    existing["citation_spans"].append(citation_span)
                 if normalized_sentence not in seen_in_paper:
                     keys.append(normalized_sentence)
                     seen_in_paper.add(normalized_sentence)

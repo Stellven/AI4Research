@@ -50,6 +50,17 @@ class SharedInvocationJournal(list):
 CODEX_RESEARCH_SERVICE_ID = "autosci-codex-research-model"
 CODEX_RESEARCH_SERVICE_VERSION = "1.0"
 MAX_CODEX_RESPONSE_BYTES = 4 * 1024 * 1024
+MAX_CODEX_TRANSPORT_ATTEMPTS = 2
+_TRANSPORT_ATTEMPT_KEY = "_solar_codex_transport_attempt"
+_TRANSIENT_TRANSPORT_MARKERS = (
+    "failed to lookup address information",
+    "failed to connect to websocket",
+    "error sending request for url",
+    "stream disconnected before completion",
+    "connection reset",
+    "connection timed out",
+    "temporary failure in name resolution",
+)
 
 
 def _sha256_bytes(value: bytes) -> str:
@@ -61,6 +72,13 @@ def _write_json(path: Path, payload: dict[str, Any]) -> str:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(data)
     return _sha256_bytes(data)
+
+
+def _is_transient_transport_failure(events: str) -> bool:
+    """Recognize only explicit connection/DNS failures emitted by Codex CLI."""
+
+    lowered = str(events or "").lower()
+    return any(marker in lowered for marker in _TRANSIENT_TRANSPORT_MARKERS)
 
 
 def _string_array() -> dict[str, Any]:
@@ -194,7 +212,7 @@ def _response_schema(node_id: str) -> dict[str, Any]:
             },
         }
         required.append("files")
-    elif node_id in {"independent_review", "report_revision_review"}:
+    elif node_id in {"independent_review", "report_revision_review", "artifact_review"}:
         properties["findings"] = {
             "type": "array",
             "items": {
@@ -282,7 +300,9 @@ class CodexResearchModelService(ResearchModelService):
         """
         payload["provider"] = self.usage_provider
         payload["model"] = self.model
-        payload["provider_usage"] = [usage]
+        # A successful bounded transport retry must retain the failed attempt
+        # as provenance instead of reporting only the final successful call.
+        payload["provider_usage"] = [dict(item) for item in self.invocation_usage]
         return payload
 
     def _record_invocation(
@@ -373,7 +393,13 @@ class CodexResearchModelService(ResearchModelService):
 
     def __call__(self, **kwargs: Any) -> dict[str, Any]:
         node_id = str(kwargs.get("node_id") or "")
-        system, user = self._prompt(node_id, kwargs)
+        try:
+            transport_attempt = max(1, int(kwargs.get(_TRANSPORT_ATTEMPT_KEY) or 1))
+        except (TypeError, ValueError):
+            transport_attempt = 1
+        prompt_kwargs = dict(kwargs)
+        prompt_kwargs.pop(_TRANSPORT_ATTEMPT_KEY, None)
+        system, user = self._prompt(node_id, prompt_kwargs)
         binary = shutil.which(self.codex_binary)
         if not binary:
             raise ResearchOperatorError("Codex CLI is unavailable", error_type="provider_unavailable")
@@ -529,6 +555,12 @@ class CodexResearchModelService(ResearchModelService):
                 ) from exc
         events_path.write_text(stdout, encoding="utf-8")
         if process.returncode != 0:
+            transient_transport = _is_transient_transport_failure(stdout)
+            error_type = (
+                "transient_provider_failure"
+                if transient_transport
+                else "provider_unavailable"
+            )
             message = f"Codex research agent failed at node={node_id} exit={process.returncode}"
             self._record_invocation(
                 invocation_id=invocation_id,
@@ -543,12 +575,16 @@ class CodexResearchModelService(ResearchModelService):
                 events_path=events_path,
                 response_payload=None,
                 exit_code=int(process.returncode),
-                error_type="provider_unavailable",
+                error_type=error_type,
                 error=message,
             )
+            if transient_transport and transport_attempt < MAX_CODEX_TRANSPORT_ATTEMPTS:
+                retry_kwargs = dict(prompt_kwargs)
+                retry_kwargs[_TRANSPORT_ATTEMPT_KEY] = transport_attempt + 1
+                return self(**retry_kwargs)
             raise ResearchOperatorError(
                 message,
-                error_type="provider_unavailable",
+                error_type=error_type,
             )
         try:
             if response_path.is_symlink() or not response_path.is_file():
@@ -557,9 +593,16 @@ class CodexResearchModelService(ResearchModelService):
             if not response_bytes or len(response_bytes) > MAX_CODEX_RESPONSE_BYTES:
                 raise ResearchOperatorError("Codex research response is empty or oversized", error_type="provider_contract")
             try:
-                payload = validate_output(parse_json(response_bytes.decode("utf-8")), schema, profile="openai")
+                parsed = parse_json(response_bytes.decode("utf-8"))
             except (UnicodeDecodeError, ValueError) as exc:
                 raise ResearchOperatorError("Codex research response is invalid JSON", error_type="provider_contract") from exc
+            try:
+                payload = validate_output(parsed, schema, profile="openai")
+            except OutputContractError as exc:
+                raise ResearchOperatorError(
+                    f"Codex research response violates its schema: {str(exc)[:300]}",
+                    error_type="provider_contract",
+                ) from exc
             schema_errors = sorted(
                 Draft202012Validator(schema).iter_errors(payload),
                 key=lambda item: list(item.absolute_path),

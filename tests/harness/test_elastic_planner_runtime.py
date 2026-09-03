@@ -137,6 +137,200 @@ def test_workspace_authority_freezes_only_explicit_source_pack_files(tmp_path: P
         )
 
 
+def test_workspace_authority_uses_exact_source_constraint_when_requirement_normalizes_path(
+    tmp_path: Path,
+) -> None:
+    sprint_id = "sprint-source-constraint-inventory"
+    sprints = tmp_path / "sprints"
+    workspace = tmp_path / "workspace"
+    binding_harness = tmp_path / "harness"
+    source_dir = workspace / "demo_inputs" / "kv_cache"
+    source_dir.mkdir(parents=True)
+    paper = source_dir / "paper.pdf"
+    paper.write_bytes(b"paper")
+    requirement = {
+        "schema_version": "solar.requirement_ir.v2",
+        "requirement_ir_id": "requirement-source-constraint-inventory",
+        "requirements": [
+            {
+                "requirement_id": "R-source",
+                "statement": "First inspect demo_inputs/kv_cache and ingest every valid source.",
+                "acceptance": {"kind": "process", "required_values": []},
+                "check": "check.source_packs_verified",
+                "source_refs": ["C-source"],
+            }
+        ],
+        "semantic_contract": {
+            "source_constraints": [
+                {
+                    "constraint_id": "C-source",
+                    "statement": "First inspect ./demo_inputs/kv_cache/.",
+                    "expression": {
+                        "literal": "Ingest every valid source under ./demo_inputs/kv_cache/."
+                    },
+                }
+            ]
+        },
+    }
+    _write(
+        sprints / f"{sprint_id}.raw_intent.json",
+        {"context": {"repo": str(workspace), "cwd": str(workspace)}, "raw": {"text": "research"}},
+    )
+    _write(sprints / f"{sprint_id}.intent_ir.json", {"schema_version": "solar.intent_ir.v3"})
+    _write(sprints / f"{sprint_id}.requirement_ir.json", requirement)
+    binding_harness.mkdir()
+    workspace_binding.bind_active_workspace(binding_harness, workspace, source="test")
+
+    authority_path = workspace_binding.freeze_sprint_workspace_authority(
+        sprints,
+        sprint_id,
+        harness_dir=binding_harness,
+    )
+    authority = workspace_binding.verify_sprint_workspace_authority(
+        authority_path,
+        sprints_dir=sprints,
+        harness_dir=binding_harness,
+    )
+
+    inventory = authority["declared_source_inventory"]
+    assert inventory["declared_paths"] == [
+        {
+            "relative_path": "demo_inputs/kv_cache",
+            "requirement_ids": ["R-source"],
+            "kind": "directory",
+            "status": "available",
+        }
+    ]
+    assert inventory["files"] == [
+        {
+            "relative_path": "demo_inputs/kv_cache/paper.pdf",
+            "sha256": workspace_binding._sha256(paper),
+            "size_bytes": 5,
+            "requirement_ids": ["R-source"],
+        }
+    ]
+
+
+def test_workspace_authority_stages_hash_bound_intake_attachments(
+    tmp_path: Path,
+) -> None:
+    sprint_id = "sprint-attachment-inventory"
+    sprints = tmp_path / "sprints"
+    workspace = tmp_path / "workspace"
+    binding_harness = tmp_path / "harness"
+    upload_dir = binding_harness / "run" / "intake-uploads" / "request-1"
+    upload_dir.mkdir(parents=True)
+    workspace.mkdir()
+    paper = upload_dir / "paper.pdf"
+    paper.write_bytes(b"%PDF-1.7\nreal paper bytes")
+    attachment = {
+        "name": paper.name,
+        "path": str(paper),
+        "mime_type": "application/pdf",
+        "size": paper.stat().st_size,
+        "sha256": workspace_binding._sha256(paper),
+    }
+    _write(
+        sprints / f"{sprint_id}.raw_intent.json",
+        {
+            "context": {"repo": str(workspace), "cwd": str(workspace)},
+            "raw": {"text": "research", "attachments": [attachment]},
+        },
+    )
+    _write(sprints / f"{sprint_id}.intent_ir.json", {"schema_version": "solar.intent_ir.v3"})
+    _write(
+        sprints / f"{sprint_id}.requirement_ir.json",
+        {
+            "schema_version": "solar.requirement_ir.v3",
+            "requirements": [
+                {
+                    "requirement_id": "R-source",
+                    "statement": "Ingest every valid user-supplied source.",
+                    "check": "check.source_packs_verified",
+                }
+            ],
+        },
+    )
+    workspace_binding.bind_active_workspace(binding_harness, workspace, source="test")
+
+    authority_path = workspace_binding.freeze_sprint_workspace_authority(
+        sprints,
+        sprint_id,
+        harness_dir=binding_harness,
+    )
+    authority = workspace_binding.verify_sprint_workspace_authority(
+        authority_path,
+        sprints_dir=sprints,
+        harness_dir=binding_harness,
+    )
+
+    inventory = authority["declared_source_inventory"]
+    staged_relative = f".solar-intake-sources/{sprint_id}/paper.pdf"
+    assert inventory["selection_basis"] == "accepted_source_pack_requirements_and_user_attachments"
+    assert inventory["files"] == [
+        {
+            "relative_path": staged_relative,
+            "sha256": attachment["sha256"],
+            "size_bytes": attachment["size"],
+            "requirement_ids": ["R-source"],
+        }
+    ]
+    staged = workspace / staged_relative
+    assert staged.read_bytes() == paper.read_bytes()
+
+    staged.write_bytes(b"tampered")
+    with pytest.raises(ValueError, match="workspace source inventory (size|hash) mismatch"):
+        workspace_binding.verify_sprint_workspace_authority(
+            authority_path,
+            sprints_dir=sprints,
+            harness_dir=binding_harness,
+        )
+
+
+def test_workspace_authority_rejects_attachment_hash_drift_before_staging(
+    tmp_path: Path,
+) -> None:
+    sprint_id = "sprint-attachment-hash-drift"
+    sprints = tmp_path / "sprints"
+    workspace = tmp_path / "workspace"
+    binding_harness = tmp_path / "harness"
+    upload_dir = binding_harness / "run" / "intake-uploads" / "request-2"
+    upload_dir.mkdir(parents=True)
+    workspace.mkdir()
+    paper = upload_dir / "paper.pdf"
+    paper.write_bytes(b"changed after intake")
+    _write(
+        sprints / f"{sprint_id}.raw_intent.json",
+        {
+            "context": {"repo": str(workspace), "cwd": str(workspace)},
+            "raw": {
+                "text": "research",
+                "attachments": [
+                    {
+                        "name": paper.name,
+                        "path": str(paper),
+                        "size": paper.stat().st_size,
+                        "sha256": "0" * 64,
+                    }
+                ],
+            },
+        },
+    )
+    _write(sprints / f"{sprint_id}.intent_ir.json", {"schema_version": "solar.intent_ir.v3"})
+    _write(
+        sprints / f"{sprint_id}.requirement_ir.json",
+        {"schema_version": "solar.requirement_ir.v3", "requirements": []},
+    )
+    workspace_binding.bind_active_workspace(binding_harness, workspace, source="test")
+
+    with pytest.raises(ValueError, match="raw intent attachment hash mismatch"):
+        workspace_binding.freeze_sprint_workspace_authority(
+            sprints,
+            sprint_id,
+            harness_dir=binding_harness,
+        )
+
+
 def test_owner_requires_exact_canonical_requirement_ir_path(tmp_path: Path) -> None:
     sprint_id = "sprint-canonical-requirement"
     sprints = tmp_path / "sprints"

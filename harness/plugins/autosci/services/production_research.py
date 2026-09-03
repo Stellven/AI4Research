@@ -2424,8 +2424,37 @@ class ResearchModelService:
                     "Use only the supplied scientific_report and run_context as factual evidence; do not invent sources, run states, hashes or measurements.",
                     "Emit syntactically valid Markdown, CSV, JSON, HTML or plain text matching each declared media_type.",
                     "CSV content must contain every required_fields value as an exact header. JSON content must expose every required_fields value as a key.",
+                    "For claim_evidence_index.json, copy any citation_spans from scientific_report.claim_status_mappings exactly; never replace character coordinates with broad section anchors.",
+                    "For research_run_manifest.json, copy each node status only from run_context.runtime_execution_snapshot. Never infer status from the frozen graph definition. The current publication node is still executing at this snapshot, and downstream evaluation and Scheduler Closure have not happened yet.",
+                    "If research_run_manifest.json includes Evidence Gate or Closure status, record them as pending_deterministic_evaluation and pending_scheduler_closure respectively. Never predict a later pass or failure. The final user-facing response obtains those outcomes from Scheduler-owned gate and closure records.",
+                    "For research_run_manifest.json, describe the actual run and artifact inventory but do not invent content hashes. The deterministic materializer computes hashes after writing the other files, binds the runtime snapshot, and records this manifest's own final hash in the outer publication bundle.",
                     "If evidence is insufficient for a requested conclusion, state that limitation in the relevant deliverable rather than fabricating support.",
                     "Do not emit empty shells, placeholder prose, TODO markers or descriptions of what a later worker should write.",
+                ],
+            }
+        elif node_id == "artifact_review":
+            user = {
+                "node_id": node_id,
+                "complete_user_request": str(task_contract.get("user_intent") or ""),
+                "scientific_report_plan": kwargs.get("report_plan") or {},
+                "required_output": {
+                    "findings": [
+                        {
+                            "finding_id": "plan-review-001",
+                            "severity": "low|medium|high|critical",
+                            "category": "evidence|coverage|structure|citation_readiness|truthfulness",
+                            "message": "specific finding grounded in the supplied report plan",
+                        }
+                    ],
+                    "verdict_suggestion": "accept|revise|reject",
+                    "limitations": [],
+                },
+                "review_rules": [
+                    "Review only the supplied scientific_report_plan; do not draft the report or invent source evidence.",
+                    "Treat findings as pre-draft guidance for the report writer, not as a final-publication verdict.",
+                    "Check requirement coverage, evidence bindings, citation readiness, unresolved fields, and unsupported-claim visibility.",
+                    "Do not create a high-severity finding merely because the plan honestly records unavailable evidence or an unresolved limitation.",
+                    "Do not require a claim/evidence proof bundle intended for post-draft final-report acceptance.",
                 ],
             }
         elif node_id == "independent_review":

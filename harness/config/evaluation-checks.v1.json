@@ -300,6 +300,14 @@
       "semantic": null
     },
     {
+      "check_id": "check.scientific.scientific_report_plan_review.v1",
+      "mode": "deterministic",
+      "applies_to": {"kind": "artifact_type", "artifact_types": ["schema:schemas/evidence/scientific_report_plan_review.v1.schema.json"], "auto_apply": true},
+      "decision": "Validate a hash-bound pre-draft report-plan review without treating its recommendation as final-publication acceptance.",
+      "deterministic": {"kind": "python_callable", "implementation_ref": "evaluators.scientific.report_plan_review_gate:evaluate"},
+      "semantic": null
+    },
+    {
       "check_id": "check.scientific.scientific_report_plan.v1",
       "mode": "deterministic",
       "applies_to": {"kind": "artifact_type", "artifact_types": ["schema:schemas/evidence/scientific_report_plan.v1.schema.json"], "auto_apply": true},

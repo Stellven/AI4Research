@@ -2765,13 +2765,33 @@ def _node_requires_deepresearch_quality_gate(node: dict[str, Any]) -> bool:
     return bool(DEEPRESEARCH_GATE_ARTIFACT_RE.search(_node_research_artifact_text(node)))
 
 
+def _node_requires_deepresearch_quality_gate_at_closeout(node: dict[str, Any]) -> bool:
+    """Return the frozen DeepResearch closeout requirement for this node.
+
+    ``evaluation_binding`` marks a node whose evaluation contract was fixed by
+    the planner before Scheduler execution.  For those nodes, closeout must not
+    add a second gate by reinterpreting capability names or output paths.  The
+    exceptional DeepResearch artifact gate therefore remains available only
+    when the frozen node explicitly declares it.  Legacy, non-frozen nodes keep
+    the historical declaration heuristic for backward compatibility.
+    """
+    explicit = node.get("research_quality_gate_required")
+    if explicit is False:
+        return False
+    if explicit is True:
+        return True
+    if "evaluation_binding" in node:
+        return False
+    return _node_requires_deepresearch_quality_gate(node)
+
+
 def _node_declares_retrieval_only(node: dict[str, Any]) -> bool:
     artifact_text = _node_research_artifact_text(node)
     return bool(RETRIEVAL_PACK_ARTIFACT_RE.search(artifact_text)) and not REPORT_ARTIFACT_RE.search(artifact_text)
 
 
 def _deepresearch_quality_gate_eval_instruction(node: dict[str, Any], eval_json: str | Path) -> str:
-    if _node_requires_deepresearch_quality_gate(node):
+    if _node_requires_deepresearch_quality_gate_at_closeout(node):
         if _node_declares_retrieval_only(node):
             return """- This is a retrieval-only node: it promises a source pack (`sources.jsonl`, `evidence.jsonl`, and `extracts/`), not a final report. Do not run `solar-harness research eval-artifacts`, and do not fail it for missing `research_eval.json`, `report_ast.json`, `claims.jsonl`, or `final.md`.
   The dispatcher runs the deterministic retrieval closeout automatically. Leave `research_quality_gate` empty; closeout will verify source metadata, extract containment, hashes, evidence ids, and source spans."""
@@ -7116,7 +7136,7 @@ def _node_proof_obligations(sid: str, node: dict[str, Any]) -> list[dict[str, An
         _append_proof_obligations(obligations, _read_json_file_safe(_artifact_path(path) or path))
 
     deduped = _dedupe_proof_obligations(obligations)
-    if not _node_requires_deepresearch_quality_gate(node):
+    if not _node_requires_deepresearch_quality_gate_at_closeout(node):
         # A claim-planning node may use the grounded-research capsule to emit only
         # synthesis_plan.json. The full report-bundle postconditions belong to the
         # later compile node, as reflected by the evaluator's DeepResearch gate
@@ -11645,6 +11665,12 @@ def _scheduler_input_bound_evaluators(graph: dict[str, Any]) -> list[dict[str, A
             operator_id = str(value or "").strip()
             if operator_id and operator_id not in operator_ids:
                 operator_ids.append(operator_id)
+    try:
+        from execution_authority import frozen_evaluation_check_ids
+
+        registered_check_ids = frozen_evaluation_check_ids(graph)
+    except (ImportError, ValueError, OSError):
+        registered_check_ids = set()
     workers: list[dict[str, Any]] = []
     semantic_check_ids: list[str] = []
     for operator_id in operator_ids:
@@ -11655,7 +11681,7 @@ def _scheduler_input_bound_evaluators(graph: dict[str, Any]) -> list[dict[str, A
         except Exception:
             config = None
         if not isinstance(config, dict):
-            if operator_id.startswith("check."):
+            if operator_id in registered_check_ids or operator_id.startswith("check."):
                 semantic_check_ids.append(operator_id)
             continue
         if not bool(config.get("enabled", True)):
@@ -13783,6 +13809,7 @@ def _autosci_dependency_inputs(graph: dict[str, Any], sid: str, node: dict[str, 
         "claim_verdict.v1": "claim_verdict_evidence",
         "scientific_report.v1": "report_evidence",
         "artifact_review.v1": "artifact_review_evidence",
+        "scientific_report_plan_review.v1": "report_plan_review_evidence",
         "publication_bundle.v1": "publication_bundle_evidence",
         "research_memory_update.v1": "memory_update_evidence",
         "research_graph_update.v1": "graph_update_evidence",
@@ -15069,7 +15096,7 @@ def _node_eval_needed(graph: dict[str, Any], sid: str, node: dict[str, Any], for
     node_id = str(node.get("id") or "")
     if not node_id:
         return False
-    repair_mode = bool(node.get("quality_gate_repair_requested_at")) and _node_requires_deepresearch_quality_gate(node)
+    repair_mode = bool(node.get("quality_gate_repair_requested_at")) and _node_requires_deepresearch_quality_gate_at_closeout(node)
     results = graph.get("node_results") or {}
     result = results.get(node_id) if isinstance(results, dict) else None
     result_status = str(result.get("status", "")).lower() if isinstance(result, dict) else ""
@@ -17334,7 +17361,7 @@ def _finalize_node_pass(
         }
 
     research_quality_gate: dict[str, Any] = {"required": False, "ok": True}
-    if _node_requires_deepresearch_quality_gate(node):
+    if _node_requires_deepresearch_quality_gate_at_closeout(node):
         research_quality_gate = {
             "required": True,
             **_deepresearch_quality_gate_from_eval(resolved_eval_json),

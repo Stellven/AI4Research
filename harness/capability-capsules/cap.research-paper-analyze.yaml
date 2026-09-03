@@ -18,6 +18,7 @@ contract:
   inputs:
     required:
       - name: research_paper
+        cardinality: many
         schema_ref: schemas/evidence/research_paper.v1.schema.json
     optional:
       - name: analysis_focus
@@ -25,6 +26,7 @@ contract:
   outputs:
     required:
       - name: analyzed_research_paper
+        cardinality: many
         schema_ref: schemas/evidence/research_paper.v1.schema.json
     optional:
       - name: analysis_notes
@@ -41,9 +43,11 @@ contract:
 composition:
   consumes:
     - schema_ref: schemas/evidence/research_paper.v1.schema.json
+      cardinality: many
       purpose: Normalized paper evidence.
   produces:
     - schema_ref: schemas/evidence/research_paper.v1.schema.json
+      cardinality: many
       purpose: Analyzed paper evidence with enriched outputs.
   compatible_with:
     - cap.research-method-extract

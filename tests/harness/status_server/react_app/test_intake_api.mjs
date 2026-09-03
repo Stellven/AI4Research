@@ -32,6 +32,7 @@ const responses = [
     terminal: false,
     poll_after_ms: 1,
   },
+  new TypeError("Failed to fetch"),
   {
     ok: true,
     status: "running",
@@ -62,6 +63,7 @@ globalThis.fetch = async (url, init = {}) => {
   calls.push({ url, init });
   const payload = responses.shift();
   assert.ok(payload, "unexpected extra fetch");
+  if (payload instanceof Error) throw payload;
   return {
     ok: true,
     status: calls.length === 1 ? 202 : 200,
@@ -79,15 +81,16 @@ try {
 
   assert.equal(result.sprint_id, "sprint-async-contract");
   assert.equal(result.job_status, "succeeded");
-  assert.equal(calls.length, 3);
+  assert.equal(calls.length, 4);
   assert.equal(calls[0].url, "/intake");
   assert.equal(calls[0].init.method, "POST");
   assert.equal(calls[1].url, "/intake/webapp-intake-contract");
   assert.equal(calls[2].url, "/intake/webapp-intake-contract");
+  assert.equal(calls[3].url, "/intake/webapp-intake-contract");
 } finally {
   globalThis.fetch = originalFetch;
   globalThis.location = originalLocation;
   globalThis.window = originalWindow;
 }
 
-console.log("intake api: accepted request polling reached terminal result");
+console.log("intake api: transient polling failure retried to terminal result");

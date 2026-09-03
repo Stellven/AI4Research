@@ -14,14 +14,13 @@ if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from evaluators.scientific.common import (
-    ARTIFACT_HARNESS_DIR,
-    HARNESS_DIR,
     check_artifact_paths,
     finish,
     has_any_evidence_ids,
     limitations,
     outputs,
     require_non_empty_list,
+    resolve_artifact_path,
     run_cli,
     validate_schema,
 )
@@ -30,22 +29,12 @@ SCHEMA = "publication_bundle.v1"
 
 
 def _file_exists(raw_path: str, evidence_path: str | Path | None) -> bool:
-    path = Path(raw_path).expanduser()
-    if path.is_absolute():
-        return path.exists()
-    evidence_dir = Path(evidence_path).resolve().parent if evidence_path else HARNESS_DIR
-    return any(candidate.exists() for candidate in (evidence_dir / path, ARTIFACT_HARNESS_DIR / path, HARNESS_DIR / path))
+    return resolve_artifact_path(raw_path, evidence_path) is not None
 
 
 def _resolved_file(raw_path: str, evidence_path: str | Path | None) -> Path | None:
-    path = Path(raw_path).expanduser()
-    if path.is_absolute():
-        return path if path.is_file() else None
-    evidence_dir = Path(evidence_path).resolve().parent if evidence_path else HARNESS_DIR
-    for candidate in (evidence_dir / path, ARTIFACT_HARNESS_DIR / path, HARNESS_DIR / path):
-        if candidate.is_file():
-            return candidate
-    return None
+    resolved = resolve_artifact_path(raw_path, evidence_path)
+    return resolved if resolved and resolved.is_file() else None
 
 
 def _stable_json_sha256(value: Any) -> str:
@@ -59,6 +48,25 @@ def _json_keys(value: Any) -> set[str]:
     if isinstance(value, list):
         return {key for child in value for key in _json_keys(child)}
     return set()
+
+
+def _declared_evidence_gate_failure(value: Any) -> str:
+    if not isinstance(value, dict):
+        return ""
+    gate = value.get("evidence_gate")
+    if not isinstance(gate, dict):
+        return ""
+    status = str(gate.get("status") or "").strip().lower()
+    failed_gates = [str(item).strip() for item in gate.get("failed_gates") or [] if str(item).strip()]
+    failed = (
+        status in {"failed", "fail", "blocked", "rejected", "not_passed"}
+        or status.startswith("failed_")
+        or (bool(failed_gates) and status not in {"passed", "pass"})
+    )
+    if not failed:
+        return ""
+    detail = f": {failed_gates[0]}" if failed_gates else ""
+    return f"research_run_manifest declares evidence gate {status or 'failed'}{detail}"
 
 
 def evaluate(payload: dict[str, Any], path: str | Path | None = None):
@@ -140,6 +148,10 @@ def evaluate(payload: dict[str, Any], path: str | Path | None = None):
                 missing = [field for field in required_fields if field not in _json_keys(parsed)]
                 if missing:
                     reasons.append(f"delivery_manifest.files[{index}] is missing JSON fields: {missing}")
+                if Path(relative_path).name == "research_run_manifest.json":
+                    declared_failure = _declared_evidence_gate_failure(parsed)
+                    if declared_failure:
+                        reasons.append(declared_failure)
     elif bundle.get("delivery_manifest_sha256"):
         reasons.append("outputs.bundle.delivery_manifest is required when delivery_manifest_sha256 is present")
     if not limitations(payload):

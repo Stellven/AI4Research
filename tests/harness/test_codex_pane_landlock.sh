@@ -24,9 +24,10 @@ grep -Fq '"$codex_arg0_dir"' "$LAUNCHER"
 grep -Fq 'codex_package_root' "$LAUNCHER"
 grep -Fq 'node_real' "$LAUNCHER"
 grep -Fq 'codex-code-mode-host is required but unavailable' "$LAUNCHER"
+grep -Fq '$HOME/.local/bin/codex' "$LAUNCHER"
 grep -Fq '/etc/resolv.conf /etc/hosts /etc/nsswitch.conf /etc/gai.conf' "$LAUNCHER"
 
-mkdir -p "$TMP_ROOT/project" "$TMP_ROOT/denied" "$TMP_ROOT/home/.codex" "$TMP_ROOT/stale-codex-home"
+mkdir -p "$TMP_ROOT/project" "$TMP_ROOT/release/bin" "$TMP_ROOT/denied" "$TMP_ROOT/home/.codex" "$TMP_ROOT/stale-codex-home"
 mkdir -p "$TMP_ROOT/pane-state/standalone-pm/home"
 printf 'must-not-cross-scope\n' >"$TMP_ROOT/denied/secret.txt"
 printf '{"fixture":true}\n' >"$TMP_ROOT/home/.codex/auth.json"
@@ -34,9 +35,10 @@ printf 'must_not_be_projected = true\n' >"$TMP_ROOT/home/.codex/config.toml"
 printf 'stale = true\n' >"$TMP_ROOT/stale-codex-home/config.toml"
 ln -s "$TMP_ROOT/home/.codex/auth.json" "$TMP_ROOT/stale-codex-home/auth.json"
 printf '{"stale":true}\n' >"$TMP_ROOT/pane-state/standalone-pm/home/auth.json"
+FAKE_CODEX_REAL="$TMP_ROOT/release/bin/codex"
 FAKE_CODEX="$TMP_ROOT/project/codex"
-FAKE_CODE_MODE_HOST="$TMP_ROOT/project/codex-code-mode-host"
-cat >"$FAKE_CODEX" <<'SH'
+FAKE_CODE_MODE_HOST="$TMP_ROOT/release/bin/codex-code-mode-host"
+cat >"$FAKE_CODEX_REAL" <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail
 echo "FAKE_CODEX_STARTED"
@@ -62,7 +64,8 @@ if cat "$DENIED_FILE" >/dev/null 2>&1; then
 fi
 echo "FAKE_CODEX_SIBLING_READ_DENIED"
 SH
-chmod +x "$FAKE_CODEX"
+chmod +x "$FAKE_CODEX_REAL"
+ln -s "$FAKE_CODEX_REAL" "$FAKE_CODEX"
 printf '#!/usr/bin/env bash\nexit 0\n' >"$FAKE_CODE_MODE_HOST"
 chmod +x "$FAKE_CODE_MODE_HOST"
 
@@ -91,5 +94,6 @@ grep -Fq 'FAKE_CODEX_STARTED' <<<"$output"
 grep -Fq 'FAKE_CODEX_SANDBOX_HOME_READY' <<<"$output"
 grep -Fq 'FAKE_CODEX_RESOLVER_READABLE' <<<"$output"
 grep -Fq 'FAKE_CODEX_SIBLING_READ_DENIED' <<<"$output"
+! grep -Fq 'codex-code-mode-host is required but unavailable' <<<"$output"
 
 echo "PASS: Codex panes route through the strict Landlock launcher"

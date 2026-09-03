@@ -118,3 +118,91 @@ def test_publication_gate_enforces_exact_manifest_and_machine_readable_fields(tm
     result = publication_gate.evaluate(missing, path=evidence_path)
     assert result.ok is False
     assert "exactly match" in " ".join(result.reasons)
+
+    run_manifest_path = tmp_path / "research_run_manifest.json"
+    run_manifest_path.write_text(
+        json.dumps({
+            "closure_status": "open_degraded",
+            "evidence_gate": {
+                "status": "failed_for_full_requested_scope",
+                "failed_gates": ["minimum source coverage was not achieved"],
+            },
+        }),
+        encoding="utf-8",
+    )
+    declared_failure = copy.deepcopy(payload)
+    declared_failure_manifest = declared_failure["outputs"]["bundle"]["delivery_manifest"]
+    declared_failure_manifest["files"].append({
+        "file_id": "research_run_manifest",
+        "relative_path": "research_run_manifest.json",
+        "media_type": "application/json",
+        "description": "Research run manifest",
+        "content_requirements": ["Record the evidence gate outcome"],
+        "required_fields": ["evidence_gate", "closure_status"],
+        "source_refs": ["D1"],
+        "required": True,
+    })
+    declared_failure["outputs"]["bundle"]["files"].append({
+        "type": "application/json",
+        "path": "research_run_manifest.json",
+        "sha256": digest(run_manifest_path),
+        "manifest_relative_path": "research_run_manifest.json",
+    })
+    declared_failure["outputs"]["bundle"]["delivery_manifest_sha256"] = hashlib.sha256(
+        json.dumps(
+            declared_failure_manifest,
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+    ).hexdigest()
+    result = publication_gate.evaluate(declared_failure, path=evidence_path)
+    assert result.ok is False
+    assert "declares evidence gate failed" in " ".join(result.reasons)
+
+
+def test_publication_gate_resolves_workspace_and_private_paths_from_nested_output(tmp_path):
+    workdir = tmp_path / "run" / "workdir"
+    output_root = workdir / "workspace" / "demo_outputs" / "landscape"
+    private_root = workdir / "private" / "report"
+    output_root.mkdir(parents=True)
+    private_root.mkdir(parents=True)
+    report_path = output_root / "report.md"
+    source_path = private_root / "scientific_report.json"
+    report_path.write_text("# Report\n\nEvidence-grounded result.\n", encoding="utf-8")
+    source_path.write_text("{}\n", encoding="utf-8")
+    digest = lambda target: hashlib.sha256(target.read_bytes()).hexdigest()
+    payload = {
+        "schema": "publication_bundle.v1",
+        "task_id": "task",
+        "sprint_id": "sprint",
+        "node_id": "publication",
+        "status": "completed",
+        "inputs": {},
+        "outputs": {"bundle": {
+            "bundle_id": "bundle",
+            "publication_type": "mixed",
+            "files": [{
+                "type": "text/markdown",
+                "path": "workspace/demo_outputs/landscape/report.md",
+                "sha256": digest(report_path),
+            }],
+            "source_report_id": "report-1",
+            "evidence_ids": ["report-1"],
+        }},
+        "artifacts": [{
+            "type": "input_evidence",
+            "path": "private/report/scientific_report.json",
+            "sha256": digest(source_path),
+        }],
+        "provenance": {
+            "operator_id": "producer",
+            "implementation_package": "test",
+            "timestamp": "2026-09-02T00:00:00Z",
+        },
+        "limitations": ["Bounded fixture."],
+    }
+    evidence_path = output_root / "publication_bundle.v1.json"
+    evidence_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    assert publication_gate.evaluate(payload, path=evidence_path).ok is True

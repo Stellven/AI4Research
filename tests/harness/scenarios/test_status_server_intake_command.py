@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import importlib.util
 import json
 import subprocess
@@ -50,7 +51,7 @@ def test_intake_prefers_harness_local_cli_over_ambient_path(
 def test_intake_timeout_covers_the_bounded_compiler_repair_budget() -> None:
     status_server = _load_status_server()
 
-    assert status_server._intake_timeout_seconds({}) == 1740
+    assert status_server._intake_timeout_seconds({}) == 1980
     assert status_server._intake_timeout_seconds({
         "SOLAR_INTENT_COMPILER_PROVIDER": "codex",
         "SOLAR_INTENT_MODEL_TIMEOUT_SEC": "300",
@@ -396,3 +397,33 @@ def test_intake_upload_rejects_oversized_attachment_before_launch(
 
     assert result["ok"] is False
     assert result["error"] == "attachment_too_large"
+
+
+def test_intake_upload_accepts_a_realistic_large_scholarly_pdf(
+    tmp_path: Path,
+) -> None:
+    status_server = _load_status_server()
+    harness = tmp_path / "harness"
+    harness.mkdir()
+    status_server.HARNESS_DIR = harness
+    target_size = 18 * 1024 * 1024
+    content = b"%PDF-1.7\n" + (b"x" * (target_size - len(b"%PDF-1.7\n")))
+
+    attachments, error = status_server._persist_intake_attachments(
+        {
+            "attachments": [
+                {
+                    "name": "research-paper.pdf",
+                    "mime_type": "application/pdf",
+                    "content_base64": base64.b64encode(content).decode("ascii"),
+                }
+            ]
+        },
+        "large-paper",
+    )
+
+    assert error == ""
+    assert len(attachments) == 1
+    stored = Path(attachments[0]["path"])
+    assert stored.stat().st_size == target_size
+    assert attachments[0]["sha256"] == hashlib.sha256(content).hexdigest()

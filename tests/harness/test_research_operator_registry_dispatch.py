@@ -94,20 +94,93 @@ def test_paper_analyze_registry_payload_preserves_all_frozen_papers() -> None:
     ]
 
 
-def test_publication_registry_payload_preserves_requirement_report_and_review() -> None:
+def test_review_and_publication_registry_payloads_preserve_stage_boundaries() -> None:
     adapter = _load_adapter()
     requirement = {"schema_version": "solar.requirement_ir.v2", "semantic_contract": {}}
     report = {"schema": "scientific_report.v1", "outputs": {"report": {}}}
-    review = {"schema": "artifact_review.v1", "outputs": {"review": {}}}
+    report_plan = {"schema": "scientific_report_plan.v1", "outputs": {"report_plan": {}}}
+    plan_review = {"schema": "scientific_report_plan_review.v1", "outputs": {"review": {}}}
 
     payload = adapter._payload_for_documents(
-        "publication_produce", [requirement, report, review]
+        "publication_produce", [requirement, report]
     )
 
     assert payload == {
         "requirement_ir": requirement,
         "report": report,
-        "artifact_review": review,
+    }
+    assert adapter._payload_for_documents("artifact_review", [report_plan]) == {
+        "report_plan": report_plan,
+    }
+    assert adapter._payload_for_documents("artifact_review", [report]) == {
+        "report": report,
+    }
+    draft_payload = adapter._payload_for_documents(
+        "report_draft", [report_plan, plan_review]
+    )
+    assert draft_payload["report_plan_review"] == plan_review
+
+
+def test_publication_runtime_snapshot_reads_scheduler_state_without_mutating_graph(tmp_path: Path) -> None:
+    adapter = _load_adapter()
+    graph_path = tmp_path / "sprint-1.task_graph.json"
+    graph = {
+        "sprint_id": "sprint-1",
+        "nodes": [
+            {"id": "report", "depends_on": []},
+            {"id": "publish", "depends_on": ["report"]},
+        ],
+    }
+    graph_path.write_text(json.dumps(graph), encoding="utf-8")
+    (tmp_path / "sprint-1.task_graph_state.json").write_text(
+        json.dumps(
+            {
+                "sprint_id": "sprint-1",
+                "revision": 7,
+                "run_status": "running",
+                "updated_at": "2026-09-03T00:00:00Z",
+                "nodes": {
+                    "report": {"status": "passed", "attempt": 1, "blocked_by": []},
+                    "publish": {"status": "running", "attempt": 1, "blocked_by": []},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    snapshot = adapter._runtime_execution_snapshot(
+        graph, {"graph_path": str(graph_path), "node_id": "publish"}
+    )
+
+    assert snapshot["availability"] == "available"
+    assert snapshot["state_revision"] == 7
+    assert snapshot["closure_status"] == "pending_scheduler_closure"
+    assert [(item["node_id"], item["status"]) for item in snapshot["nodes"]] == [
+        ("report", "passed"),
+        ("publish", "running"),
+    ]
+    assert snapshot["nodes"][1]["is_current_node"] is True
+    assert "status" not in graph["nodes"][0]
+
+
+def test_memory_registry_payload_preserves_all_pre_report_evidence_classes() -> None:
+    adapter = _load_adapter()
+    documents = [
+        {"schema": "research_paper.v1", "outputs": {"paper": {"paper_id": "p1"}}},
+        {"schema": "claim_verdict.v1", "outputs": {"verdicts": []}},
+        {"schema": "research_method.v1", "outputs": {"methods": []}},
+        {"schema": "research_source_assessment.v1", "outputs": {"assessments": []}},
+        {"schema": "scientific_report_plan.v1", "outputs": {"report_plan": {}}},
+    ]
+
+    payload = adapter._payload_for_documents("memory_update_initial", documents)
+
+    assert set(payload) == {
+        "paper_evidence",
+        "verdict_evidence",
+        "research_method",
+        "source_assessment",
+        "report_plan",
     }
 
 
@@ -126,8 +199,142 @@ def test_existing_publication_worker_is_permanently_bound_to_native_manifest_act
     assert set(worker["resource_requirements"]["required_artifact_types"]) == {
         "requirement_ir.v1",
         "schema:schemas/evidence/scientific_report.v1.schema.json",
-        "schema:schemas/evidence/artifact_review.v1.schema.json",
     }
+
+
+def test_existing_review_worker_declares_both_typed_review_targets() -> None:
+    operators = json.loads(
+        (HARNESS / "config" / "physical-operators.json").read_text(encoding="utf-8")
+    )["operators"]
+    worker = operators["autosci-artifact-review-worker"]
+
+    assert worker["backend"] == "research_operator_registry"
+    assert worker["runtime_binding"] == {
+        "registry": "plugins.autosci.operators.scientific_lifecycle.registry",
+        "node_id": "artifact_review",
+        "implementation_operator_id": "autosci-artifact-review-physical",
+    }
+    assert set(worker["resource_requirements"]["required_artifact_types"]) == {
+        "schema:schemas/evidence/scientific_report_plan.v1.schema.json",
+        "schema:schemas/evidence/scientific_report.v1.schema.json",
+    }
+
+
+def test_review_registry_payload_rejects_unrelated_artifact_types() -> None:
+    adapter = _load_adapter()
+
+    with pytest.raises(adapter.RegistryAdapterError, match="not admitted"):
+        adapter._payload_for_documents(
+            "artifact_review",
+            [{"schema": "research_claims.v1", "outputs": {"claims": []}}],
+        )
+
+
+def test_review_model_route_uses_frozen_envelope_not_daemon_environment(monkeypatch) -> None:
+    adapter = _load_adapter()
+    monkeypatch.setenv("SOLAR_RESEARCH_MODEL", "deepseek")
+    monkeypatch.setenv("SOLAR_RESEARCH_REASONING_EFFORT", "low")
+    node = {
+        "capsule_binding": {"capsule_ids": ["cap.research-report-plan-review"]},
+        "execution_authority": {
+            "capsules": {
+                "cap.research-report-plan-review": {
+                    "default_operator_profile": "codex-evaluator"
+                }
+            }
+        },
+    }
+    envelope = {
+        "profile": "codex-evaluator",
+        "model": "gpt-5.5",
+        "reasoning_effort": "medium",
+    }
+
+    route = adapter._verified_model_service_route(envelope, node)
+
+    assert route == {
+        "profile": "codex-evaluator",
+        "model": "gpt-5.5",
+        "provider": "openai",
+        "reasoning_effort": "medium",
+    }
+
+
+def test_review_model_route_rejects_profile_or_model_tampering() -> None:
+    adapter = _load_adapter()
+    node = {
+        "capsule_binding": {"capsule_ids": ["cap.research-report-plan-review"]},
+        "execution_authority": {
+            "capsules": {
+                "cap.research-report-plan-review": {
+                    "default_operator_profile": "codex-evaluator"
+                }
+            }
+        },
+    }
+    with pytest.raises(adapter.RegistryAdapterError, match="frozen capsule"):
+        adapter._verified_model_service_route(
+            {
+                "profile": "codex-builder",
+                "model": "gpt-5.5",
+                "reasoning_effort": "medium",
+            },
+            node,
+        )
+    with pytest.raises(adapter.RegistryAdapterError, match="registered profile"):
+        adapter._verified_model_service_route(
+            {
+                "profile": "codex-evaluator",
+                "model": "gpt-5.4",
+                "reasoning_effort": "medium",
+            },
+            node,
+        )
+
+
+def test_native_discovery_requests_the_complete_production_service_bundle(tmp_path: Path) -> None:
+    adapter = _load_adapter()
+
+    overrides = adapter._production_service_overrides(
+        "literature_discover",
+        envelope={},
+        node={},
+        work_dir=tmp_path,
+    )
+
+    assert overrides is None
+
+
+def test_report_writer_override_remains_explicit(monkeypatch, tmp_path: Path) -> None:
+    adapter = _load_adapter()
+    sentinel = object()
+    monkeypatch.setattr(
+        adapter,
+        "_verified_model_service_route",
+        lambda _envelope, _node: {
+            "model": "gpt-5.5",
+            "reasoning_effort": "medium",
+        },
+    )
+    monkeypatch.setattr(adapter, "CodexResearchModelService", lambda *_args, **_kwargs: sentinel)
+
+    overrides = adapter._production_service_overrides(
+        "report_draft",
+        envelope={},
+        node={},
+        work_dir=tmp_path,
+    )
+
+    assert overrides == {"model_generate": sentinel}
+
+
+def test_registry_adapter_uses_the_action_registry_error_class_identity() -> None:
+    adapter = _load_adapter()
+    from harness.plugins.autosci.operators.scientific_lifecycle.action import registry
+
+    service_error = adapter.CodexResearchModelService.__call__.__globals__["ResearchOperatorError"]
+
+    assert service_error is registry.ResearchOperatorError
 
 
 def test_registry_adapter_resolves_only_hash_bound_workspace_sources(tmp_path: Path) -> None:
@@ -506,10 +713,12 @@ def test_all_current_providerless_registry_operators_are_locally_dispatchable(mo
         "claim_verify_worker",
         "experiment_monitor_worker",
         "experiment_approval_gate_worker",
-            "autosci-report-plan-worker",
-            "autosci-report-worker",
-            "autosci-publication-compile-worker",
-        }
+        "autosci-memory-update-worker",
+        "autosci-report-plan-worker",
+        "autosci-artifact-review-worker",
+        "autosci-report-worker",
+        "autosci-publication-compile-worker",
+    }
     for operator_id, operator in registry_operators.items():
         assert not operator.get("provider") and not operator.get("vendor")
         assert not operator.get("key_ref")

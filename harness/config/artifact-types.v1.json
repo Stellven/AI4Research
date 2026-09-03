@@ -73,6 +73,7 @@
     {"artifact_type": "schema:schemas/evidence/research_paper.v1.schema.json", "controller_input": false},
     {"artifact_type": "schema:schemas/evidence/research_source_assessment.v1.schema.json", "controller_input": false},
     {"artifact_type": "schema:schemas/evidence/scientific_report_plan.v1.schema.json", "controller_input": false},
+    {"artifact_type": "schema:schemas/evidence/scientific_report_plan_review.v1.schema.json", "controller_input": false},
     {"artifact_type": "schema:schemas/evidence/scientific_report.v1.schema.json", "controller_input": false},
     {"artifact_type": "schema:schemas/evidence/workflow_evolution.v1.schema.json", "controller_input": false}
   ]

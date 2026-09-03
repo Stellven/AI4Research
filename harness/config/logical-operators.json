@@ -661,7 +661,7 @@
     },
     "ScientificWorkflowEvolver": {
       "operator_type": "ScientificWorkflowEvolver",
-      "description": "AutoSci lifecycle closeout, memory-finalization, and workflow evolution evidence generation.",
+      "description": "AutoSci bounded workflow-improvement proposal generation. This operator does not perform lifecycle Closure, final status reporting, or memory finalization.",
       "primary_role": "planner",
       "required_capabilities": {
         "scientific_evidence": 3,

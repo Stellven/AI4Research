@@ -2684,7 +2684,8 @@ def _build_plan_governance(sid: str, status: dict, tg: dict) -> dict:
     """G4 spec §3: the generic path's governance facts, surfaced truthfully.
 
     Everything derives from files the runtime actually writes (status.json,
-    task_graph.json, <sid>.plan-compile-errors.json) — never heuristics
+    task_graph.json, <sid>.plan-compile-errors.json, and the bounded Planner
+    repair record) — never heuristics
     (failure class 14). States:
       certified                -> stamped pm.generic.v1 + certificate PASS
       compiling                -> intake-born graph, not yet stamped (NEUTRAL:
@@ -2721,6 +2722,30 @@ def _build_plan_governance(sid: str, status: dict, tg: dict) -> dict:
                     error_codes.append(str(error["code"]))
         except (OSError, ValueError):
             pass
+        # A successful bounded repair removes the terminal compile-error file,
+        # but the repair record remains the authoritative history of what the
+        # Planner corrected.  Surface that history so finalized runs do not
+        # lose their repaired-issue provenance in the POC preview.
+        try:
+            repair = json.loads(
+                (
+                    SPRINTS_DIR
+                    / sid
+                    / "planning"
+                    / "semantic"
+                    / "repair_record.json"
+                ).read_text(encoding="utf-8")
+            )
+            if str(repair.get("status") or "").strip().lower() == "completed":
+                try:
+                    bounces = max(bounces, int(repair.get("generation") or 0))
+                except (TypeError, ValueError):
+                    pass
+                for defect in repair.get("defects") or []:
+                    if isinstance(defect, dict) and str(defect.get("code") or "").strip():
+                        error_codes.append(str(defect["code"]))
+        except (OSError, ValueError):
+            pass
     certified = contract_id == "pm.generic.v1" and str(cert.get("verdict") or "").upper() == "PASS"
     if sprint_status == "failed" and phase == "plan_compile_failed":
         state = "plan_compile_failed"
@@ -2746,7 +2771,7 @@ def _build_plan_governance(sid: str, status: dict, tg: dict) -> dict:
             "graph_hash": str(cert.get("graph_hash") or "")[:12],
         },
         "plan_compile_bounces": bounces,
-        "compile_error_codes": error_codes[:6],
+        "compile_error_codes": list(dict.fromkeys(error_codes))[:6],
         "birth_marker": birth_marker,
         "workflow_contract_id": contract_id,
     }

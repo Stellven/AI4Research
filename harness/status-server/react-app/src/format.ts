@@ -47,6 +47,46 @@ export function asString(value: unknown, fallback = ""): string {
   return fallback;
 }
 
+const PLAN_LABEL_ACRONYMS = new Set([
+  "ai",
+  "api",
+  "csv",
+  "e2e",
+  "html",
+  "json",
+  "kv",
+  "llm",
+  "pdf",
+  "poc",
+  "ui",
+  "url",
+]);
+
+function humanizePlanStep(value: string): string {
+  return value
+    .split(/[-_]+/)
+    .filter(Boolean)
+    .map((part) =>
+      PLAN_LABEL_ACRONYMS.has(part.toLowerCase())
+        ? part.toUpperCase()
+        : `${part.charAt(0).toUpperCase()}${part.slice(1)}`,
+    )
+    .join(" ");
+}
+
+export function planNodeLabel(node: DagNode): string {
+  const id = asString(node.node_id || node.id).replace(/^build[-_]/i, "");
+  if (!id) return asString(node.title, "Untitled step");
+
+  const [base, composition = ""] = id.split("__", 2);
+  const label = humanizePlanStep(base);
+  const component = composition.match(/_c(\d+)$/i);
+  if (component) {
+    return `${label} · Part ${Number(component[1])}`;
+  }
+  return label || asString(node.title, "Untitled step");
+}
+
 export function normalizeRole(value: unknown): AgentRole | "" {
   const text = asString(value).toLowerCase();
   if (text.includes("planner") || text.includes("规划")) return "planner";

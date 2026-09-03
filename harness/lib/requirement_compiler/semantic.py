@@ -24,6 +24,7 @@ from .template_contract import (
     fill_template,
     make_template,
     review_defects,
+    requirement_check_rows,
     selection_authority_defects,
 )
 
@@ -113,9 +114,14 @@ def semantic_defects(ir: dict[str, Any], intent: dict[str, Any] | None = None,
     from evaluation_plan import load_evaluation_check_registry
     registry = check_registry if check_registry is not None else load_evaluation_check_registry()
     checks = {row["check_id"] for row in registry.get("checks", [])}
+    requirement_checks = {
+        row["check_id"] for row in requirement_check_rows(registry)
+    }
     for row in rows:
         if row.get("check") not in checks:
             errors.append(f"UNKNOWN_CHECK: {row.get('check')}")
+        elif row.get("check") not in requirement_checks:
+            errors.append(f"REQUIREMENT_CHECK_NOT_BOUND_OUTPUT: {row.get('check')}")
         role = roles.get(row.get("requirement_id"))
         kind = (row.get("acceptance") or {}).get("kind")
         if kind == "scope_coverage" and role != "research_scope":

@@ -135,7 +135,9 @@ def test_discovery_to_ingestion_and_internal_report_plan_compose_exactly() -> No
         _catalog(), available_inputs=[LITERATURE], target_outputs=[PAPER]
     )
     report = composition.search_composition_candidates(
-        _catalog(), available_inputs=[REQUIREMENT_IR, CLAIM_VERDICT], target_outputs=[REPORT]
+        _catalog(),
+        available_inputs=[REQUIREMENT_IR, CLAIM_VERDICT, LITERATURE],
+        target_outputs=[REPORT],
     )
 
     assert ingest["verdict"] == "candidates_found"
@@ -283,9 +285,15 @@ def test_report_composition_carries_method_evidence_into_plan_and_draft() -> Non
     report = "schema:schemas/evidence/scientific_report.v1.schema.json"
     search = composition.search_composition_candidates(
         catalog,
-        available_inputs=[REQUIREMENT_IR, CLAIM_VERDICT, METHODS, SOURCE_ASSESSMENT],
+        available_inputs=[
+            REQUIREMENT_IR,
+            CLAIM_VERDICT,
+            METHODS,
+            SOURCE_ASSESSMENT,
+            LITERATURE,
+        ],
         target_outputs=[report],
-        allowed_effects=["read", "write", "execute"],
+        allowed_effects=["read", "write", "execute", "network"],
     )
 
     assert search["verdict"] == "candidates_found"
@@ -295,12 +303,220 @@ def test_report_composition_carries_method_evidence_into_plan_and_draft() -> Non
         if [step["capsule_id"] for step in row["steps"]]
         == [
             "cap.research-method-aware-report-plan",
+            "cap.research-report-plan-review",
             "cap.scientific-method-aware-report-draft",
         ]
     )
-    for step in candidate["steps"]:
+    for step in (candidate["steps"][0], candidate["steps"][2]):
         assert METHODS in step["consumes"]
         assert SOURCE_ASSESSMENT in step["consumes"]
+    assert candidate["steps"][1]["consumes"] == [
+        "schema:schemas/evidence/scientific_report_plan.v1.schema.json"
+    ]
+
+
+def _reviewed_method_report_node(*, network: str) -> dict:
+    effects = ["read", "write", "execute"]
+    if network == "required":
+        effects.append("network")
+    return {
+        "node_id": "draft_reviewed_report",
+        "logical_operator": "ScientificReportWriter",
+        "objective": "Draft the reviewed method-aware scientific report.",
+        "depends_on": [],
+        "consumes": [
+            "schema:schemas/evidence/scientific_report_plan.v1.schema.json",
+            "schema:schemas/evidence/scientific_report_plan_review.v1.schema.json",
+            CLAIM_VERDICT,
+            METHODS,
+            SOURCE_ASSESSMENT,
+        ],
+        "produces": [
+            {
+                "artifact_type": REPORT,
+                "verifier_ids": ["check.scientific.report.v1"],
+                "materialization": {"kind": "file", "path": "report.json"},
+            }
+        ],
+        "requirement_ids": ["REQ-REPORT"],
+        "operator_requirements": {
+            "effects": effects,
+            "network": network,
+            "minimum_context_tokens": 0,
+            "execution_trust": "any",
+        },
+        "gate_requirement": "report_review",
+    }
+
+
+def test_report_draft_contracts_and_worker_declare_model_network_authority() -> None:
+    catalog = _catalog()
+    by_id = {item["capsule_id"]: item for item in catalog["capsules"]}
+    for capsule_id in (
+        "cap.scientific-report-draft",
+        "cap.scientific-method-aware-report-draft",
+        "cap.scientific-experiment-aware-report-draft",
+    ):
+        assert composition._active_effects(by_id[capsule_id]) == [
+            "read",
+            "write",
+            "execute",
+            "network",
+        ]
+
+    physical = json.loads(
+        (ROOT / "harness" / "config" / "physical-operators.json").read_text(
+            encoding="utf-8"
+        )
+    )["operators"]["autosci-report-worker"]
+    assert physical["resource_requirements"]["required_services"] == [
+        "model_generate"
+    ]
+    assert physical["resource_requirements"]["network"] == "required"
+
+
+def test_report_draft_cannot_freeze_under_network_forbidden_plan_authority() -> None:
+    catalog = _catalog()
+    node = _reviewed_method_report_node(network="forbidden")
+
+    composition_row = elastic_planner._node_composition_row(
+        node,
+        catalog,
+        artifact_registry=composition.load_artifact_type_registry(),
+        conversion_registry=composition.load_conversion_registry(),
+    )
+    assert composition_row["status"] == "unsatisfiable"
+    assert composition_row["admitted_candidate_ids"] == []
+    report_exclusions = {
+        item["capsule_id"]: item
+        for item in composition_row["search"]["excluded_capsules"]
+        if "report-draft" in item["capsule_id"]
+    }
+    assert set(report_exclusions) == {
+        "cap.scientific-report-draft",
+        "cap.scientific-method-aware-report-draft",
+        "cap.scientific-experiment-aware-report-draft",
+    }
+    assert all(
+        item["reason_codes"] == ["EFFECT_POLICY_DISALLOWED"]
+        and item["disallowed_effects"] == ["network"]
+        for item in report_exclusions.values()
+    )
+
+    hard_row = elastic_planner._hard_capsule_candidate_row(node, catalog)
+    method_exclusion = next(
+        item
+        for item in hard_row["exclusions"]
+        if item["capsule_id"] == "cap.scientific-method-aware-report-draft"
+    )
+    assert method_exclusion["reason_codes"] == ["NETWORK_FORBIDDEN"]
+
+
+def test_report_draft_can_freeze_when_plan_authorizes_required_network() -> None:
+    catalog = _catalog()
+    node = _reviewed_method_report_node(network="required")
+
+    composition_row = elastic_planner._node_composition_row(
+        node,
+        catalog,
+        artifact_registry=composition.load_artifact_type_registry(),
+        conversion_registry=composition.load_conversion_registry(),
+    )
+    assert composition_row["status"] == "candidates_available"
+    assert any(
+        [step["capsule_id"] for step in candidate["steps"]]
+        == ["cap.scientific-method-aware-report-draft"]
+        for candidate in composition_row["search"]["candidates"]
+    )
+
+    hard_row = elastic_planner._hard_capsule_candidate_row(node, catalog)
+    assert hard_row["eligible_candidate_ids"] == [
+        "cap.scientific-method-aware-report-draft"
+    ]
+
+
+def test_report_plan_can_be_reviewed_before_report_drafting() -> None:
+    catalog = _catalog()
+    report_plan = "schema:schemas/evidence/scientific_report_plan.v1.schema.json"
+    artifact_review = "schema:schemas/evidence/scientific_report_plan_review.v1.schema.json"
+    search = composition.search_composition_candidates(
+        catalog,
+        available_inputs=[report_plan],
+        target_outputs=[artifact_review],
+        allowed_effects=["read", "write", "execute", "network"],
+    )
+
+    assert search["verdict"] == "candidates_found"
+    assert any(
+        [step["capsule_id"] for step in candidate["steps"]]
+        == ["cap.research-report-plan-review"]
+        for candidate in search["candidates"]
+    )
+
+
+def test_reviewed_report_plan_flows_into_draft_without_becoming_publication_gate() -> None:
+    catalog = _catalog()
+    report_plan = "schemas/evidence/scientific_report_plan.v1.schema.json"
+    plan_review = "schemas/evidence/scientific_report_plan_review.v1.schema.json"
+    publication = "schemas/evidence/publication_bundle.v1.schema.json"
+    by_id = {item["capsule_id"]: item for item in catalog["capsules"]}
+    report_capsule = by_id["cap.scientific-method-aware-report-draft"]
+    publication_capsule = by_id["cap.research-publication-produce"]
+
+    report_inputs = {
+        item.get("schema_ref") or item.get("type")
+        for item in report_capsule["contract"]["inputs"]["required"]
+    }
+    publication_inputs = {
+        item.get("schema_ref") or item.get("type")
+        for item in publication_capsule["contract"]["inputs"]["required"]
+    }
+
+    assert {report_plan, plan_review}.issubset(report_inputs)
+    assert "schemas/evidence/artifact_review.v1.schema.json" not in publication_inputs
+    assert plan_review not in publication_inputs
+    assert publication in {
+        item.get("schema_ref") or item.get("type")
+        for item in publication_capsule["contract"]["outputs"]["required"]
+    }
+
+
+def test_landscape_memory_update_uses_pre_report_evidence_without_hidden_draft() -> None:
+    memory_update = "schema:schemas/evidence/research_memory_update.v1.schema.json"
+    available = [
+        PAPER,
+        CLAIM_VERDICT,
+        METHODS,
+        SOURCE_ASSESSMENT,
+        "schema:schemas/evidence/scientific_report_plan.v1.schema.json",
+    ]
+
+    search = composition.search_composition_candidates(
+        _catalog(),
+        available_inputs=available,
+        target_outputs=[memory_update],
+        allowed_effects=["read", "write", "execute"],
+    )
+
+    assert search["verdict"] == "candidates_found"
+    assert [step["capsule_id"] for step in search["candidates"][0]["steps"]] == [
+        "cap.research-landscape-memory-update"
+    ]
+    assert "cap.scientific-report-draft" not in {
+        step["capsule_id"] for step in search["candidates"][0]["steps"]
+    }
+
+    physical = json.loads(
+        (ROOT / "harness" / "config" / "physical-operators.json").read_text(
+            encoding="utf-8"
+        )
+    )["operators"]["autosci-memory-update-worker"]
+    assert physical["backend"] == "research_operator_registry"
+    assert physical["runtime_binding"] == {
+        "registry": "plugins.autosci.operators.scientific_lifecycle.evidence.registry",
+        "node_id": "memory_update_initial",
+        "implementation_operator_id": "autosci-evidence-memory-update-initial",
+    }
 
 
 def test_combined_report_composition_consumes_plan_and_measured_result() -> None:
@@ -316,7 +532,7 @@ def test_combined_report_composition_consumes_plan_and_measured_result() -> None
             EXPERIMENT_RESULT,
         ],
         target_outputs=[REPORT],
-        allowed_effects=["read", "write", "execute"],
+        allowed_effects=["read", "write", "execute", "network"],
     )
 
     assert search["verdict"] == "candidates_found"
@@ -710,7 +926,7 @@ def test_requirement_only_ab_frontier_fails_without_fake_adapter() -> None:
     assert all(row["edge_kind"] != "approved_conversion" for row in result["hyperedges"])
 
 
-def test_research_only_publication_path_uses_plan_draft_and_review() -> None:
+def test_research_only_publication_path_does_not_treat_predraft_review_as_release_gate() -> None:
     result = composition.search_composition_candidates(
         _catalog(),
         available_inputs=[REQUEST_ENVELOPE, REQUIREMENT_IR],
@@ -721,17 +937,15 @@ def test_research_only_publication_path_uses_plan_draft_and_review() -> None:
 
     assert result["verdict"] == "candidates_found"
     assert result["unreachable_targets"] == []
-    assert [
+    selected_ids = [
         step["capsule_id"] for step in result["candidates"][0]["steps"]
-    ] == [
-        "cap.research-paper-ingest",
-        "cap.research-claim-extract",
-        "cap.research-claim-verify",
+    ]
+    assert selected_ids[-3:] == [
         "cap.research-report-plan",
         "cap.scientific-report-draft",
-        "cap.research-artifact-review",
         "cap.research-publication-produce",
     ]
+    assert "cap.research-artifact-review" not in selected_ids
     assert any(
         [step["capsule_id"] for step in candidate["steps"]][:2]
         == ["cap.research-literature-discover", "cap.research-discovery-ingest"]

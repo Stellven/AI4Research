@@ -197,7 +197,7 @@ find_codex_bin() {
   local c
   local candidates=()
   [[ -n "${SOLAR_CODEX_BIN:-}" ]] && candidates+=("$SOLAR_CODEX_BIN")
-  candidates+=("$HOME/.npm-global/bin/codex" "$HOME/bin/codex" "$HOME/n/bin/codex")
+  candidates+=("$HOME/.local/bin/codex" "$HOME/.npm-global/bin/codex" "$HOME/bin/codex" "$HOME/n/bin/codex")
   c="$(command -v codex 2>/dev/null || true)"
   [[ -n "$c" ]] && candidates+=("$c")
 
@@ -625,6 +625,14 @@ if [[ "$PANE_RUNTIME" == "codex" ]]; then
   fi
   if [[ -z "$_code_mode_host_bin" && -x "$(dirname "$CODEX_BIN")/codex-code-mode-host" ]]; then
     _code_mode_host_bin="$(dirname "$CODEX_BIN")/codex-code-mode-host"
+  fi
+  # The managed standalone installer exposes Codex through a stable symlink
+  # (for example ~/.local/bin/codex) while keeping its companion beside the
+  # versioned, resolved executable.  Resolve that target before declaring the
+  # runtime incomplete; the symlink's parent is not the package bin directory.
+  _resolved_codex_bin="$(readlink -f "$CODEX_BIN" 2>/dev/null || true)"
+  if [[ -z "$_code_mode_host_bin" && -n "$_resolved_codex_bin" && -x "$(dirname "$_resolved_codex_bin")/codex-code-mode-host" ]]; then
+    _code_mode_host_bin="$(dirname "$_resolved_codex_bin")/codex-code-mode-host"
   fi
   case "$_code_mode_host_mode" in
     0|false|off|disabled)

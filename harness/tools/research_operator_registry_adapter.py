@@ -36,7 +36,15 @@ for entry in (str(HARNESS_DIR / "lib"), str(HARNESS_DIR), str(REPO_ROOT)):
 
 from physical_operator_worker import run_physical_operator  # noqa: E402
 from research_orchestration.runtime import default_production_resolver  # noqa: E402
-from plugins.autosci.services.codex_research import CodexResearchModelService  # noqa: E402
+# Import the service through the same canonical package identity used by
+# ``default_production_resolver``.  Loading the service as ``plugins.*`` while
+# the action registry is loaded as ``harness.plugins.*`` creates two distinct
+# ResearchOperatorError classes, so typed provider failures are accidentally
+# reclassified as operator_internal_error at the package boundary.
+from harness.plugins.autosci.services.codex_research import (  # noqa: E402
+    CodexResearchModelService,
+)
+import model_registry  # noqa: E402
 import scheduler_input  # noqa: E402
 
 
@@ -97,6 +105,14 @@ _NODE_INPUT_PAYLOAD_KEYS = {
         "experiment_result.v1": "experiment_result",
         "code_evidence_map.v1": "code_evidence_map",
     },
+    "memory_update_initial": {
+        "research_paper.v1": "paper_evidence",
+        "claim_verdict.v1": "verdict_evidence",
+        "research_method.v1": "research_method",
+        "research_source_assessment.v1": "source_assessment",
+        "scientific_report_plan.v1": "report_plan",
+        "scientific_report.v1": "report_evidence",
+    },
     "report_plan": {
         "requirement_ir.v1": "requirement_ir",
         "claim_verdict.v1": "verdicts",
@@ -108,16 +124,20 @@ _NODE_INPUT_PAYLOAD_KEYS = {
     },
     "report_draft": {
         "scientific_report_plan.v1": "report_plan",
+        "scientific_report_plan_review.v1": "report_plan_review",
         "claim_verdict.v1": "verdicts",
         "research_method.v1": "research_method",
         "research_source_assessment.v1": "source_assessment",
         "experiment_plan.v1": "experiment_plan",
         "experiment_result.v1": "experiment_result",
     },
+    "artifact_review": {
+        "scientific_report_plan.v1": "report_plan",
+        "scientific_report.v1": "report",
+    },
     "publication_produce": {
         "requirement_ir.v1": "requirement_ir",
         "scientific_report.v1": "report",
-        "artifact_review.v1": "artifact_review",
     },
 }
 _MULTI_DOCUMENT_PAYLOAD_NODES = {"claim_verify"}
@@ -154,6 +174,73 @@ def _read_object(path: Path, *, label: str) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise RegistryAdapterError(f"{label} must be a JSON object: {path}")
     return payload
+
+
+def _runtime_execution_snapshot(
+    graph: dict[str, Any], envelope: dict[str, Any]
+) -> dict[str, Any]:
+    """Capture the mutable node ledger without changing frozen graph authority."""
+
+    graph_path = Path(str(envelope.get("graph_path") or "")).resolve()
+    state_path = graph_path.with_name(f"{graph_path.stem}_state.json")
+    if not state_path.is_file():
+        return {
+            "schema": "solar.publication_execution_snapshot.v1",
+            "availability": "unavailable",
+            "reason": "task_graph_state_missing_at_operator_dispatch",
+            "graph_path": str(graph_path),
+            "state_path": str(state_path),
+            "closure_status": "pending_scheduler_closure",
+            "nodes": [],
+        }
+    raw = state_path.read_bytes()
+    try:
+        state = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise RegistryAdapterError(
+            f"task graph state is not readable JSON: {state_path}"
+        ) from exc
+    if not isinstance(state, dict):
+        raise RegistryAdapterError(f"task graph state must be an object: {state_path}")
+    graph_sprint_id = str(graph.get("sprint_id") or "")
+    state_sprint_id = str(state.get("sprint_id") or "")
+    if state_sprint_id != graph_sprint_id:
+        raise RegistryAdapterError("task graph state sprint_id does not match frozen graph")
+    state_nodes = state.get("nodes") if isinstance(state.get("nodes"), dict) else {}
+    nodes: list[dict[str, Any]] = []
+    for item in graph.get("nodes") or []:
+        if not isinstance(item, dict):
+            continue
+        node_id = str(item.get("id") or item.get("node_id") or "")
+        observed = state_nodes.get(node_id) if isinstance(state_nodes.get(node_id), dict) else {}
+        status = str(observed.get("status") or "").strip()
+        if not node_id or not status:
+            raise RegistryAdapterError(
+                f"task graph state is missing runtime status for frozen node: {node_id or '<empty>'}"
+            )
+        nodes.append(
+            {
+                "node_id": node_id,
+                "status": status,
+                "attempt": int(observed.get("attempt") or 0),
+                "blocked_by": [
+                    str(value) for value in observed.get("blocked_by") or []
+                ],
+                "is_current_node": node_id == str(envelope.get("node_id") or ""),
+            }
+        )
+    return {
+        "schema": "solar.publication_execution_snapshot.v1",
+        "availability": "available",
+        "captured_from_state_updated_at": str(state.get("updated_at") or ""),
+        "state_revision": int(state.get("revision") or 0),
+        "state_sha256": hashlib.sha256(raw).hexdigest(),
+        "graph_path": str(graph_path),
+        "state_path": str(state_path),
+        "run_status": str(state.get("run_status") or ""),
+        "closure_status": "pending_scheduler_closure",
+        "nodes": nodes,
+    }
 
 
 def _expected_schema(contract_value: str) -> str:
@@ -628,6 +715,110 @@ def _lease_id(envelope: dict[str, Any]) -> str:
     return lease_id
 
 
+def _verified_model_service_route(
+    envelope: dict[str, Any],
+    node: dict[str, Any],
+) -> dict[str, str]:
+    """Verify the exact model route selected for this frozen dispatch.
+
+    The model belongs to the scheduler dispatch envelope, not to the long-lived
+    operatord environment.  Validate it against both the capsule's frozen
+    default profile and the canonical model registry before constructing a
+    provider service.  This prevents ambient configuration from silently
+    changing or erasing the selected route.
+    """
+    profile_name = str(envelope.get("profile") or "").strip()
+    model = str(envelope.get("model") or "").strip()
+    reasoning_effort = str(envelope.get("reasoning_effort") or "").strip()
+    if not profile_name or not model or not reasoning_effort:
+        raise RegistryAdapterError(
+            "model-backed registry dispatch requires profile, model, and reasoning_effort in the scheduler envelope"
+        )
+
+    authority = node.get("execution_authority")
+    capsules = authority.get("capsules") if isinstance(authority, dict) else None
+    capsule_ids = [
+        str(value)
+        for value in (node.get("capsule_binding") or {}).get("capsule_ids") or []
+        if str(value).strip()
+    ]
+    frozen_profiles: list[str] = []
+    for capsule_id in capsule_ids:
+        snapshot = capsules.get(capsule_id) if isinstance(capsules, dict) else None
+        value = str(
+            snapshot.get("default_operator_profile") if isinstance(snapshot, dict) else ""
+        ).strip()
+        if value and value not in frozen_profiles:
+            frozen_profiles.append(value)
+    if len(frozen_profiles) != 1 or profile_name != frozen_profiles[0]:
+        raise RegistryAdapterError(
+            "scheduler envelope profile does not match the frozen capsule default_operator_profile"
+        )
+
+    profiles = _read_object(
+        HARNESS_DIR / "config" / "multi-task-profiles.json",
+        label="multi-task profile registry",
+    ).get("profiles")
+    profile = profiles.get(profile_name) if isinstance(profiles, dict) else None
+    if not isinstance(profile, dict):
+        raise RegistryAdapterError(f"scheduler envelope profile is not registered: {profile_name}")
+    if model != str(profile.get("model") or "").strip():
+        raise RegistryAdapterError("scheduler envelope model does not match its registered profile")
+    if reasoning_effort != str(profile.get("reasoning_effort") or "").strip():
+        raise RegistryAdapterError(
+            "scheduler envelope reasoning_effort does not match its registered profile"
+        )
+
+    try:
+        model_spec = model_registry.spec(model_registry.load_registry(), model)
+    except SystemExit as exc:
+        raise RegistryAdapterError(f"scheduler envelope model is not registered: {model}") from exc
+    provider = str(model_spec.get("provider") or "").strip()
+    if provider != "openai":
+        raise RegistryAdapterError(
+            f"selected provider {provider or '<missing>'} is unsupported by the Codex research model service"
+        )
+    return {
+        "profile": profile_name,
+        "model": model,
+        "provider": provider,
+        "reasoning_effort": reasoning_effort,
+    }
+
+
+def _production_service_overrides(
+    node_id: str,
+    *,
+    envelope: dict[str, Any],
+    node: dict[str, Any],
+    work_dir: Path,
+) -> dict[str, Any] | None:
+    """Return only deliberate per-node overrides.
+
+    ``default_production_resolver`` assigns a different meaning to ``None``
+    and ``{}``: None loads the production service bundle, while an explicit
+    mapping is treated as the complete injected bundle.  Native evidence
+    nodes such as literature discovery therefore must return None so their
+    multi-provider production service is installed.
+    """
+
+    if node_id not in {"report_draft", "publication_produce", "artifact_review"}:
+        return None
+    model_route = _verified_model_service_route(envelope, node)
+    model_service = CodexResearchModelService(
+        work_dir,
+        model=model_route["model"],
+        role="reviewer" if node_id == "artifact_review" else "writer",
+        reasoning_effort=model_route["reasoning_effort"],
+        timeout_seconds=int(
+            os.environ.get("SOLAR_RESEARCH_MODEL_TIMEOUT_SEC") or "900"
+        ),
+    )
+    return {
+        "review_model_generate" if node_id == "artifact_review" else "model_generate": model_service
+    }
+
+
 def execute(envelope: dict[str, Any], *, receipt_path: Path) -> dict[str, Any]:
     expected = _validated_binding(envelope)
     operator_id = expected["operator_id"]
@@ -641,6 +832,11 @@ def execute(envelope: dict[str, Any], *, receipt_path: Path) -> dict[str, Any]:
     )
     documents, source_paths = _matching_input_documents(graph, node, work_dir)
     workspace_sources = _verified_workspace_sources(graph, node)
+    runtime_execution_snapshot = (
+        _runtime_execution_snapshot(graph, envelope)
+        if expected["node_id"] == "publication_produce"
+        else None
+    )
     if not documents and expected["node_id"] != "literature_discover":
         raise RegistryAdapterError("no artifact matching the frozen consume contract was found")
     payload = {
@@ -659,6 +855,11 @@ def execute(envelope: dict[str, Any], *, receipt_path: Path) -> dict[str, Any]:
         "run_context": {
             "sprint_id": str(graph.get("sprint_id") or ""),
             "run_contract_ref": _run_contract_ref(graph, envelope),
+            **(
+                {"runtime_execution_snapshot": runtime_execution_snapshot}
+                if runtime_execution_snapshot is not None
+                else {}
+            ),
             "frozen_nodes": [
                 {
                     "node_id": str(item.get("id") or item.get("node_id") or ""),
@@ -669,7 +870,6 @@ def execute(envelope: dict[str, Any], *, receipt_path: Path) -> dict[str, Any]:
                         for candidate in item.get("physical_candidates") or []
                         if isinstance(candidate, dict) and str(candidate.get("operator_id") or "")
                     ],
-                    "status": "not_recorded_in_frozen_graph",
                     "artifact_routes": item.get("artifact_routes") or item.get("output_routes") or [],
                 }
                 for item in graph.get("nodes") or []
@@ -762,20 +962,12 @@ def execute(envelope: dict[str, Any], *, receipt_path: Path) -> dict[str, Any]:
         "write_scope": write_scope,
         "timeout_retry_policy": {"timeout_seconds": 900, "max_attempts": 1, "retry_on": []},
     }
-    services: dict[str, Any] = {}
-    research_model = str(os.environ.get("SOLAR_RESEARCH_MODEL") or "").strip()
-    if expected["node_id"] in {"report_draft", "publication_produce"} and research_model:
-        services["model_generate"] = CodexResearchModelService(
-            work_dir,
-            model=research_model,
-            role="writer",
-            reasoning_effort=str(
-                os.environ.get("SOLAR_RESEARCH_REASONING_EFFORT") or "high"
-            ),
-            timeout_seconds=int(
-                os.environ.get("SOLAR_RESEARCH_MODEL_TIMEOUT_SEC") or "900"
-            ),
-        )
+    services = _production_service_overrides(
+        expected["node_id"],
+        envelope=envelope,
+        node=node,
+        work_dir=work_dir,
+    )
     resolver = default_production_resolver(services=services, workspace_root=work_dir)
     resolver_operator_id = f"{expected['node_id']}_worker"
 

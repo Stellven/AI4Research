@@ -23,11 +23,12 @@ contract:
         description: Accepted requirements, including the exact table-like delivery manifest when named files were requested.
       - name: scientific_report
         schema_ref: schemas/evidence/scientific_report.v1.schema.json
-      - name: artifact_review
-        schema_ref: schemas/evidence/artifact_review.v1.schema.json
     optional:
       - name: publication_target
         description: Paper, poster, rebuttal, slides, supplement, or mixed bundle.
+      - name: final_artifact_review
+        schema_ref: schemas/evidence/artifact_review.v1.schema.json
+        description: Optional post-draft review of this exact scientific_report; when supplied, its blocking verdict is enforced.
   outputs:
     required:
       - name: publication_bundle
@@ -43,17 +44,22 @@ contract:
   postconditions:
     - check: bundle_manifest_emitted
       description: Every required delivery-manifest row is materialized, hash-recorded, and represented exactly once in the publication bundle.
+    - check: machine_evidence_bound
+      description: Citation spans come from verified upstream claim coordinates, and artifact hashes are computed by the deterministic materializer after file creation rather than authored by the semantic model.
   invariants:
     - Publication output remains traceable to report and evidence ids.
     - Named deliverables are neither collapsed into one generic report nor satisfied by empty placeholder files.
+    - A research run manifest records actual hashes for the other materialized files; its own final byte hash is recorded by the outer publication bundle to avoid a false self-referential digest.
+    - A research run manifest binds node statuses from a Scheduler-owned runtime execution snapshot captured at publication dispatch; frozen graph definitions never stand in for execution state.
+    - Publication evaluation and Scheduler Closure occur after materialization, so the manifest records those outcomes as pending and never predicts a pass or failure. The final user-facing status comes from the later gate and closure records.
+    - A pre-draft report-plan review is not interpreted as approval or rejection of the final report.
+    - A research run manifest that declares a failed Evidence Gate or lists failed gates cannot pass publication or close the run as completed.
 composition:
   consumes:
     - type: requirement_ir.v1
       purpose: Exact output root, file set, formats, and per-file requirements accepted before planning.
     - schema_ref: schemas/evidence/scientific_report.v1.schema.json
       purpose: Source report or paper draft evidence.
-    - schema_ref: schemas/evidence/artifact_review.v1.schema.json
-      purpose: Independent review and blocking findings for the exact report.
   produces:
     - schema_ref: schemas/evidence/publication_bundle.v1.schema.json
       purpose: Publication bundle evidence.
@@ -61,8 +67,7 @@ composition:
     - cap.research-artifact-review
   incompatible_with:
     - cap.research-experiment-run
-  requires_after:
-    - cap.research-artifact-review
+  requires_after: []
 effects:
   read:
     - report artifacts and source evidence
@@ -99,6 +104,7 @@ verification:
   pass_conditions:
     - Fixture bundle emits valid publication_bundle.v1 evidence.
     - Missing, extra, malformed, empty, or renamed required outputs produce failed evidence.
+    - The research run manifest records observed node states and marks the later Evidence Gate and Scheduler Closure as pending; deterministic evaluation and closure records supply their final outcomes.
 operator_compatibility:
   preferred:
     - autosci-publication-compile-worker

@@ -291,6 +291,6 @@ def test_intake_deadline_covers_both_compilers():
     scope = {}
     exec(compile(ast.Module(body=selected, type_ignores=[]), "intake_timeout", "exec"), scope)
     timeout = scope["_intake_timeout_seconds"]
-    assert timeout({}) == 4 * 180 + 4 * 240 + 60
+    assert timeout({}) == 4 * 240 + 4 * 240 + 60
     assert timeout({"SOLAR_INTAKE_TIMEOUT_SEC": "100"}) == 100
     assert timeout({"SOLAR_INTAKE_COMPAT_MODE": "legacy"}) == 180

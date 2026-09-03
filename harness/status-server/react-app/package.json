@@ -5,11 +5,13 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "prebuild": "npm run test:node-actor && npm run test:run-pipeline && npm run test:run-usage && npm run test:status-colors && npm run test:intake-api",
+    "prebuild": "npm run test:node-actor && npm run test:plan-node-label && npm run test:run-pipeline && npm run test:run-usage && npm run test:status-colors && npm run test:poc-preview && npm run test:intake-api",
     "test:node-actor": "node ../../../tests/harness/status_server/react_app/test_node_actor.mjs",
+    "test:plan-node-label": "node ../../../tests/harness/status_server/react_app/test_plan_node_label.mjs",
     "test:run-pipeline": "node ../../../tests/harness/status_server/react_app/test_run_pipeline.mjs",
     "test:run-usage": "node ../../../tests/harness/status_server/react_app/test_run_usage.mjs",
     "test:status-colors": "node ../../../tests/harness/status_server/react_app/test_status_colors.mjs",
+    "test:poc-preview": "node ../../../tests/harness/status_server/react_app/test_poc_preview.mjs",
     "test:intake-api": "node ../../../tests/harness/status_server/react_app/test_intake_api.mjs",
     "typecheck": "tsc --noEmit",
     "dev": "vite --host 127.0.0.1"

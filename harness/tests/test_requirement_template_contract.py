@@ -44,6 +44,11 @@ def test_compiler_and_reviewer_receive_identical_program_owned_contract(tmp_path
     fixed = filled["read_only"]
     assert fixed["source_constraints"] == intent()["constraints"]
     assert fixed["evaluation_check_registry"] == load_evaluation_check_registry()
+    assert fixed["requirement_check_options"]
+    assert all(
+        row["applies_to"]["kind"] == "bound_output"
+        for row in fixed["requirement_check_options"]
+    )
     policy = fixed["contract"]["policies"]["discovery_nonempty_handoff"]
     assert blank["contract_ref"]["version"] == 3
     assert policy["default"] == 1 and policy["origin"] == "runtime_validity_policy"
@@ -57,6 +62,22 @@ def test_compiler_and_reviewer_receive_identical_program_owned_contract(tmp_path
     assert json.loads((tmp_path / "generation-0/filled_template.json").read_text()) == filled
     verdict = json.loads((tmp_path / "generation-0/validation.json").read_text())
     assert verdict["contract_ref"] == blank["contract_ref"]
+
+
+def test_requirement_check_options_exclude_auto_artifact_checks():
+    registry = load_evaluation_check_registry()
+    template = make_template(intent(), registry)
+    options = template["read_only"]["requirement_check_options"]
+    option_ids = {row["check_id"] for row in options}
+    schema_ids = set(
+        template["read_only"]["compiler_output_schema"]["properties"]
+        ["requirements"]["items"]["properties"]["check"]["enum"]
+    )
+
+    assert schema_ids == option_ids
+    assert "check.intent_constraint_coverage.v1" in option_ids
+    assert "check.scientific.artifact_review.v1" not in option_ids
+    assert "check.scientific.scientific_report_plan_review.v1" not in option_ids
 
 
 @pytest.mark.parametrize("protected", ["read_only", "contract_ref", "description", "policies"])

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import importlib.util
 import json
 import sys
@@ -256,6 +257,104 @@ def test_graph_evaluator_uses_frozen_evaluation_authority_not_builder_authority(
     escaped["expected_artifacts"][1] = str(tmp_path / "outside.json")
     with pytest.raises(ValueError, match="ARTIFACT_SCOPE_MISMATCH"):
         authority.from_envelope(escaped, current_operator=evaluator)
+
+
+def test_graph_evaluator_accepts_unprefixed_registered_check_id(tmp_path, monkeypatch):
+    node = {
+        "id": "publish",
+        "capsule_binding": {"capsule_ids": ["cap.publish"]},
+        "physical_candidates": [{"operator_id": "builder-op", "rank": 1}],
+    }
+    definitions = {
+        "capsules": {"cap.publish": {"status": "stable", "manifest": {}}},
+        "operators": {"builder-op": {"model": "fixture"}},
+    }
+    node["execution_authority"] = authority.freeze_node(node, definitions)
+    node["evaluation_binding"] = {
+        "deterministic_gate_ids": ["gate.fixture"],
+        "semantic_evaluator_ids": ["structured_output_parses"],
+    }
+    node["evaluation_plan"] = {
+        "review_mode": "single",
+        "required_evaluators": 1,
+        "evaluator_classes": ["structured_output_parses"],
+        "evidence_requirements": ["handoff_md"],
+    }
+    graph = {
+        "schema_version": "solar.scheduler_runtime_projection.v1",
+        "planning_authority": "frozen_execution_plan_v1",
+        "sprint_id": "sprint-eval-check-id",
+        "nodes": [node],
+    }
+    graph_path = tmp_path / "runtime" / "sprint-eval-check-id.task_graph.json"
+    graph_path.parent.mkdir(parents=True)
+    graph_path.write_text(json.dumps(graph), encoding="utf-8")
+    monkeypatch.setattr(scheduler, "verify_runtime_projection", lambda *_args, **_kwargs: {"ok": True})
+    monkeypatch.setattr(
+        authority,
+        "frozen_evaluation_check_ids",
+        lambda _graph: {"structured_output_parses"},
+    )
+    prefix = graph_path.parent / "sprint-eval-check-id.publish-eval"
+    envelope = {
+        "task_type": "graph_eval",
+        "requested_role": "evaluator",
+        "logical_operator": "Verifier",
+        "capability_capsule_id": "cap.requirement-compiler-verification",
+        "sprint_id": graph["sprint_id"],
+        "node_id": node["id"],
+        "operator_id": "eval-op",
+        "graph_path": str(graph_path),
+        "evaluation_binding": copy.deepcopy(node["evaluation_binding"]),
+        "evaluation_plan": copy.deepcopy(node["evaluation_plan"]),
+        "evaluated_execution_authority_sha256": node["execution_authority"]["sha256"],
+        "expected_artifacts": [str(prefix) + ".md", str(prefix) + ".json"],
+    }
+    evaluator = {
+        "role": "evaluator",
+        "roles": ["evaluator"],
+        "persona": "evaluator",
+        "task_classes": ["graph_eval"],
+    }
+
+    assert authority.from_envelope(envelope, current_operator=evaluator) is None
+
+
+def test_frozen_evaluation_check_ids_reads_hash_bound_registry(tmp_path):
+    execution_dir = tmp_path / "planning" / "execution"
+    execution_dir.mkdir(parents=True)
+    registry_path = execution_dir / "evaluation_check_registry.snapshot.json"
+    registry_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "solar.evaluation_check_registry.v1",
+                "checks": [{"check_id": "structured_output_parses"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    registry_sha = hashlib.sha256(registry_path.read_bytes()).hexdigest()
+    run_contract_path = execution_dir / "run_contract.frozen.json"
+    run_contract_path.write_text(
+        json.dumps(
+            {
+                "evaluation_check_registry_ref": {
+                    "sha256": registry_sha,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    run_contract_sha = hashlib.sha256(run_contract_path.read_bytes()).hexdigest()
+
+    assert authority.frozen_evaluation_check_ids(
+        {
+            "run_contract_ref": {
+                "path": str(run_contract_path),
+                "sha256": run_contract_sha,
+            }
+        }
+    ) == {"structured_output_parses"}
 
 
 @pytest.mark.parametrize("repair_succeeds", [True, False])

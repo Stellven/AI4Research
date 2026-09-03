@@ -1120,9 +1120,11 @@ def _intake_subprocess_env() -> dict[str, str]:
 
 
 _MAX_INTAKE_ATTACHMENTS = 8
-_MAX_INTAKE_ATTACHMENT_BYTES = 5 * 1024 * 1024
-_MAX_INTAKE_ATTACHMENTS_TOTAL_BYTES = 10 * 1024 * 1024
-_MAX_INTAKE_JSON_BODY_BYTES = 16 * 1024 * 1024
+_MAX_INTAKE_ATTACHMENT_BYTES = 20 * 1024 * 1024
+_MAX_INTAKE_ATTACHMENTS_TOTAL_BYTES = 64 * 1024 * 1024
+# Intake attachments are JSON/base64 encoded on the wire.  A 64 MiB decoded
+# bundle needs roughly 85.4 MiB before prompt and metadata overhead.
+_MAX_INTAKE_JSON_BODY_BYTES = 96 * 1024 * 1024
 _MAX_INTENT_MODEL_CALLS = 4  # compile + review, then one bounded compile + review repair
 _MAX_REQUIREMENT_MODEL_CALLS = 4  # separate LLM requirement compile/review + bounded repair
 _INTAKE_JOB_POLL_AFTER_MS = 1000
@@ -1135,7 +1137,7 @@ def _intake_timeout_seconds(env: dict[str, str]) -> int:
     if explicit:
         return max(1, int(explicit))
     if str(env.get("SOLAR_INTAKE_COMPAT_MODE") or "").strip().lower() != "legacy":
-        per_call = max(1, int(env.get("SOLAR_INTENT_MODEL_TIMEOUT_SEC") or "180"))
+        per_call = max(1, int(env.get("SOLAR_INTENT_MODEL_TIMEOUT_SEC") or "240"))
         requirement_call = max(1, int(env.get("SOLAR_REQUIREMENT_TIMEOUT_SEC") or "240"))
         return max(180, per_call * _MAX_INTENT_MODEL_CALLS + requirement_call * _MAX_REQUIREMENT_MODEL_CALLS + 60)
     return 180

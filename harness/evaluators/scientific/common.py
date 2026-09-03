@@ -192,12 +192,32 @@ def has_any_evidence_ids(value: Any) -> bool:
     return isinstance(value, list) and any(isinstance(item, str) and item.strip() for item in value)
 
 
+def resolve_artifact_path(raw_path: str, evidence_path: str | Path | None) -> Path | None:
+    """Resolve absolute or run-root-relative evidence paths without cwd assumptions."""
+
+    path = Path(raw_path).expanduser()
+    if path.is_absolute():
+        return path if path.exists() else None
+    evidence_dir = Path(evidence_path).resolve().parent if evidence_path else HARNESS_DIR
+    run_roots = [
+        parent
+        for parent in evidence_dir.parents
+        if (parent / "workspace").is_dir() or (parent / "private").is_dir()
+    ]
+    candidates = [
+        evidence_dir / path,
+        *(root / path for root in run_roots),
+        ARTIFACT_HARNESS_DIR / path,
+        HARNESS_DIR / path,
+    ]
+    return next((candidate for candidate in candidates if candidate.exists()), None)
+
+
 def check_artifact_paths(payload: dict[str, Any], evidence_path: str | Path | None, reasons: list[str]) -> None:
     artifacts = payload.get("artifacts")
     if not isinstance(artifacts, list) or not artifacts:
         reasons.append("artifacts must contain at least one entry")
         return
-    evidence_dir = Path(evidence_path).resolve().parent if evidence_path else HARNESS_DIR
     for index, artifact in enumerate(artifacts):
         if not isinstance(artifact, dict):
             reasons.append(f"artifacts[{index}] must be an object")
@@ -210,19 +230,7 @@ def check_artifact_paths(payload: dict[str, Any], evidence_path: str | Path | No
             if not raw_path.split(":", 1)[1].strip():
                 reasons.append(f"artifacts[{index}].path declares unavailable without a reason")
             continue
-        path = Path(raw_path).expanduser()
-        # Evidence ABIs use workspace-root-relative paths.  A report commonly
-        # lives under ``workspace/deliverables`` while its inputs live under
-        # the sibling ``private`` tree, so also resolve through the enclosing
-        # run root instead of incorrectly requiring report-relative paths.
-        run_root = evidence_dir.parent.parent
-        candidates = [path] if path.is_absolute() else [
-            evidence_dir / path,
-            run_root / path,
-            ARTIFACT_HARNESS_DIR / path,
-            HARNESS_DIR / path,
-        ]
-        if not any(candidate.exists() for candidate in candidates):
+        if resolve_artifact_path(raw_path, evidence_path) is None:
             reasons.append(f"artifacts[{index}].path does not exist or declare unavailable: {raw_path}")
 
 

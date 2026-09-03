@@ -110,41 +110,52 @@ def _path_candidates(raw: str, roots: list[Path]) -> list[Path]:
     return candidates
 
 
-def _scientific_report_routes(inputs: dict[str, Any]) -> list[str]:
+_TYPED_REVIEW_TARGETS = {
+    "scientific_report.v1": "report",
+    "scientific_report_plan.v1": "report_plan",
+}
+
+
+def _typed_review_target_routes(inputs: dict[str, Any]) -> list[tuple[str, str]]:
     routes = inputs.get("artifact_routes")
     if not isinstance(routes, dict):
         return []
-    values: list[str] = []
+    values: list[tuple[str, str]] = []
     for artifact_type, raw_route in routes.items():
-        if "scientific_report.v1" not in str(artifact_type):
+        schema = next(
+            (candidate for candidate in _TYPED_REVIEW_TARGETS if candidate in str(artifact_type)),
+            "",
+        )
+        if not schema:
             continue
         route_values = raw_route if isinstance(raw_route, list) else [raw_route]
         for value in route_values:
             text = str(value or "").strip()
-            if text and text not in values:
-                values.append(text)
+            row = (schema, text)
+            if text and row not in values:
+                values.append(row)
     return values
 
 
-def _resolve_routed_scientific_report(
+def _resolve_routed_review_target(
     inputs: dict[str, Any],
     workspace_root: Path,
 ) -> dict[str, Any] | None:
-    """Resolve the exact typed report supplied by the Scheduler route.
+    """Resolve the exact typed review target supplied by the Scheduler route.
 
-    A declared ``scientific_report.v1`` route is authoritative.  If it is
-    missing, malformed, or ambiguous, fail closed instead of falling back to
-    a similarly named wiki page or legacy ``target`` value.
+    A declared ``scientific_report.v1`` or ``scientific_report_plan.v1`` route
+    is authoritative. If it is missing, malformed, or ambiguous, fail closed
+    instead of falling back to a similarly named wiki page or legacy target.
     """
 
-    raw_routes = _scientific_report_routes(inputs)
-    if not raw_routes:
+    typed_routes = _typed_review_target_routes(inputs)
+    if not typed_routes:
         return None
 
     checked: list[str] = []
-    matches: list[tuple[Path, str, str]] = []
+    matches: list[tuple[Path, str, str, str]] = []
     errors: list[str] = []
-    for raw_route in raw_routes:
+    for expected_schema, raw_route in typed_routes:
         route = Path(raw_route).expanduser()
         if not route.is_absolute():
             route = workspace_root / route
@@ -160,58 +171,64 @@ def _resolve_routed_scientific_report(
             except (OSError, ValueError) as exc:
                 errors.append(f"{candidate}: {type(exc).__name__}")
                 continue
-            if not isinstance(payload, dict) or payload.get("schema") != "scientific_report.v1":
+            if not isinstance(payload, dict) or payload.get("schema") != expected_schema:
                 continue
             if payload.get("status") != "completed":
                 errors.append(
-                    f"{candidate}: scientific_report.v1 status is "
+                    f"{candidate}: {expected_schema} status is "
                     f"{payload.get('status') or 'missing'}, not completed"
                 )
                 continue
             outputs = payload.get("outputs") if isinstance(payload.get("outputs"), dict) else {}
-            if not isinstance(outputs.get("report"), dict):
-                errors.append(f"{candidate}: outputs.report is missing")
+            output_key = _TYPED_REVIEW_TARGETS[expected_schema]
+            if not isinstance(outputs.get(output_key), dict):
+                errors.append(f"{candidate}: outputs.{output_key} is missing")
                 continue
             matches.append(
                 (
                     candidate.resolve(),
                     json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True),
                     hashlib.sha256(source_bytes).hexdigest(),
+                    expected_schema,
                 )
             )
 
-    unique_matches = {str(path): (path, text, sha256) for path, text, sha256 in matches}
+    unique_matches = {
+        (str(path), schema): (path, text, sha256, schema)
+        for path, text, sha256, schema in matches
+    }
     if len(unique_matches) == 1:
-        path, text, sha256 = next(iter(unique_matches.values()))
+        path, text, sha256, schema = next(iter(unique_matches.values()))
         return {
             "path": path,
             "text": text,
             "target": str(path),
-            "schema": "scientific_report.v1",
+            "schema": schema,
             "sha256": sha256,
             "checked_paths": checked,
-            "route_authority": "artifact_routes:scientific_report.v1",
+            "route_authority": f"artifact_routes:{schema}",
         }
+    route_label = ",".join(sorted({schema for schema, _ in typed_routes}))
     reason = (
-        "scientific_report.v1 route did not contain one completed report"
+        f"typed review route ({route_label}) did not contain one completed artifact"
         if not unique_matches
-        else "scientific_report.v1 route contained multiple completed reports"
+        else f"typed review route ({route_label}) contained multiple completed artifacts"
     )
     return {
         "path": None,
         "text": "",
-        "target": raw_routes[0],
+        "target": typed_routes[0][1],
         "checked_paths": checked,
-        "route_authority": "artifact_routes:scientific_report.v1",
+        "route_authority": f"artifact_routes:{route_label}",
         "route_error": reason,
         "route_errors": errors,
     }
 
 
 def _resolve_artifact(inputs: dict[str, Any], workspace_root: Path, repository_root: Path) -> dict[str, Any]:
-    routed_report = _resolve_routed_scientific_report(inputs, workspace_root)
-    if routed_report is not None:
-        return routed_report
+    routed_target = _resolve_routed_review_target(inputs, workspace_root)
+    if routed_target is not None:
+        return routed_target
     raw_wiki_root = str(inputs.get("wiki_root") or "").strip()
     active_roots = [workspace_root]
     if raw_wiki_root:

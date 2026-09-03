@@ -1,0 +1,104 @@
+capability_capsule_id: cap.research-report-plan-review
+capsule_kind: capability
+metadata:
+  name: Scientific Report Plan Artifact Review
+  description: Independently review a completed scientific report plan and hand diagnostic findings to report generation; this is not a final-publication gate.
+applicability:
+  task_types:
+    - scientific-research
+    - artifact-review
+  positive_signals:
+    - review report plan
+    - pre-draft artifact review
+    - evidence readiness review
+  negative_signals:
+    - review final report
+    - run experiment
+contract:
+  inputs:
+    required:
+      - name: artifact_under_review
+        schema_ref: schemas/evidence/scientific_report_plan.v1.schema.json
+        description: Completed report plan whose sections, evidence bindings, excluded claims, protocol, and unresolved gaps are reviewed before drafting.
+    optional:
+      - name: review_focus
+        description: Checklist, evidence-readiness, unsupported-claim, citation, or completeness dimensions to emphasize.
+  outputs:
+    required:
+      - name: scientific_report_plan_review
+        schema_ref: schemas/evidence/scientific_report_plan_review.v1.schema.json
+    optional:
+      - name: revision_recommendations
+        description: Evidence-grounded recommendations and unresolved blocking issues for report generation.
+  preconditions:
+    - check: report_plan_available
+      description: One completed scientific_report_plan.v1 artifact is supplied by its frozen Scheduler route.
+  postconditions:
+    - check: review_evidence_linked
+      description: Review findings cite the report-plan artifact, evidence identifiers, and checklist items.
+    - check: review_handoff_explicit
+      description: The review identifies itself as pre_draft_plan and is consumed by the immediately downstream report drafter.
+  invariants:
+    - Does not draft, compile, or publish the report.
+    - Does not mark unsupported or unresolved claims as resolved.
+    - Does not substitute for the post-generation deterministic Evidence Gate.
+composition:
+  consumes:
+    - schema_ref: schemas/evidence/scientific_report_plan.v1.schema.json
+      purpose: The exact pre-draft synthesis and evidence plan to review.
+  produces:
+    - schema_ref: schemas/evidence/scientific_report_plan_review.v1.schema.json
+      purpose: Pre-draft diagnostic findings and recommendations that the report drafter must consume.
+  compatible_with:
+    - cap.scientific-method-aware-report-draft
+    - cap.research-publication-produce
+  incompatible_with:
+    - cap.research-experiment-run
+  requires_after:
+    - cap.research-method-aware-report-plan
+effects:
+  read:
+    - scientific report plan and referenced evidence
+    - schemas/evidence/scientific_report_plan.v1.schema.json
+    - schemas/evidence/scientific_report_plan_review.v1.schema.json
+  write:
+    - artifacts/scientific/artifact_review/
+  execute:
+    - plugins/autosci/bin/autosci_bridge.py
+  network:
+    - configured model-registry transport only
+  cost:
+    - bounded review cost
+  risk:
+    - review quality depends on explicit evidence bindings and checklist coverage
+bindings:
+  skills:
+    required: []
+    optional:
+      - autosci.artifact_review
+      - autosci.review
+      - autosci.check
+  mcp_capabilities: {}
+  data_refs:
+    - schemas/evidence/scientific_report_plan.v1.schema.json
+    - schemas/evidence/scientific_report_plan_review.v1.schema.json
+  secret_refs: []
+verification:
+  self_check:
+    - Validate emitted evidence against scientific_report_plan_review.v1.schema.json.
+    - Confirm the exact routed report plan was reloaded independently.
+    - Confirm blocking issues, unsupported claims, and unresolved evidence remain visible.
+  external_verifier:
+    required: true
+  pass_conditions:
+    - A completed scientific_report_plan.v1 route receives one bounded Review LLM assessment and emits valid scientific_report_plan_review.v1 evidence.
+    - Missing, ambiguous, or incomplete report-plan evidence fails closed.
+    - A revise_plan recommendation remains a diagnostic handoff for report generation and is never misused as a final-publication verdict.
+operator_compatibility:
+  preferred:
+    - autosci-artifact-review-worker
+  forbidden:
+    - BackendFullWorkflowRunner
+provenance:
+  owner: opensolar
+  source_phase: planner_ordered_pre_draft_review_contract

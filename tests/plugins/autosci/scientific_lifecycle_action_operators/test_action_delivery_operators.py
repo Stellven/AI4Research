@@ -45,6 +45,58 @@ EXPECTED_NODES = {
 }
 
 
+def test_predraft_plan_review_is_model_backed_diagnostic_handoff(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    plan = {
+        "report_id": "report-plan-1",
+        "title": "KV cache landscape",
+        "sections": [
+            {"section_id": "methods", "title": "Methods", "evidence_ids": ["claim-1"]},
+            {"section_id": "findings", "title": "Findings", "evidence_ids": ["claim-1"]},
+            {"section_id": "limitations", "title": "Limitations", "evidence_ids": ["claim-1"]},
+        ],
+        "reportable_claim_ids": ["claim-1"],
+        "requirement_bindings": [{"requirement_id": "R1"}],
+        "study_protocol": {"unresolved_fields": []},
+    }
+
+    def reviewer(**kwargs):
+        assert kwargs["node_id"] == "artifact_review"
+        assert kwargs["report_plan"] == plan
+        return {
+            "findings": [{
+                "finding_id": "review-1",
+                "severity": "high",
+                "category": "citation_readiness",
+                "message": "Citation spans must remain visible in the final report.",
+            }],
+            "verdict_suggestion": "revise",
+            "limitations": [],
+            "provider_usage": [{"provider": "openai", "model": "gpt-5.5"}],
+        }
+
+    result = execute_operator(
+        _request(
+            "artifact_review",
+            payload={
+                "report_plan": {
+                    "schema": "scientific_report_plan.v1",
+                    "status": "completed",
+                    "outputs": {"report_plan": plan},
+                }
+            },
+        ),
+        services={"review_model_generate": reviewer},
+    )
+
+    assert result["status"] == "completed"
+    artifact = _artifact(tmp_path, result)
+    assert artifact["schema"] == "scientific_report_plan_review.v1"
+    assert artifact["outputs"]["review"]["review_stage"] == "pre_draft_plan"
+    assert artifact["outputs"]["review"]["recommendation"] == "revise_plan"
+    assert artifact["outputs"]["findings"][0]["finding_id"] == "review-1"
+
+
 def test_external_controller_input_requires_exact_declared_read_scope(tmp_path: Path) -> None:
     workspace = tmp_path / "workspace"
     workspace.mkdir()
@@ -504,6 +556,7 @@ def test_full_action_delivery_chain_produces_traceable_usable_artifacts(tmp_path
     assert [section["section_id"] for section in report["sections"]] == [
         "summary",
         "findings",
+        "study_protocol",
         "claim_audit",
         "methods",
         "limitations",
@@ -637,6 +690,7 @@ def test_claim_verification_records_resolved_retained_paper_evidence(
     tmp_path: Path, monkeypatch
 ) -> None:
     monkeypatch.chdir(tmp_path)
+    claim_text = "Reranker A improves ranking quality over reranker B."
     paper = _external_ref(tmp_path, "paper", "research_paper.v1", {
         "paper": {
             "paper_id": "paper-reranker",
@@ -647,7 +701,7 @@ def test_claim_verification_records_resolved_retained_paper_evidence(
             "sections": [{
                 "section_id": "results",
                 "title": "Results",
-                "text": "Reranker A improves ranking quality over reranker B.",
+                "text": claim_text,
                 "source_anchor": "paper-reranker#results",
             }],
         }
@@ -655,11 +709,19 @@ def test_claim_verification_records_resolved_retained_paper_evidence(
     claims = _external_ref(tmp_path, "claims", "research_claims.v1", {
         "claims": [{
             "claim_id": "claim-reranker-001",
-            "text": "Reranker A improves ranking quality over reranker B.",
+            "text": claim_text,
             "source_anchor": "paper-reranker#results",
             "testability": "testable",
             "verification_status": "unverified",
             "evidence_ids": ["paper-reranker"],
+            "citation_spans": [{
+                "source_ref": "paper-reranker#results",
+                "coordinate_space": "section_text_whitespace_normalized",
+                "start_char": 0,
+                "end_char": len(claim_text),
+                "quote": claim_text,
+                "source_text_sha256": hashlib.sha256(claim_text.encode("utf-8")).hexdigest(),
+            }],
         }]
     })
 
@@ -672,7 +734,9 @@ def test_claim_verification_records_resolved_retained_paper_evidence(
         "resolved_paper_ids": ["paper-reranker"],
         "source_anchor_resolved": True,
         "exact_quote_resolved": True,
+        "precise_source_span_resolved": True,
     }
+    assert verdict["citation_spans"][0]["quote"] == claim_text
     assert verdict["verdict"] == "partially_supported"
     assert verdict["support_classification"] == "source_reported"
     assert verdict["locally_reproduced"] is False
@@ -1221,7 +1285,10 @@ def test_report_plan_and_draft_preserve_accepted_requirements_without_self_appro
                 "the report must preserve this question explicitly: Resolve or explicitly "
                 "report which benchmark remains unavailable."
             ),
-            "supporting_evidence": ["source:claim-001"],
+            "supporting_evidence": [
+                "source:claim-001",
+                "unresolved:study-protocol",
+            ],
             "unresolved_status": "unresolved",
         }
     ]
@@ -1293,6 +1360,90 @@ def test_report_draft_uses_explicit_topic_and_links_verified_input_artifacts(
         "path": verdict_ref["path"],
         "sha256": hashlib.sha256(source_path.read_bytes()).hexdigest(),
     }]
+
+
+def test_semantic_report_relevance_accepts_domain_match_without_verbatim_action_title(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    verdict_ref = _external_ref(tmp_path, "semantic-title-verdict", "claim_verdict.v1", {
+        "verdicts": [{
+            "claim_id": "claim-001",
+            "claim_text": "KV cache compression reduces retained memory in the bounded source.",
+            "verdict": "supported",
+            "support_classification": "supported",
+            "confidence": 0.9,
+            "basis": "Retained evidence supports the bounded claim.",
+            "evidence_ids": ["source:claim-001"],
+            "limitations": [],
+        }]
+    })
+    action_title = (
+        "Perform Report Generation for KV cache compression and long-context inference "
+        "with reviewed evidence and limitations."
+    )
+    planned = execute_operator(
+        _request("report_plan", refs=[verdict_ref], payload={"topic": action_title}),
+        services={},
+    )
+
+    result = execute_operator(
+        _request("report_draft", refs=[*planned["output_artifacts"], verdict_ref], payload={"topic": action_title}),
+        services={"model_generate": lambda **_kwargs: {
+            "node_id": "report_draft",
+            "limitations": [],
+            "report": {
+                "title": "Evidence-Grounded KV Cache Landscape",
+                "body": "# KV Cache Landscape\n\nKV cache compression for long-context inference is assessed from bounded evidence.",
+                "sections": [{"title": "KV Cache Compression", "body": "The bounded claim remains source-grounded."}],
+                "conclusions": [{"conclusion_id": "conclusion-001", "text": "The bounded claim is supported.", "evidence_ids": ["claim-001"]}],
+            },
+        }},
+    )
+
+    assert result["status"] == "completed"
+
+
+def test_semantic_report_relevance_rejects_unrelated_domain(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    verdict_ref = _external_ref(tmp_path, "semantic-off-topic-verdict", "claim_verdict.v1", {
+        "verdicts": [{
+            "claim_id": "claim-001",
+            "claim_text": "KV cache compression reduces retained memory in the bounded source.",
+            "verdict": "supported",
+            "support_classification": "supported",
+            "confidence": 0.9,
+            "basis": "Retained evidence supports the bounded claim.",
+            "evidence_ids": ["source:claim-001"],
+            "limitations": [],
+        }]
+    })
+    action_title = "Perform Report Generation for KV cache compression and long-context inference."
+    planned = execute_operator(
+        _request("report_plan", refs=[verdict_ref], payload={"topic": action_title}),
+        services={},
+    )
+
+    result = execute_operator(
+        _request("report_draft", refs=[*planned["output_artifacts"], verdict_ref], payload={"topic": action_title}),
+        services={"model_generate": lambda **_kwargs: {
+            "node_id": "report_draft",
+            "limitations": [],
+            "report": {
+                "title": "Crop Irrigation Calendar",
+                "body": "# Crop Irrigation\n\nSeasonal rainfall determines watering frequency for orchard soil.",
+                "sections": [{"title": "Agronomy", "body": "The orchard schedule follows rainfall."}],
+                "conclusions": [{"conclusion_id": "conclusion-001", "text": "Watering follows rainfall.", "evidence_ids": ["claim-001"]}],
+            },
+        }},
+    )
+
+    assert result["status"] == "failed"
+    assert result["errors"][0]["error_type"] == "product_failure"
 
 
 def test_combined_report_renders_exact_experiment_plan_and_measured_result(
@@ -1547,6 +1698,19 @@ def _manifest_publication_inputs(tmp_path: Path) -> tuple[dict, dict, dict]:
             "sections": [{"section_id": "summary", "title": "Summary", "evidence_ids": ["paper-1"]}],
             "evidence_ids": ["paper-1"],
             "unsupported_claims": [],
+            "claim_status_mappings": [{
+                "claim_id": "c1",
+                "claim_text": "Supported claim",
+                "evidence_ids": ["paper-1"],
+                "citation_spans": [{
+                    "source_ref": "paper-1#results",
+                    "coordinate_space": "section_text_whitespace_normalized",
+                    "start_char": 10,
+                    "end_char": 25,
+                    "quote": "Supported claim",
+                    "source_text_sha256": "a" * 64,
+                }],
+            }],
             "markdown": "# KV cache landscape\n\n" + "Evidence-grounded comparison. " * 8,
         }
     })
@@ -1609,9 +1773,23 @@ def _manifest_publication_inputs(tmp_path: Path) -> tuple[dict, dict, dict]:
     return report, review, requirement_ir
 
 
-def test_manifest_publication_materializes_exact_required_file_set(tmp_path: Path, monkeypatch) -> None:
+@pytest.mark.parametrize(
+    "manifest_output_root",
+    [
+        "Downloads/demo_outputs/kv_cache_landscape",
+        "Downloads/demo_outputs/kv_cache_landscape/",
+    ],
+)
+def test_manifest_publication_materializes_exact_required_file_set(
+    tmp_path: Path,
+    monkeypatch,
+    manifest_output_root: str,
+) -> None:
     monkeypatch.chdir(tmp_path)
     report, review, requirement_ir = _manifest_publication_inputs(tmp_path)
+    requirement_ir["semantic_contract"]["delivery_manifest"]["output_root"] = (
+        manifest_output_root
+    )
 
     def model_generate(**kwargs):
         assert kwargs["node_id"] == "publication_produce"
@@ -1648,6 +1826,10 @@ def test_manifest_publication_materializes_exact_required_file_set(tmp_path: Pat
     assert (output_root / "report.md").is_file()
     assert (output_root / "evidence_matrix.csv").is_file()
     assert (output_root / "claim_evidence_index.json").is_file()
+    claim_index = json.loads((output_root / "claim_evidence_index.json").read_text(encoding="utf-8"))
+    assert claim_index["claims"][0]["citation_spans"][0]["start_char"] == 10
+    assert claim_index["claims"][0]["evidence_ids"] == ["paper-1"]
+    assert bundle["source_report_id"] in bundle["evidence_ids"]
     assert not (output_root / "publication.md").exists()
 
 
@@ -1669,6 +1851,52 @@ def test_manifest_publication_rejects_incomplete_model_output_before_writing(tmp
     assert result["status"] == "failed"
     assert result["errors"][0]["error_type"] == "provider_contract_failure"
     assert not (tmp_path / "Downloads/demo_outputs/kv_cache_landscape/report.md").exists()
+
+
+def test_research_run_manifest_requires_scheduler_runtime_snapshot(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.chdir(tmp_path)
+    report, review, requirement_ir = _manifest_publication_inputs(tmp_path)
+    requirement_ir["semantic_contract"]["delivery_manifest"] = {
+        "output_root": "Downloads/demo_outputs/kv_cache_landscape",
+        "exact_file_set": True,
+        "files": [
+            {
+                "file_id": "run-manifest",
+                "relative_path": "research_run_manifest.json",
+                "media_type": "application/json",
+                "description": "Research run manifest",
+                "content_requirements": ["Record actual node execution status"],
+                "required_fields": ["status"],
+                "source_refs": ["D8"],
+                "required": True,
+            }
+        ],
+    }
+
+    result = execute_operator(
+        _request(
+            "publication_produce",
+            refs=[report, review],
+            payload={"requirement_ir": requirement_ir},
+            write_scope=["Downloads/demo_outputs/kv_cache_landscape"],
+        ),
+        services={
+            "model_generate": lambda **_kwargs: {
+                "files": [
+                    {
+                        "relative_path": "research_run_manifest.json",
+                        "content": json.dumps({"status": "completed"}),
+                    }
+                ],
+                "limitations": [],
+            }
+        },
+    )
+
+    assert result["status"] == "failed"
+    assert result["errors"][0]["error_type"] == "invalid_input"
+    assert "runtime execution snapshot" in result["errors"][0]["message"]
+    assert not (tmp_path / "Downloads/demo_outputs/kv_cache_landscape/research_run_manifest.json").exists()
 
 
 def test_kv_cache_demo_manifest_materializes_all_eight_named_deliverables(tmp_path: Path, monkeypatch) -> None:
@@ -1734,7 +1962,33 @@ def test_kv_cache_demo_manifest_materializes_all_eight_named_deliverables(tmp_pa
         _request(
             "publication_produce",
             refs=[report, review],
-            payload={"requirement_ir": requirement_ir},
+            payload={
+                "requirement_ir": requirement_ir,
+                "run_context": {
+                    "runtime_execution_snapshot": {
+                        "schema": "solar.publication_execution_snapshot.v1",
+                        "availability": "available",
+                        "state_revision": 9,
+                        "closure_status": "pending_scheduler_closure",
+                        "nodes": [
+                            {
+                                "node_id": "report_generation",
+                                "status": "passed",
+                                "attempt": 1,
+                                "blocked_by": [],
+                                "is_current_node": False,
+                            },
+                            {
+                                "node_id": "poster_generation_publication",
+                                "status": "running",
+                                "attempt": 1,
+                                "blocked_by": [],
+                                "is_current_node": True,
+                            },
+                        ],
+                    }
+                },
+            },
             write_scope=["Downloads/demo_outputs/kv_cache_landscape"],
         ),
         services={"model_generate": model_generate},
@@ -1749,3 +2003,17 @@ def test_kv_cache_demo_manifest_materializes_all_eight_named_deliverables(tmp_pa
     assert {path.name for path in output_root.iterdir() if path.name != "publication_bundle.v1.json"} == {
         item[0] for item in names_and_types
     }
+    run_manifest = json.loads((output_root / "research_run_manifest.json").read_text(encoding="utf-8"))
+    assert {item["relative_path"] for item in run_manifest["artifact_paths"]} == {
+        item[0] for item in names_and_types if item[0] != "research_run_manifest.json"
+    }
+    assert all(len(item["content_hash_sha256"]) == 64 for item in run_manifest["artifact_paths"])
+    assert all(len(item["value"]) == 64 for item in run_manifest["artifact_hashes"])
+    assert run_manifest["manifest_self_hash"]["recorded_in"] == "publication_bundle.v1.outputs.bundle.files"
+    assert [(item["node_id"], item["status"]) for item in run_manifest["graph"]["nodes"]] == [
+        ("report_generation", "passed"),
+        ("poster_generation_publication", "running"),
+    ]
+    assert run_manifest["status"]["Evidence Gate"] == "pending_deterministic_evaluation"
+    assert run_manifest["status"]["Closure-status"] == "pending_scheduler_closure"
+    assert bundle["source_report_id"] in bundle["evidence_ids"]

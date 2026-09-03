@@ -138,11 +138,9 @@ def test_status_server_repeated_lifecycle_releases_reserved_test_port(tmp_path: 
 
 def test_status_server_tmux_command_binds_per_harness_environment() -> None:
     source = (REPO_ROOT / "harness" / "solar-harness.sh").read_text(encoding="utf-8")
-    command = next(
-        line
-        for line in source.splitlines()
-        if "exec env HOME='$HOME'" in line and "status-server.py" in line
-    )
+    assert '"SOLAR_BIND_HOST=${SOLAR_BIND_HOST:-}"' in source
+    assert '"SOLAR_BIND_HOST=${SOLAR_BIND_HOST:-127.0.0.1}"' not in source
+    env_block = source.split("_ss_runtime_env=(", 1)[1].split("\n          )", 1)[0]
     for token in (
         "USERPROFILE=",
         "SOLAR_HOME=",
@@ -150,4 +148,4 @@ def test_status_server_tmux_command_binds_per_harness_environment() -> None:
         "SOLAR_HARNESS_DIR=",
         "SOLAR_BIND_HOST=",
     ):
-        assert token in command
+        assert token in env_block

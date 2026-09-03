@@ -258,6 +258,33 @@
                     "type": "string",
                     "minLength": 1
                   },
+                  "claim_text": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "citation_spans": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "source_ref",
+                        "coordinate_space",
+                        "start_char",
+                        "end_char",
+                        "quote",
+                        "source_text_sha256"
+                      ],
+                      "additionalProperties": false,
+                      "properties": {
+                        "source_ref": {"type": "string", "minLength": 1},
+                        "coordinate_space": {"const": "section_text_whitespace_normalized"},
+                        "start_char": {"type": "integer", "minimum": 0},
+                        "end_char": {"type": "integer", "minimum": 1},
+                        "quote": {"type": "string", "minLength": 1},
+                        "source_text_sha256": {"type": "string", "pattern": "^[A-Fa-f0-9]{64}$"}
+                      }
+                    }
+                  },
                   "verdict": {
                     "type": "string",
                     "minLength": 1
